@@ -3,7 +3,7 @@
 Personal developer portfolio — Next.js frontend + NestJS backend.
 
 **Domain:** [grig-teo.space](https://grig-teo.space)  
-**VPS:** `168.222.140.86`
+**VPS:** `168.222.140.86` (SSH alias: `vecin2vecin-vps` in `~/.ssh/config`)
 
 ## Stack
 
@@ -30,6 +30,14 @@ A     grig-teo.space      -> 168.222.140.86
 A     www.grig-teo.space  -> 168.222.140.86
 ```
 
+Production uses **host nginx** on the VPS (ports 80/443 are shared with other projects).
+
+SSH alias from `~/.ssh/config`:
+
+```bash
+ssh vecin2vecin-vps
+```
+
 From your machine:
 
 ```bash
@@ -44,7 +52,7 @@ Environment: `.env.production`
 Manual deploy on the server:
 
 ```bash
-ssh root@168.222.140.86
+ssh vecin2vecin-vps
 cd /opt/grig-teo-space
 docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 ```
