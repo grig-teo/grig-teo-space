@@ -30,14 +30,14 @@ export class PortfolioService {
     return this.content.getExperienceIds();
   }
 
-  async getCvStream() {
-    if (!this.cv.exists()) {
+  async getCvStream(locale: Locale) {
+    if (!this.cv.exists(locale)) {
       await this.content.rebuildCv();
     }
-    if (!this.cv.exists()) {
+    if (!this.cv.exists(locale)) {
       return null;
     }
-    return this.cv.getStream();
+    return this.cv.getStream(locale);
   }
 
   resolveLocale(locale?: string): Locale {

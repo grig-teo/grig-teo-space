@@ -18,7 +18,15 @@
   },
   "footer": {
     "downloadCv": "Скачать CV",
-    "phone": "Телефон"
+    "phone": "Телефон",
+    "cvModalTitle": "Скачать CV",
+    "cvModalDescription": "Выберите язык файла CV.",
+    "cvLanguage": "Язык CV",
+    "cvConfirm": "Скачать",
+    "cvCancel": "Отмена",
+    "english": "English",
+    "russian": "Русский",
+    "romanian": "Română"
   },
   "projectsPage": {
     "title": "Проекты | WebRTC, мобильные и marketplace приложения",

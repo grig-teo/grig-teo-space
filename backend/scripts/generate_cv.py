@@ -78,12 +78,13 @@ class ContactRow(Flowable):
         website_label = website.replace("https://", "").replace("http://", "").rstrip("/")
         github_label = github.replace("https://github.com/", "github.com/")
         linkedin_label = linkedin.rstrip("/").split("/")[-1]
+        contact_labels = self.contact.get("labels") or {}
 
         items = [
-            ("Website", website_label, website, self._website),
-            ("GitHub", github_label, github, self._github),
-            ("LinkedIn", linkedin_label, linkedin, self._linkedin),
-            ("Email", email, f"mailto:{email}", self._mail),
+            (contact_labels.get("website", "Website"), website_label, website, self._website),
+            (contact_labels.get("github", "GitHub"), github_label, github, self._github),
+            (contact_labels.get("linkedin", "LinkedIn"), linkedin_label, linkedin, self._linkedin),
+            (contact_labels.get("email", "Email"), email, f"mailto:{email}", self._mail),
         ]
         y_top = self.height - 18
         for i, (label, text, url, drawer) in enumerate(items):
@@ -253,6 +254,7 @@ def generate(output_path: Path, data: dict) -> None:
     languages = data.get("languages") or DEFAULT_LANGUAGES
     projects = data.get("projects") or []
     experience = data.get("experience") or []
+    labels = data.get("labels") or {}
 
     story = [
         Paragraph(data["name"], styles["name"]),
@@ -262,12 +264,13 @@ def generate(output_path: Path, data: dict) -> None:
     ]
 
     if projects:
-        story.append(Paragraph("PROJECTS", styles["section"]))
+        story.append(Paragraph(labels.get("projects", "PROJECTS"), styles["section"]))
         for project in projects:
             block = []
             title = project["title"]
             if project.get("inDevelopment"):
-                title = f'{title} <font color="#444444">(in development)</font>'
+                in_dev = labels.get("inDevelopment", "(in development)")
+                title = f'{title} <font color="#444444">{in_dev}</font>'
             block.append(Paragraph(title, styles["job_title"]))
             summary = project.get("overview") or project.get("description") or ""
             if summary:
@@ -278,11 +281,12 @@ def generate(output_path: Path, data: dict) -> None:
                 block.append(Paragraph(f"• {bullet}", styles["bullet"]))
             if project.get("tags"):
                 block.append(Spacer(1, 3))
-                block.append(Paragraph(f"Tech stack: {project['tags']}", styles["stack"]))
+                tech = labels.get("techStack", "Tech stack:")
+                block.append(Paragraph(f"{tech} {project['tags']}", styles["stack"]))
             block.append(Spacer(1, 4))
             story.extend(block)
 
-    story.append(Paragraph("EXPERIENCE", styles["section"]))
+    story.append(Paragraph(labels.get("experience", "EXPERIENCE"), styles["section"]))
 
     for job in experience:
         block = []
@@ -315,11 +319,12 @@ def generate(output_path: Path, data: dict) -> None:
             block.append(Paragraph(f"• {bullet}", styles["bullet"]))
         if job.get("stack"):
             block.append(Spacer(1, 3))
-            block.append(Paragraph(f"Tech stack: {job['stack']}", styles["stack"]))
+            tech = labels.get("techStack", "Tech stack:")
+            block.append(Paragraph(f"{tech} {job['stack']}", styles["stack"]))
         block.append(Spacer(1, 4))
         story.extend(block)
 
-    story.append(Paragraph("LANGUAGES", styles["section"]))
+    story.append(Paragraph(labels.get("languages", "LANGUAGES"), styles["section"]))
     for lang in languages:
         story.append(Paragraph(lang, styles["lang"]))
 
@@ -340,7 +345,7 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path(__file__).resolve().parent.parent / "generated" / "grigore_teodoru_cv.pdf",
+        default=Path(__file__).resolve().parent.parent / "generated" / "grigore_teodoru_cv.en.pdf",
     )
     args = parser.parse_args()
 

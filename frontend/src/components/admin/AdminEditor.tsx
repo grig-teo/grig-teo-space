@@ -139,7 +139,7 @@ export function AdminEditor() {
     setStatus('');
     try {
       const cvRebuilt = await adminSaveProfile(content.profile);
-      setStatus(cvRebuilt ? 'Profile saved. CV updated.' : 'Profile saved.');
+      setStatus(cvRebuilt ? 'Profile saved. CV updated (all languages).' : 'Profile saved.');
     } catch {
       setStatus('Failed to save profile.');
     } finally {
@@ -153,7 +153,7 @@ export function AdminEditor() {
     setStatus('');
     try {
       const cvRebuilt = await adminSaveProjects(content.projects);
-      setStatus(cvRebuilt ? 'Projects saved. CV updated.' : 'Projects saved.');
+      setStatus(cvRebuilt ? 'Projects saved. CV updated (all languages).' : 'Projects saved.');
     } catch {
       setStatus('Failed to save projects.');
     } finally {
@@ -167,7 +167,7 @@ export function AdminEditor() {
     setStatus('');
     try {
       const cvRebuilt = await adminSaveExperience(content.experience);
-      setStatus(cvRebuilt ? 'Experience saved. CV updated.' : 'Experience saved.');
+      setStatus(cvRebuilt ? 'Experience saved. CV updated (all languages).' : 'Experience saved.');
     } catch {
       setStatus('Failed to save experience.');
     } finally {

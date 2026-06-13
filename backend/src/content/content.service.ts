@@ -55,7 +55,7 @@ export class ContentService {
       this.getProjects(),
       this.getExperience(),
     ]);
-    await this.cv.rebuild(profile, experience, projects);
+    await this.cv.rebuildAll(profile, experience, projects);
   }
 
   async updateProfile(profile: Profile): Promise<Profile> {

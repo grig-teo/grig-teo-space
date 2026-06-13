@@ -94,7 +94,8 @@ export async function getExperienceIds(): Promise<string[]> {
   return res.json() as Promise<string[]>;
 }
 
-export function getCvUrl(): string {
+export function getCvUrl(locale: Locale = 'en'): string {
   const base = publicApiBaseUrl();
-  return base ? `${base}/api/cv` : '/api/cv';
+  const prefix = base ? `${base}/api` : '/api';
+  return `${prefix}/cv?locale=${locale}`;
 }

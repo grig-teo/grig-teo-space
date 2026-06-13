@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { Profile } from '@/lib/api';
-import { getCvUrl } from '@/lib/api';
+import { CvDownloadModal } from '@/components/CvDownloadModal';
 
 function GitHubIcon() {
   return (
@@ -47,54 +48,58 @@ function DownloadIcon() {
 
 export function Footer({ profile }: { profile: Profile }) {
   const t = useTranslations('footer');
+  const [cvModalOpen, setCvModalOpen] = useState(false);
 
   return (
-    <footer id="contact" className="flex w-full flex-col items-center justify-between gap-6 border-t border-border px-4 py-8 sm:px-6 sm:py-10 md:flex-row md:px-12">
-      <a
-        href={getCvUrl()}
-        download
-        className="inline-flex items-center gap-2 border border-accent px-5 py-2.5 text-sm text-accent transition-colors hover:bg-accent hover:text-white"
-      >
-        <DownloadIcon />
-        {t('downloadCv')}
-      </a>
-      <div className="flex items-center gap-6 text-muted">
-        <a
-          href={profile.contact.github}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="transition-colors hover:text-accent"
-          aria-label="GitHub"
+    <>
+      <footer id="contact" className="flex w-full flex-col items-center justify-between gap-6 border-t border-border px-4 py-8 sm:px-6 sm:py-10 md:flex-row md:px-12">
+        <button
+          type="button"
+          onClick={() => setCvModalOpen(true)}
+          className="inline-flex items-center gap-2 border border-accent px-5 py-2.5 text-sm text-accent transition-colors hover:bg-accent hover:text-white"
         >
-          <GitHubIcon />
-        </a>
-        <a
-          href={profile.contact.linkedin}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="transition-colors hover:text-accent"
-          aria-label="LinkedIn"
-        >
-          <LinkedInIcon />
-        </a>
-        <a
-          href={`mailto:${profile.contact.email}`}
-          className="transition-colors hover:text-accent"
-          aria-label="Email"
-        >
-          <MailIcon />
-        </a>
-        {profile.contact.phone && (
+          <DownloadIcon />
+          {t('downloadCv')}
+        </button>
+        <div className="flex items-center gap-6 text-muted">
           <a
-            href={`tel:${profile.contact.phone}`}
+            href={profile.contact.github}
+            target="_blank"
+            rel="noopener noreferrer"
             className="transition-colors hover:text-accent"
-            aria-label={t('phone')}
-            title={profile.contact.phone}
+            aria-label="GitHub"
           >
-            <PhoneIcon />
+            <GitHubIcon />
           </a>
-        )}
-      </div>
-    </footer>
+          <a
+            href={profile.contact.linkedin}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-colors hover:text-accent"
+            aria-label="LinkedIn"
+          >
+            <LinkedInIcon />
+          </a>
+          <a
+            href={`mailto:${profile.contact.email}`}
+            className="transition-colors hover:text-accent"
+            aria-label="Email"
+          >
+            <MailIcon />
+          </a>
+          {profile.contact.phone && (
+            <a
+              href={`tel:${profile.contact.phone}`}
+              className="transition-colors hover:text-accent"
+              aria-label={t('phone')}
+              title={profile.contact.phone}
+            >
+              <PhoneIcon />
+            </a>
+          )}
+        </div>
+      </footer>
+      <CvDownloadModal open={cvModalOpen} onClose={() => setCvModalOpen(false)} />
+    </>
   );
 }

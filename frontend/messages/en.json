@@ -18,7 +18,15 @@
   },
   "footer": {
     "downloadCv": "Download CV",
-    "phone": "Phone"
+    "phone": "Phone",
+    "cvModalTitle": "Download CV",
+    "cvModalDescription": "Choose the language for your CV file.",
+    "cvLanguage": "CV language",
+    "cvConfirm": "Download",
+    "cvCancel": "Cancel",
+    "english": "English",
+    "russian": "Russian",
+    "romanian": "Romanian"
   },
   "projectsPage": {
     "title": "Projects | WebRTC, Mobile & Marketplace Apps",

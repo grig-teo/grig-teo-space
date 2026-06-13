@@ -94,12 +94,15 @@ export class PortfolioController {
 
   @Get('cv')
   @Header('Content-Type', 'application/pdf')
-  @Header('Content-Disposition', 'attachment; filename="grigore_teodoru_cv.pdf"')
-  async downloadCv() {
-    const stream = await this.portfolio.getCvStream();
+  async downloadCv(@Query('locale') locale?: string) {
+    const loc = this.portfolio.resolveLocale(locale);
+    const stream = await this.portfolio.getCvStream(loc);
     if (!stream) {
       throw new NotFoundException('CV file not found');
     }
-    return new StreamableFile(stream);
+    return new StreamableFile(stream, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="grigore_teodoru_cv_${loc}.pdf"`,
+    });
   }
 }
