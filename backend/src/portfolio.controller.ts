@@ -20,9 +20,9 @@ export class PortfolioController {
   }
 
   @Get('profile')
-  profile(@Query('locale') locale?: string) {
+  async profile(@Query('locale') locale?: string) {
     const loc = this.portfolio.resolveLocale(locale);
-    const data = this.portfolio.getProfile();
+    const data = await this.portfolio.getProfile();
     const phone = data.contact.phone ? this.portfolio.pick(data.contact.phone, loc) : '';
     return {
       name: this.portfolio.pick(data.name, loc),
@@ -38,9 +38,10 @@ export class PortfolioController {
   }
 
   @Get('projects')
-  projects(@Query('locale') locale?: string) {
+  async projects(@Query('locale') locale?: string) {
     const loc = this.portfolio.resolveLocale(locale);
-    return this.portfolio.getProjects().map((project) => ({
+    const items = await this.portfolio.getProjects();
+    return items.map((project) => ({
       id: project.id,
       title: this.portfolio.pick(project.title, loc),
       description: this.portfolio.pick(project.description, loc),
@@ -53,9 +54,10 @@ export class PortfolioController {
   }
 
   @Get('experience')
-  experience(@Query('locale') locale?: string) {
+  async experience(@Query('locale') locale?: string) {
     const loc = this.portfolio.resolveLocale(locale);
-    return this.portfolio.getExperience().map((item) => ({
+    const items = await this.portfolio.getExperience();
+    return items.map((item) => ({
       id: item.id,
       period: this.portfolio.pick(item.period, loc),
       role: this.portfolio.pick(item.role, loc),
@@ -66,8 +68,8 @@ export class PortfolioController {
   }
 
   @Get('experience/:id')
-  experienceDetail(@Param('id') id: string, @Query('locale') locale?: string) {
-    const item = this.portfolio.getExperienceById(id);
+  async experienceDetail(@Param('id') id: string, @Query('locale') locale?: string) {
+    const item = await this.portfolio.getExperienceById(id);
     if (!item) {
       throw new NotFoundException('Experience item not found');
     }

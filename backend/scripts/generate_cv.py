@@ -3,11 +3,14 @@
 
 from pathlib import Path
 
+from io import BytesIO
+
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
+from reportlab.lib.utils import ImageReader
 from reportlab.platypus import (
     Flowable,
     Paragraph,
@@ -22,6 +25,7 @@ INK = colors.HexColor("#111111")
 MUTED = colors.HexColor("#444444")
 
 EMAIL = "grigore.teodoru97@gmail.com"
+WEBSITE = "https://grig-teo.space"
 GITHUB = "https://github.com/grig-teo"
 LINKEDIN = "https://www.linkedin.com/in/grigore-teodoru-228103287/"
 
@@ -93,16 +97,17 @@ EXPERIENCE = [
         "period": "2021 — 2022",
         "summary": (
             "Back-end development in a microservices environment — Java/Spring Boot and "
-            "Node.js services with REST and GraphQL APIs, SQL and MongoDB data stores, "
-            "plus Azure deployment on an internal project."
+            "Node.js services with REST and GraphQL APIs, Kafka event streaming, SQL and "
+            "MongoDB data stores, plus Azure deployment on an internal project."
         ),
         "bullets": [
             "Built and maintained microservices with Java, Spring Boot, and Node.js.",
             "Designed and implemented REST and GraphQL APIs for internal product features.",
+            "Integrated Kafka for asynchronous messaging and event-driven communication between services.",
             "Worked with SQL and MongoDB across service boundaries in a microservices architecture.",
             "Feature development, legacy maintenance, code reviews, task estimation, and Azure deployment.",
         ],
-        "stack": "Java, Spring Boot, Node.js, GraphQL, REST API, microservices, SQL, MongoDB, Azure",
+        "stack": "Java, Spring Boot, Node.js, Kafka, GraphQL, REST API, microservices, SQL, MongoDB, Azure",
     },
     {
         "company": "Crossinx GmbH",
@@ -129,17 +134,47 @@ LANGUAGES = [
     "English — Professional Working",
 ]
 
+_GITHUB_LOGO: ImageReader | None = None
+
+
+def github_logo_reader() -> ImageReader:
+    global _GITHUB_LOGO
+    if _GITHUB_LOGO is not None:
+        return _GITHUB_LOGO
+
+    from PIL import Image, ImageDraw
+
+    size = 96
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    ink = (17, 17, 17, 255)
+
+    # GitHub mark (simplified octocat silhouette)
+    draw.ellipse((10, 18, 86, 88), fill=ink)
+    draw.ellipse((8, 4, 34, 34), fill=ink)
+    draw.ellipse((62, 4, 88, 34), fill=ink)
+    draw.rounded_rectangle((72, 52, 90, 88), radius=6, fill=ink)
+    draw.ellipse((18, 10, 28, 20), fill=(248, 246, 242, 255))
+    draw.ellipse((68, 10, 78, 20), fill=(248, 246, 242, 255))
+
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    _GITHUB_LOGO = ImageReader(buf)
+    return _GITHUB_LOGO
+
 
 class ContactRow(Flowable):
     def __init__(self, width: float):
         super().__init__()
         self.width = width
-        self.height = 58
+        self.height = 62
 
     def draw(self):
         c = self.canv
-        block_w = self.width / 3
+        block_w = self.width / 4
         items = [
+            ("Website", "grig-teo.space", WEBSITE, self._website),
             ("GitHub", "github.com/grig-teo", GITHUB, self._github),
             ("LinkedIn", "grigore-teodoru-228103287", LINKEDIN, self._linkedin),
             ("Email", EMAIL, f"mailto:{EMAIL}", self._mail),
@@ -149,24 +184,32 @@ class ContactRow(Flowable):
             cx = block_w * i + block_w / 2
             drawer(c, cx, y_top, 7)
             c.setFillColor(MUTED)
-            c.setFont("Helvetica", 8)
+            c.setFont("Helvetica", 7.5)
             c.drawCentredString(cx, y_top - 14, label)
             c.setFillColor(INK)
-            c.setFont("Helvetica", 7.5)
+            c.setFont("Helvetica", 7)
             link_y = y_top - 28
             c.drawCentredString(cx, link_y, text)
             c.linkURL(
                 url,
-                (block_w * i + 6, link_y - 4, block_w * (i + 1) - 6, link_y + 12),
+                (block_w * i + 4, link_y - 4, block_w * (i + 1) - 4, link_y + 12),
                 relative=1,
             )
 
     @staticmethod
-    def _github(c, cx, cy, r):
+    def _website(c, cx, cy, r):
         c.setStrokeColor(INK)
         c.setLineWidth(0.8)
         c.circle(cx, cy, r, stroke=1, fill=0)
-        c.line(cx - r * 0.55, cy + r * 0.15, cx + r * 0.55, cy + r * 0.15)
+        c.line(cx - r * 0.65, cy, cx + r * 0.65, cy)
+        c.line(cx, cy - r * 0.65, cx, cy + r * 0.65)
+        c.circle(cx, cy, r * 0.35, stroke=1, fill=0)
+
+    @staticmethod
+    def _github(c, cx, cy, r):
+        logo = github_logo_reader()
+        side = r * 2.2
+        c.drawImage(logo, cx - side / 2, cy - side / 2, side, side, mask="auto")
 
     @staticmethod
     def _linkedin(c, cx, cy, r):

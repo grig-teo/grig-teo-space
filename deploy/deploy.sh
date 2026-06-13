@@ -5,6 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VPS_HOST="${VPS_HOST:-vecin2vecin-vps}"
 REMOTE_DIR="${REMOTE_DIR:-/opt/grig-teo-space}"
 DOMAIN="${DOMAIN:-grig-teo.space}"
+ADMIN_ACCESS_KEY="${ADMIN_ACCESS_KEY:-}"
+JWT_SECRET="${JWT_SECRET:-}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-}"
 COMPOSE_FILE="docker-compose.prod.yml"
 NGINX_SITE="/etc/nginx/sites-available/grig-teo.space.conf"
 NGINX_ENABLED="/etc/nginx/sites-enabled/grig-teo.space.conf"
@@ -22,6 +25,7 @@ rsync -avz --delete \
   --exclude 'backend/dist' \
   --exclude 'backend/.venv' \
   --exclude '.env' \
+  --exclude '.env.production' \
   "${ROOT_DIR}/" "${VPS_HOST}:${REMOTE_DIR}/"
 
 ssh "${VPS_HOST}" bash -s <<EOF
@@ -36,7 +40,48 @@ fi
 
 if [ ! -f .env.production ]; then
   cp .env.production.example .env.production
-  echo "Created .env.production from example — review values on the server."
+  echo "Created .env.production from example."
+fi
+
+ensure_env() {
+  local key="\$1"
+  local value="\$2"
+  if ! grep -q "^\${key}=" .env.production 2>/dev/null; then
+    echo "\${key}=\${value}" >> .env.production
+  elif grep -q "^\${key}=change-me\$" .env.production 2>/dev/null; then
+    sed -i "s/^\${key}=change-me\$/\${key}=\${value}/" .env.production
+  fi
+}
+
+set_env() {
+  local key="\$1"
+  local value="\$2"
+  if grep -q "^\${key}=" .env.production 2>/dev/null; then
+    sed -i "s|^\${key}=.*|\${key}=\${value}|" .env.production
+  else
+    echo "\${key}=\${value}" >> .env.production
+  fi
+}
+
+if [ -n "${POSTGRES_PASSWORD}" ]; then
+  set_env POSTGRES_PASSWORD "${POSTGRES_PASSWORD}"
+elif grep -q "^POSTGRES_PASSWORD=change-me\$" .env.production 2>/dev/null || ! grep -q "^POSTGRES_PASSWORD=" .env.production 2>/dev/null; then
+  POSTGRES_PASSWORD="\$(openssl rand -hex 16)"
+  ensure_env POSTGRES_PASSWORD "\${POSTGRES_PASSWORD}"
+fi
+
+if [ -n "${JWT_SECRET}" ]; then
+  set_env JWT_SECRET "${JWT_SECRET}"
+elif grep -q "^JWT_SECRET=change-me\$" .env.production 2>/dev/null || ! grep -q "^JWT_SECRET=" .env.production 2>/dev/null; then
+  JWT_SECRET="\$(openssl rand -hex 32)"
+  ensure_env JWT_SECRET "\${JWT_SECRET}"
+fi
+
+if [ -n "${ADMIN_ACCESS_KEY}" ]; then
+  set_env ADMIN_ACCESS_KEY "${ADMIN_ACCESS_KEY}"
+elif grep -q "^ADMIN_ACCESS_KEY=change-me\$" .env.production 2>/dev/null || ! grep -q "^ADMIN_ACCESS_KEY=" .env.production 2>/dev/null; then
+  ADMIN_ACCESS_KEY="\$(openssl rand -hex 32)"
+  ensure_env ADMIN_ACCESS_KEY "\${ADMIN_ACCESS_KEY}"
 fi
 
 docker compose --env-file .env.production -f ${COMPOSE_FILE} up -d --build --remove-orphans
@@ -55,6 +100,10 @@ nginx -t
 systemctl reload nginx
 EOF
 
+ADMIN_KEY="$(ssh "${VPS_HOST}" "grep '^ADMIN_ACCESS_KEY=' ${REMOTE_DIR}/.env.production | cut -d= -f2-")"
+
 echo "==> Deploy finished"
-echo "    Site: http://${DOMAIN}"
+echo "    Site: https://${DOMAIN}"
+echo "    Admin: https://${DOMAIN}/admin"
+echo "    Access key: ${ADMIN_KEY}"
 echo "    Run ./deploy/init-ssl.sh if HTTPS is not configured yet."

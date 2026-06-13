@@ -1,21 +1,44 @@
 services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: grigteo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devpassword}
+      POSTGRES_DB: grigteo
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U grigteo -d grigteo']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   backend:
     build: ./backend
     ports:
-      - "3001:3001"
+      - '3001:3001'
     environment:
       PORT: 3001
       CORS_ORIGIN: http://localhost:3000
+      DATABASE_URL: postgresql://grigteo:${POSTGRES_PASSWORD:-devpassword}@db:5432/grigteo
+      ADMIN_ACCESS_KEY: ${ADMIN_ACCESS_KEY:-dev-access-key}
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret}
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test:
         [
-          "CMD-SHELL",
+          'CMD-SHELL',
           "node -e \"fetch('http://127.0.0.1:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
         ]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 15s
+      retries: 8
+      start_period: 30s
 
   frontend:
     build:
@@ -23,10 +46,13 @@ services:
       args:
         NEXT_PUBLIC_API_URL: http://localhost:3001
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:3001
       API_INTERNAL_URL: http://backend:3001
     depends_on:
       backend:
         condition: service_healthy
+
+volumes:
+  postgres_data:
