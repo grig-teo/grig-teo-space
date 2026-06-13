@@ -3,6 +3,7 @@ import { Hero } from '@/components/Hero';
 import { ProjectsPreview } from '@/components/Projects';
 import { Experience } from '@/components/Experience';
 import { Footer } from '@/components/Footer';
+import { JsonLd } from '@/components/JsonLd';
 import { getExperience, getProfile, getProjects } from '@/lib/api';
 import type { Locale } from '@/lib/api';
 
@@ -21,6 +22,7 @@ export default async function HomePage({ params }: Props) {
 
   return (
     <main className="min-h-screen">
+      <JsonLd profile={profile} locale={locale} />
       <Header />
       <Hero profile={profile} />
       <ProjectsPreview projects={projects} />

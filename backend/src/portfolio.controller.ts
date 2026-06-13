@@ -3,6 +3,7 @@ import {
   Get,
   Header,
   NotFoundException,
+  Param,
   Query,
   StreamableFile,
 } from '@nestjs/common';
@@ -62,6 +63,26 @@ export class PortfolioController {
       companyUrl: item.companyUrl,
       description: this.portfolio.pick(item.description, loc),
     }));
+  }
+
+  @Get('experience/:id')
+  experienceDetail(@Param('id') id: string, @Query('locale') locale?: string) {
+    const item = this.portfolio.getExperienceById(id);
+    if (!item) {
+      throw new NotFoundException('Experience item not found');
+    }
+    const loc = this.portfolio.resolveLocale(locale);
+    return {
+      id: item.id,
+      period: this.portfolio.pick(item.period, loc),
+      role: this.portfolio.pick(item.role, loc),
+      company: item.company,
+      companyUrl: item.companyUrl,
+      description: this.portfolio.pick(item.description, loc),
+      summary: item.summary ? this.portfolio.pick(item.summary, loc) : undefined,
+      highlights: item.highlights[loc] ?? item.highlights.en,
+      stack: item.stack ? this.portfolio.pick(item.stack, loc) : undefined,
+    };
   }
 
   @Get('cv')

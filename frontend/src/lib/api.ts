@@ -32,6 +32,12 @@ export interface ExperienceItem {
   description: string;
 }
 
+export interface ExperienceDetail extends ExperienceItem {
+  summary?: string;
+  highlights: string[];
+  stack?: string;
+}
+
 function publicApiBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
   return configured ?? '';
@@ -69,6 +75,10 @@ export function getProjects(locale: Locale) {
 
 export function getExperience(locale: Locale) {
   return fetchJson<ExperienceItem[]>('/experience', locale);
+}
+
+export function getExperienceDetail(id: string, locale: Locale) {
+  return fetchJson<ExperienceDetail>(`/experience/${id}`, locale);
 }
 
 export function getCvUrl(): string {

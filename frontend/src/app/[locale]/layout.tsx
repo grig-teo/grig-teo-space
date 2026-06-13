@@ -16,10 +16,39 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'meta' });
+  const ogLocale = locale === 'ru' ? 'ru_RU' : locale === 'ro' ? 'ro_RO' : 'en_US';
+
   return {
     metadataBase: new URL('https://grig-teo.space'),
     title: t('title'),
     description: t('description'),
+    keywords: t('keywords'),
+    alternates: {
+      canonical: `/${locale}`,
+      languages: {
+        en: '/en',
+        ru: '/ru',
+        ro: '/ro',
+        'x-default': '/en',
+      },
+    },
+    openGraph: {
+      title: t('title'),
+      description: t('description'),
+      url: `/${locale}`,
+      siteName: 'grig-teo',
+      locale: ogLocale,
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary',
+      title: t('title'),
+      description: t('description'),
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
     icons: {
       icon: [
         { url: '/favicon.ico' },

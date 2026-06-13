@@ -13,23 +13,31 @@
   "sections": {
     "projects": "/projects",
     "experience": "/experience",
-    "viewAll": "все проекты →"
+    "viewAll": "все проекты →",
+    "readMore": "подробнее →"
   },
   "footer": {
     "downloadCv": "Скачать CV",
     "phone": "Телефон"
   },
   "projectsPage": {
-    "title": "Проекты — grig-teo",
+    "title": "Проекты | WebRTC, мобильные и marketplace приложения",
     "heading": "/projects",
-    "description": "Избранные продукты и платформы, которые я спроектировал, разработал и запустил end-to-end.",
+    "description": "Платформа для дебатов в реальном времени (WebRTC, iOS, Android, AI) и P2P маркетплейс доставки (Next.js, NestJS, Stripe, карты). Full-stack end-to-end.",
     "back": "← на главную",
     "highlights": "Ключевое",
     "visit": "Открыть проект",
     "inDevelopment": "В разработке"
   },
+  "experiencePage": {
+    "title": "{company} — Опыт | grig-teo",
+    "back": "← назад к опыту",
+    "highlights": "Ключевое",
+    "stack": "Стек"
+  },
   "meta": {
-    "title": "grig-teo — Full-Stack разработчик",
-    "description": "Портфолио Grigore Teodoru — NestJS, Next.js, TypeScript"
+    "title": "Григорий Федоров | Remote Full-Stack разработчик",
+    "description": "Удалённый full-stack разработчик — TypeScript, NestJS, Next.js, WebRTC, iOS и Android. Debate Room, Vecin2Vecin. Фриланс, проекты и CV.",
+    "keywords": "удалённый full-stack разработчик, фриланс разработчик, разработчик TypeScript, разработчик NestJS, разработчик Next.js, WebRTC разработчик, мобильный разработчик iOS Android, разработчик маркетплейсов, Григорий Федоров, Grigore Teodoru"
   }
 }

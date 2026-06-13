@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/navigation';
 import type { ExperienceItem } from '@/lib/api';
 
 export function Experience({ items }: { items: ExperienceItem[] }) {
@@ -38,6 +39,12 @@ export function Experience({ items }: { items: ExperienceItem[] }) {
                   </h3>
                 </div>
                 <p className="mt-2 text-sm leading-relaxed text-muted">{item.description}</p>
+                <Link
+                  href={`/experience/${item.id}`}
+                  className="mt-2 inline-block text-sm text-accent hover:underline underline-offset-4"
+                >
+                  {t('readMore')}
+                </Link>
               </article>
             </div>
           ))}

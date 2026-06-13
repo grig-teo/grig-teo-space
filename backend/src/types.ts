@@ -21,6 +21,9 @@ export interface ExperienceItem {
   company: string;
   companyUrl?: string;
   description: LocalizedString;
+  summary?: LocalizedString;
+  highlights: LocalizedList;
+  stack?: LocalizedString;
 }
 
 export interface ContactInfo {

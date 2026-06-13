@@ -13,9 +13,33 @@ type Props = {
 export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'projectsPage' });
+  const ogLocale = locale === 'ru' ? 'ru_RU' : locale === 'ro' ? 'ro_RO' : 'en_US';
+
   return {
     title: t('title'),
     description: t('description'),
+    alternates: {
+      canonical: `/${locale}/projects`,
+      languages: {
+        en: '/en/projects',
+        ru: '/ru/projects',
+        ro: '/ro/projects',
+        'x-default': '/en/projects',
+      },
+    },
+    openGraph: {
+      title: t('title'),
+      description: t('description'),
+      url: `/${locale}/projects`,
+      siteName: 'grig-teo',
+      locale: ogLocale,
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary',
+      title: t('title'),
+      description: t('description'),
+    },
   };
 }
 

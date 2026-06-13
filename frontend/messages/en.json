@@ -13,23 +13,31 @@
   "sections": {
     "projects": "/projects",
     "experience": "/experience",
-    "viewAll": "view all projects →"
+    "viewAll": "view all projects →",
+    "readMore": "read more →"
   },
   "footer": {
     "downloadCv": "Download CV",
     "phone": "Phone"
   },
   "projectsPage": {
-    "title": "Projects — grig-teo",
+    "title": "Projects | WebRTC, Mobile & Marketplace Apps",
     "heading": "/projects",
-    "description": "Selected products and platforms I designed, built, and shipped end to end.",
+    "description": "Real-time debate platform (WebRTC, iOS, Android, AI) and P2P grocery marketplace (Next.js, NestJS, Stripe, maps). End-to-end full-stack delivery.",
     "back": "← back home",
     "highlights": "Highlights",
     "visit": "Visit project",
     "inDevelopment": "In development"
   },
+  "experiencePage": {
+    "title": "{company} — Experience | grig-teo",
+    "back": "← back to experience",
+    "highlights": "Highlights",
+    "stack": "Tech stack"
+  },
   "meta": {
-    "title": "grig-teo — Full-Stack Developer",
-    "description": "Portfolio of Grigore Teodoru — NestJS, Next.js, TypeScript"
+    "title": "Gregory Theodor | Remote Full-Stack Developer",
+    "description": "Remote full-stack developer from Moldova — TypeScript, NestJS, Next.js, WebRTC, iOS & Android. Debate Room, Vecin2Vecin. Freelance-ready. CV & projects.",
+    "keywords": "remote full-stack developer, freelance developer Moldova, TypeScript developer, NestJS developer, Next.js developer, WebRTC developer, iOS Android developer, mobile app developer, marketplace developer, Gregory Theodor, Grigore Teodoru"
   }
 }

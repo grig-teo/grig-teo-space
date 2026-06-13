@@ -13,23 +13,31 @@
   "sections": {
     "projects": "/projects",
     "experience": "/experience",
-    "viewAll": "toate proiectele →"
+    "viewAll": "toate proiectele →",
+    "readMore": "citește mai mult →"
   },
   "footer": {
     "downloadCv": "Descarcă CV",
     "phone": "Telefon"
   },
   "projectsPage": {
-    "title": "Proiecte — grig-teo",
+    "title": "Proiecte | WebRTC, mobile & marketplace apps",
     "heading": "/projects",
-    "description": "Produse și platforme selectate pe care le-am proiectat, construit și lansat end-to-end.",
+    "description": "Platformă de dezbateri realtime (WebRTC, iOS, Android, AI) și marketplace P2P livrare (Next.js, NestJS, Stripe, hărți). Full-stack end-to-end.",
     "back": "← înapoi acasă",
     "highlights": "Repere",
     "visit": "Vizitează proiectul",
     "inDevelopment": "În dezvoltare"
   },
+  "experiencePage": {
+    "title": "{company} — Experiență | grig-teo",
+    "back": "← înapoi la experiență",
+    "highlights": "Repere",
+    "stack": "Stack tehnologic"
+  },
   "meta": {
-    "title": "grig-teo — Dezvoltator Full-Stack",
-    "description": "Portofoliu Grigore Teodoru — NestJS, Next.js, TypeScript"
+    "title": "Grigore Teodoru | Dezvoltator Full-Stack Remote",
+    "description": "Dezvoltator full-stack remote din Moldova — TypeScript, NestJS, Next.js, WebRTC, iOS & Android. Debate Room, Vecin2Vecin. Freelance, proiecte și CV.",
+    "keywords": "dezvoltator full-stack remote, dezvoltator freelance Moldova, dezvoltator TypeScript, dezvoltator NestJS, dezvoltator Next.js, dezvoltator WebRTC, dezvoltator aplicații mobile iOS Android, dezvoltator marketplace, Grigore Teodoru"
   }
 }

@@ -10,7 +10,6 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import (
     Flowable,
-    KeepTogether,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -31,60 +30,96 @@ EXPERIENCE = [
         "company": "Vecin2Vecin",
         "role": "Founder / Full-Stack Developer",
         "period": "2025 — Present",
-        "summary": "Hyperlocal P2P grocery delivery marketplace.",
+        "summary": (
+            "Built and launched a neighbor-to-neighbor grocery delivery platform — a P2P "
+            "marketplace where customers order groceries and nearby couriers fulfill "
+            "deliveries within a defined service area."
+        ),
         "bullets": [
-            "End-to-end product: auth, catalog, checkout, courier flows, chat, push notifications.",
-            "Payments, maps/geo, NestJS REST API, MongoDB, MinIO, multi-language UI.",
-            "Production deployment on VPS with Docker Compose, HTTPS, and SMS integration.",
+            "End-to-end product — landing page, phone/SMS auth, onboarding, catalog, basket & checkout, order tracking, courier take-order flow, in-app chat, push notifications, and account settings.",
+            "Payments — multi-provider architecture with card and cash checkout, webhooks/callbacks, courier payout card binding, and Stripe for international payouts where applicable.",
+            "Maps & geo — delivery area picker, address editor, order maps with region-aware tiles, geocoding, and geo-based currency / visitor country detection.",
+            "Backend API — NestJS REST API with JWT auth, MongoDB, order batching, courier payouts, basket, regional catalog, MinIO for file uploads.",
+            "Localization — multi-language UI (3 locales) and legal/compliance information on the landing page.",
+            "Production deployment — Docker Compose on VPS, custom domain with HTTPS, env/secrets management, deploy scripts, SMS integration.",
+            "Reliability & UX fixes — payment fulfillment race conditions, acquiring API edge cases, delivery address CRUD, and empty-state improvements.",
         ],
-        "stack": "Next.js, React, TypeScript, Tailwind CSS, NestJS, MongoDB, Docker, Stripe",
+        "stack": (
+            "Next.js 15, React, TypeScript, Tailwind CSS, NestJS 11, MongoDB, Docker, "
+            "Leaflet, payment gateway REST APIs, Stripe Connect, WebSockets, Linux VPS"
+        ),
     },
     {
         "company": "Debate Zone",
         "role": "Founder / Full-Stack Developer",
         "period": "2023 — Present",
-        "summary": "Cross-platform live debate platform (iOS, Android, web).",
+        "summary": (
+            "Debate Room — cross-platform live debate platform (iOS, Android, web) for "
+            "hosting and joining audio/video debates."
+        ),
         "bullets": [
-            "Native iOS/Android apps with WebRTC, SMS and Google Sign-In, push notifications.",
-            "Dockerized backend: REST API, Socket.IO + mediasoup, recording and AI workers.",
-            "Real-time debate mechanics, server-side recording, Whisper/Ollama AI pipeline.",
-            "Next.js marketing site, admin dashboard, OpenAPI docs, observability tooling.",
+            "Built native iOS (SwiftUI + WebRTC) and Android (Jetpack Compose) apps with SMS and Google Sign-In, profile management, push notifications, and in-app legal views.",
+            "Architected a Dockerized Node.js/TypeScript backend: REST API, Socket.IO + mediasoup signaling, recording worker, and AI worker — MongoDB, Redis, MinIO, nginx gateway.",
+            "Implemented real-time debate mechanics: timed turns/rounds, live moderation, blind mode, async chat, polls, on-site debates, invites, teams, and organizations.",
+            "Built a server-side recording pipeline: mediasoup track capture, FFmpeg merge/finalize, retryable jobs, outputs uploaded to object storage.",
+            "Added an AI/NLP pipeline: Whisper transcription, transcript summaries, Ollama topic generation, AI room moderator, and political-preference scoring.",
+            "Shipped a Next.js marketing site with localization, admin dashboard, OpenAPI/Swagger docs, centralized logging, Prometheus metrics, and backup/restore tooling.",
         ],
-        "stack": "TypeScript, Swift, Kotlin, Express, Socket.IO, mediasoup, FFmpeg, Docker",
+        "stack": (
+            "TypeScript, Swift, Kotlin, Express, Socket.IO, mediasoup, FFmpeg, Whisper, "
+            "Ollama, Docker, Twilio, Google OAuth, FCM"
+        ),
     },
     {
         "company": "FeelIT",
         "role": "Back End Developer",
         "period": "2022 — 2023",
-        "summary": "",
+        "summary": (
+            "Back-end development on an emotional-intelligence platform — Node.js and "
+            "Express.js services with AI integrations for speech transcription and "
+            "emotional analysis, plus React frontend work."
+        ),
         "bullets": [
-            "Implemented features, maintained legacy code, bug fixes, and code reviews.",
-            "Task planning, estimation, and allocation.",
+            "Built and maintained Node.js / Express.js REST APIs for core product features.",
+            "Integrated OpenAI and related AI services for speech transcription and emotional detection on the backend.",
+            "Worked with React on frontend features and API integration.",
+            "Maintained legacy code, fixed bugs, performed code reviews, and participated in task planning and estimation.",
         ],
-        "stack": "",
+        "stack": "Node.js, Express.js, OpenAI, speech transcription, emotional detection, React, REST APIs",
     },
     {
         "company": "Amdaris",
         "role": "Back End Developer",
         "period": "2021 — 2022",
-        "summary": "",
+        "summary": (
+            "Back-end development in a microservices environment — Java/Spring Boot and "
+            "Node.js services with REST and GraphQL APIs, SQL and MongoDB data stores, "
+            "plus Azure deployment on an internal project."
+        ),
         "bullets": [
-            "Feature development, legacy maintenance, bug fixing, and code reviews.",
-            "Task creation, estimation, and distribution; Azure deployment on internal project.",
+            "Built and maintained microservices with Java, Spring Boot, and Node.js.",
+            "Designed and implemented REST and GraphQL APIs for internal product features.",
+            "Worked with SQL and MongoDB across service boundaries in a microservices architecture.",
+            "Feature development, legacy maintenance, code reviews, task estimation, and Azure deployment.",
         ],
-        "stack": "",
+        "stack": "Java, Spring Boot, Node.js, GraphQL, REST API, microservices, SQL, MongoDB, Azure",
     },
     {
         "company": "Crossinx GmbH",
         "role": "Back End & Android Developer",
         "period": "2018 — 2021",
-        "summary": "",
+        "summary": (
+            "Back-end and Android development for a business web platform — Java/Spring Boot "
+            "microservices on the server side and an Android client with OpenCV-based "
+            "document detection, plus a Kotlin multiplatform library shared with iOS."
+        ),
         "bullets": [
-            "Server-side development with Java, Hibernate, and Oracle database.",
-            "Refactored monolith into Java/Spring Boot microservices.",
-            "Android development with Java and Kotlin multiplatform library for iOS reuse.",
+            "Developed and maintained server-side business logic with Java, Hibernate ORM, and Oracle database.",
+            "Refactored a monolithic backend into a microservices architecture with Java and Spring Boot.",
+            "Built Android features in Java, including OpenCV-based document detection and scanning flows.",
+            "Created a Kotlin multiplatform library to share core logic between Android and iOS.",
         ],
-        "stack": "",
+        "stack": "Java, Kotlin, Spring Boot, Android, OpenCV, Hibernate, Oracle",
     },
 ]
 
@@ -305,9 +340,9 @@ def generate(output_path: Path) -> None:
             block.append(Paragraph(f"• {bullet}", styles["bullet"]))
         if job["stack"]:
             block.append(Spacer(1, 3))
-            block.append(Paragraph(job["stack"], styles["stack"]))
+            block.append(Paragraph(f"Tech stack: {job['stack']}", styles["stack"]))
         block.append(Spacer(1, 4))
-        story.append(KeepTogether(block))
+        story.extend(block)
 
     story.append(Paragraph("LANGUAGES", styles["section"]))
     for lang in LANGUAGES:
