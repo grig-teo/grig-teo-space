@@ -28,6 +28,11 @@ export class PortfolioService {
         email: 'grigore.teodoru97@gmail.com',
         github: 'https://github.com/grig-teo',
         linkedin: 'https://www.linkedin.com/in/grigore-teodoru-228103287/',
+        phone: {
+          en: '',
+          ru: '+79091589886',
+          ro: '',
+        },
       },
     };
   }

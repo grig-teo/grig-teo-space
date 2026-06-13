@@ -22,11 +22,17 @@ export class PortfolioController {
   profile(@Query('locale') locale?: string) {
     const loc = this.portfolio.resolveLocale(locale);
     const data = this.portfolio.getProfile();
+    const phone = data.contact.phone ? this.portfolio.pick(data.contact.phone, loc) : '';
     return {
       name: this.portfolio.pick(data.name, loc),
       title: this.portfolio.pick(data.title, loc),
       location: this.portfolio.pick(data.location, loc),
-      contact: data.contact,
+      contact: {
+        email: data.contact.email,
+        github: data.contact.github,
+        linkedin: data.contact.linkedin,
+        ...(phone ? { phone } : {}),
+      },
     };
   }
 

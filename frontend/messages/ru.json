@@ -16,7 +16,8 @@
     "viewAll": "все проекты →"
   },
   "footer": {
-    "downloadCv": "Скачать CV"
+    "downloadCv": "Скачать CV",
+    "phone": "Телефон"
   },
   "projectsPage": {
     "title": "Проекты — grig-teo",
