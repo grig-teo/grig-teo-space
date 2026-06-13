@@ -12,6 +12,7 @@ export interface Project {
   url: string;
   tags: string[];
   inDevelopment?: boolean;
+  sortOrder?: number;
 }
 
 export interface ExperienceItem {

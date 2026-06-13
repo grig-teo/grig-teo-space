@@ -56,9 +56,12 @@ function buildApiUrl(path: string, locale: Locale): string {
   return `${prefix}${path}?locale=${locale}`;
 }
 
-async function fetchJson<T>(path: string, locale: Locale): Promise<T> {
+async function fetchJson<T>(path: string, locale: Locale, dynamic = false): Promise<T> {
   const url = buildApiUrl(path, locale);
-  const res = await fetch(url, { next: { revalidate: 60 } });
+  const res = await fetch(
+    url,
+    dynamic ? { cache: 'no-store' } : { next: { revalidate: 60 } },
+  );
   if (!res.ok) {
     throw new Error(`API error: ${res.status} ${path}`);
   }
@@ -78,7 +81,17 @@ export function getExperience(locale: Locale) {
 }
 
 export function getExperienceDetail(id: string, locale: Locale) {
-  return fetchJson<ExperienceDetail>(`/experience/${id}`, locale);
+  return fetchJson<ExperienceDetail>(`/experience/${id}`, locale, true);
+}
+
+export async function getExperienceIds(): Promise<string[]> {
+  const base = apiBaseUrl();
+  const prefix = base ? `${base}/api` : '/api';
+  const res = await fetch(`${prefix}/experience/ids`, { next: { revalidate: 60 } });
+  if (!res.ok) {
+    throw new Error(`API error: ${res.status} /experience/ids`);
+  }
+  return res.json() as Promise<string[]>;
 }
 
 export function getCvUrl(): string {

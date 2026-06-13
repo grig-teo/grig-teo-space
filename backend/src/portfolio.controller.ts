@@ -67,6 +67,11 @@ export class PortfolioController {
     }));
   }
 
+  @Get('experience/ids')
+  async experienceIds() {
+    return this.portfolio.getExperienceIds();
+  }
+
   @Get('experience/:id')
   async experienceDetail(@Param('id') id: string, @Query('locale') locale?: string) {
     const item = await this.portfolio.getExperienceById(id);
@@ -90,8 +95,8 @@ export class PortfolioController {
   @Get('cv')
   @Header('Content-Type', 'application/pdf')
   @Header('Content-Disposition', 'attachment; filename="grigore_teodoru_cv.pdf"')
-  downloadCv() {
-    const stream = this.portfolio.getCvStream();
+  async downloadCv() {
+    const stream = await this.portfolio.getCvStream();
     if (!stream) {
       throw new NotFoundException('CV file not found');
     }

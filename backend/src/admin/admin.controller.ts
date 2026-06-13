@@ -48,17 +48,20 @@ export class AdminContentController {
   }
 
   @Put('profile')
-  updateProfile(@Body() profile: Profile) {
-    return this.content.updateProfile(profile);
+  async updateProfile(@Body() profile: Profile) {
+    await this.content.updateProfile(profile);
+    return { profile, cvRebuilt: true };
   }
 
   @Put('projects')
-  updateProjects(@Body() projects: Project[]) {
-    return this.content.updateProjects(projects);
+  async updateProjects(@Body() projects: Project[]) {
+    const result = await this.content.updateProjects(projects);
+    return { projects: result, cvRebuilt: true };
   }
 
   @Put('experience')
-  updateExperience(@Body() experience: ExperienceItem[]) {
-    return this.content.updateExperience(experience);
+  async updateExperience(@Body() experience: ExperienceItem[]) {
+    await this.content.updateExperience(experience);
+    return { experience, cvRebuilt: true };
   }
 }

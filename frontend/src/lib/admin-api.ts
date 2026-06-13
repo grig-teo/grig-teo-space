@@ -12,6 +12,7 @@ export interface Project {
   url: string;
   tags: string[];
   inDevelopment?: boolean;
+  sortOrder?: number;
 }
 
 export interface ExperienceItem {
@@ -107,29 +108,35 @@ export async function adminGetContent(): Promise<SiteContent> {
   return res.json();
 }
 
-export async function adminSaveProfile(profile: Profile): Promise<void> {
+export async function adminSaveProfile(profile: Profile): Promise<boolean> {
   const res = await fetch(`${apiBase()}/api/admin/content/profile`, {
     method: 'PUT',
     headers: authHeaders(),
     body: JSON.stringify(profile),
   });
   if (!res.ok) throw new Error('Failed to save profile');
+  const data = (await res.json()) as { cvRebuilt?: boolean };
+  return data.cvRebuilt ?? false;
 }
 
-export async function adminSaveProjects(projects: Project[]): Promise<void> {
+export async function adminSaveProjects(projects: Project[]): Promise<boolean> {
   const res = await fetch(`${apiBase()}/api/admin/content/projects`, {
     method: 'PUT',
     headers: authHeaders(),
     body: JSON.stringify(projects),
   });
   if (!res.ok) throw new Error('Failed to save projects');
+  const data = (await res.json()) as { cvRebuilt?: boolean };
+  return data.cvRebuilt ?? false;
 }
 
-export async function adminSaveExperience(experience: ExperienceItem[]): Promise<void> {
+export async function adminSaveExperience(experience: ExperienceItem[]): Promise<boolean> {
   const res = await fetch(`${apiBase()}/api/admin/content/experience`, {
     method: 'PUT',
     headers: authHeaders(),
     body: JSON.stringify(experience),
   });
   if (!res.ok) throw new Error('Failed to save experience');
+  const data = (await res.json()) as { cvRebuilt?: boolean };
+  return data.cvRebuilt ?? false;
 }

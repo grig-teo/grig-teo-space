@@ -6,17 +6,11 @@ import type { Locale } from '@/lib/api';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 
-const experienceIds = ['vecin2vecin', 'debate-zone', 'feelit', 'amdaris', 'crossinx'];
-
 type Props = {
   params: Promise<{ locale: Locale; id: string }>;
 };
 
-export function generateStaticParams() {
-  return experienceIds.flatMap((id) =>
-    (['en', 'ru', 'ro'] as Locale[]).map((locale) => ({ locale, id })),
-  );
-}
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: Props) {
   const { locale, id } = await params;

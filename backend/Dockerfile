@@ -12,6 +12,9 @@ ENV PORT=3001
 COPY package*.json ./
 RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
-COPY assets ./assets
+COPY scripts ./scripts
+RUN apk add --no-cache python3 py3-pip \
+  && pip3 install --no-cache-dir --break-system-packages -r scripts/requirements.txt
+RUN mkdir -p generated
 EXPOSE 3001
 CMD ["node", "dist/main.js"]

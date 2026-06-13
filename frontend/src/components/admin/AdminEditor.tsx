@@ -8,6 +8,8 @@ import {
   clearAdminToken,
   type ExperienceItem,
   type Locale,
+  type LocalizedList,
+  type LocalizedString,
   type Profile,
   type Project,
   type SiteContent,
@@ -29,6 +31,51 @@ function linesToList(text: string): string[] {
 
 function listToLines(items: string[]): string {
   return items.join('\n');
+}
+
+function emptyLocalizedString(): LocalizedString {
+  return { en: '', ru: '', ro: '' };
+}
+
+function emptyLocalizedList(): LocalizedList {
+  return { en: [], ru: [], ro: [] };
+}
+
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function newProject(): Project {
+  const suffix = Date.now().toString(36);
+  return {
+    id: `project-${suffix}`,
+    title: emptyLocalizedString(),
+    description: emptyLocalizedString(),
+    overview: emptyLocalizedString(),
+    highlights: emptyLocalizedList(),
+    url: '',
+    tags: [],
+    inDevelopment: false,
+  };
+}
+
+function newExperienceItem(): ExperienceItem {
+  const suffix = Date.now().toString(36);
+  return {
+    id: `experience-${suffix}`,
+    period: emptyLocalizedString(),
+    role: emptyLocalizedString(),
+    company: 'New company',
+    companyUrl: '',
+    description: emptyLocalizedString(),
+    summary: emptyLocalizedString(),
+    highlights: emptyLocalizedList(),
+    stack: emptyLocalizedString(),
+  };
 }
 
 function Field({
@@ -91,8 +138,8 @@ export function AdminEditor() {
     setSaving(true);
     setStatus('');
     try {
-      await adminSaveProfile(content.profile);
-      setStatus('Profile saved.');
+      const cvRebuilt = await adminSaveProfile(content.profile);
+      setStatus(cvRebuilt ? 'Profile saved. CV updated.' : 'Profile saved.');
     } catch {
       setStatus('Failed to save profile.');
     } finally {
@@ -105,8 +152,8 @@ export function AdminEditor() {
     setSaving(true);
     setStatus('');
     try {
-      await adminSaveProjects(content.projects);
-      setStatus('Projects saved.');
+      const cvRebuilt = await adminSaveProjects(content.projects);
+      setStatus(cvRebuilt ? 'Projects saved. CV updated.' : 'Projects saved.');
     } catch {
       setStatus('Failed to save projects.');
     } finally {
@@ -119,13 +166,62 @@ export function AdminEditor() {
     setSaving(true);
     setStatus('');
     try {
-      await adminSaveExperience(content.experience);
-      setStatus('Experience saved.');
+      const cvRebuilt = await adminSaveExperience(content.experience);
+      setStatus(cvRebuilt ? 'Experience saved. CV updated.' : 'Experience saved.');
     } catch {
       setStatus('Failed to save experience.');
     } finally {
       setSaving(false);
     }
+  }
+
+  function addProject() {
+    setContent((prev) => {
+      if (!prev) return prev;
+      const maxOrder = Math.max(0, ...prev.projects.map((p) => p.sortOrder ?? 0));
+      const project = { ...newProject(), sortOrder: maxOrder + 1 };
+      const projects = [project, ...prev.projects];
+      setSelectedProject(0);
+      return { ...prev, projects };
+    });
+  }
+
+  function removeProject(index: number) {
+    if (!content || content.projects.length <= 1) return;
+    const project = content.projects[index];
+    if (!window.confirm(`Remove project "${project.id}"? Click Save projects to apply.`)) {
+      return;
+    }
+    setContent((prev) => {
+      if (!prev || prev.projects.length <= 1) return prev;
+      const projects = prev.projects.filter((_, i) => i !== index);
+      setSelectedProject(Math.max(0, Math.min(index, projects.length - 1)));
+      return { ...prev, projects };
+    });
+  }
+
+  function addExperienceItem() {
+    setContent((prev) => {
+      if (!prev) return prev;
+      const experience = [...prev.experience, newExperienceItem()];
+      setSelectedExperience(experience.length - 1);
+      return { ...prev, experience };
+    });
+  }
+
+  function removeExperienceItem(index: number) {
+    if (!content || content.experience.length <= 1) return;
+    const item = content.experience[index];
+    const label = item.company || item.id;
+    if (!window.confirm(`Remove experience "${label}"? Click Save experience to apply.`)) {
+      return;
+    }
+    setContent((prev) => {
+      if (!prev || prev.experience.length <= 1) return prev;
+      const experience = prev.experience.filter((_, i) => i !== index);
+      setSelectedExperience(Math.max(0, Math.min(index, experience.length - 1)));
+      return { ...prev, experience };
+    });
   }
 
   function updateProfile(updater: (profile: Profile) => Profile) {
@@ -306,10 +402,10 @@ export function AdminEditor() {
 
       {tab === 'projects' && project ? (
         <section className="space-y-4 border border-border/60 p-4 md:p-6">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {content.projects.map((item, index) => (
               <button
-                key={item.id}
+                key={`${item.id}-${index}`}
                 type="button"
                 onClick={() => setSelectedProject(index)}
                 className={`px-3 py-1 text-xs border ${
@@ -319,8 +415,24 @@ export function AdminEditor() {
                 {item.id}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={addProject}
+              className="px-3 py-1 text-xs border border-accent/60 text-accent"
+            >
+              + Add project
+            </button>
           </div>
-          <Field label="ID" value={project.id} onChange={() => {}} />
+          <Field
+            label="ID (used in URLs)"
+            value={project.id}
+            onChange={(value) =>
+              updateProject(selectedProject, (item) => ({
+                ...item,
+                id: slugify(value) || item.id,
+              }))
+            }
+          />
           <Field
             label={`Title (${locale})`}
             value={project.title[locale]}
@@ -395,34 +507,61 @@ export function AdminEditor() {
             />
             In development
           </label>
-          <button
-            type="button"
-            onClick={saveProjects}
-            disabled={saving}
-            className="border border-accent/60 px-4 py-2 text-sm hover:bg-accent/10 disabled:opacity-50"
-          >
-            Save projects
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={saveProjects}
+              disabled={saving}
+              className="border border-accent/60 px-4 py-2 text-sm hover:bg-accent/10 disabled:opacity-50"
+            >
+              Save projects
+            </button>
+            {content.projects.length > 1 ? (
+              <button
+                type="button"
+                onClick={() => removeProject(selectedProject)}
+                className="border border-red-500/60 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10"
+              >
+                Remove project
+              </button>
+            ) : null}
+          </div>
         </section>
       ) : null}
 
       {tab === 'experience' && experienceItem ? (
         <section className="space-y-4 border border-border/60 p-4 md:p-6">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {content.experience.map((item, index) => (
               <button
-                key={item.id}
+                key={`${item.id}-${index}`}
                 type="button"
                 onClick={() => setSelectedExperience(index)}
                 className={`px-3 py-1 text-xs border ${
                   selectedExperience === index ? 'border-accent text-accent' : 'border-border/60 text-muted'
                 }`}
               >
-                {item.company}
+                {item.company || item.id}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={addExperienceItem}
+              className="px-3 py-1 text-xs border border-accent/60 text-accent"
+            >
+              + Add experience
+            </button>
           </div>
-          <Field label="ID" value={experienceItem.id} onChange={() => {}} />
+          <Field
+            label="ID (used in URLs, e.g. /experience/my-id)"
+            value={experienceItem.id}
+            onChange={(value) =>
+              updateExperienceItem(selectedExperience, (item) => ({
+                ...item,
+                id: slugify(value) || item.id,
+              }))
+            }
+          />
           <Field
             label={`Period (${locale})`}
             value={experienceItem.period[locale]}
@@ -500,14 +639,25 @@ export function AdminEditor() {
               }))
             }
           />
-          <button
-            type="button"
-            onClick={saveExperience}
-            disabled={saving}
-            className="border border-accent/60 px-4 py-2 text-sm hover:bg-accent/10 disabled:opacity-50"
-          >
-            Save experience
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={saveExperience}
+              disabled={saving}
+              className="border border-accent/60 px-4 py-2 text-sm hover:bg-accent/10 disabled:opacity-50"
+            >
+              Save experience
+            </button>
+            {content.experience.length > 1 ? (
+              <button
+                type="button"
+                onClick={() => removeExperienceItem(selectedExperience)}
+                className="border border-red-500/60 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10"
+              >
+                Remove experience
+              </button>
+            ) : null}
+          </div>
         </section>
       ) : null}
 

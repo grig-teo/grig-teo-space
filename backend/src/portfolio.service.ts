@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { createReadStream, existsSync } from 'fs';
-import { join } from 'path';
 import { ContentService } from './content/content.service';
+import { CvService } from './cv/cv.service';
 import type { ExperienceItem, Locale, Profile, Project } from './types';
 
 @Injectable()
 export class PortfolioService {
-  private readonly cvPath = join(process.cwd(), 'assets', 'grigore_teodoru_cv.pdf');
-
-  constructor(private readonly content: ContentService) {}
+  constructor(
+    private readonly content: ContentService,
+    private readonly cv: CvService,
+  ) {}
 
   async getProfile(): Promise<Profile> {
     return this.content.getProfile();
@@ -30,11 +30,14 @@ export class PortfolioService {
     return this.content.getExperienceIds();
   }
 
-  getCvStream() {
-    if (!existsSync(this.cvPath)) {
+  async getCvStream() {
+    if (!this.cv.exists()) {
+      await this.content.rebuildCv();
+    }
+    if (!this.cv.exists()) {
       return null;
     }
-    return createReadStream(this.cvPath);
+    return this.cv.getStream();
   }
 
   resolveLocale(locale?: string): Locale {

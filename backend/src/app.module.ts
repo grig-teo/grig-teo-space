@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdminModule } from './admin/admin.module';
 import { ContentModule } from './content/content.module';
+import { CvModule } from './cv/cv.module';
 import { SiteContent } from './entities/site-content.entity';
 import { PortfolioController } from './portfolio.controller';
 import { PortfolioService } from './portfolio.service';
@@ -15,6 +16,7 @@ import { PortfolioService } from './portfolio.service';
       synchronize: true,
     }),
     ContentModule,
+    CvModule,
     AdminModule,
   ],
   controllers: [PortfolioController],
