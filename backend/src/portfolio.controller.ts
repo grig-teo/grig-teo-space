@@ -41,6 +41,7 @@ export class PortfolioController {
       highlights: project.highlights[loc] ?? project.highlights.en,
       url: project.url,
       tags: project.tags,
+      inDevelopment: project.inDevelopment ?? false,
     }));
   }
 
@@ -52,6 +53,7 @@ export class PortfolioController {
       period: this.portfolio.pick(item.period, loc),
       role: this.portfolio.pick(item.role, loc),
       company: item.company,
+      companyUrl: item.companyUrl,
       description: this.portfolio.pick(item.description, loc),
     }));
   }

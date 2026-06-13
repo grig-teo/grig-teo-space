@@ -93,6 +93,7 @@ export class PortfolioService {
           'Docker',
           'MongoDB',
         ],
+        inDevelopment: true,
       },
       {
         id: 'vecin2vecin',
@@ -139,6 +140,7 @@ export class PortfolioService {
         },
         url: 'https://vecin2vecin.ro/',
         tags: ['Next.js', 'NestJS', 'MongoDB', 'Stripe', 'Docker', 'Leaflet'],
+        inDevelopment: true,
       },
     ];
   }
@@ -158,6 +160,7 @@ export class PortfolioService {
           ro: 'Fondator / Dezvoltator Full-Stack',
         },
         company: 'Vecin2Vecin',
+        companyUrl: 'https://vecin2vecin.ro/',
         description: {
           en: 'Built end-to-end hyperlocal grocery delivery platform: auth, catalog, checkout, courier flows, payments, maps, and Docker deployment on VPS.',
           ru: 'Создал платформу гиперлокальной доставки продуктов: авторизация, каталог, checkout, курьерские потоки, платежи, карты и Docker-деплой на VPS.',
@@ -196,6 +199,7 @@ export class PortfolioService {
           ro: 'Dezvoltator Back End',
         },
         company: 'FeelIT',
+        companyUrl: 'https://feel-it-services.com/',
         description: {
           en: 'Implemented features, maintained legacy code, bug fixes, and code reviews in Chișinău.',
           ru: 'Реализация фич, поддержка legacy-кода, исправление багов и code review в Кишинёве.',
@@ -215,6 +219,7 @@ export class PortfolioService {
           ro: 'Dezvoltator Back End',
         },
         company: 'Amdaris',
+        companyUrl: 'https://amdaris.com/',
         description: {
           en: 'Feature development, legacy maintenance, and Azure deployment on an internal project.',
           ru: 'Разработка фич, поддержка legacy и деплой на Azure во внутреннем проекте.',
@@ -234,6 +239,7 @@ export class PortfolioService {
           ro: 'Dezvoltator Back End & Android',
         },
         company: 'Crossinx GmbH',
+        companyUrl: 'https://crossinx.com/',
         description: {
           en: 'Java/Spring Boot microservices, Oracle DB, and Android development with Kotlin multiplatform library.',
           ru: 'Java/Spring Boot микросервисы, Oracle DB и Android-разработка с Kotlin multiplatform библиотекой.',

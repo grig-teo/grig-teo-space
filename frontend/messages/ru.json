@@ -3,7 +3,9 @@
     "about": "_about",
     "projects": "_projects",
     "experience": "_experience",
-    "contact": "_contact"
+    "contact": "_contact",
+    "openMenu": "Открыть меню",
+    "closeMenu": "Закрыть меню"
   },
   "hero": {
     "prompt": "grig-teo:~$"
@@ -22,7 +24,8 @@
     "description": "Избранные продукты и платформы, которые я спроектировал, разработал и запустил end-to-end.",
     "back": "← на главную",
     "highlights": "Ключевое",
-    "visit": "Открыть проект"
+    "visit": "Открыть проект",
+    "inDevelopment": "В разработке"
   },
   "meta": {
     "title": "grig-teo — Full-Stack разработчик",

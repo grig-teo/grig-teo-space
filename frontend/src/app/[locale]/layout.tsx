@@ -17,8 +17,17 @@ export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'meta' });
   return {
+    metadataBase: new URL('https://grig-teo.space'),
     title: t('title'),
     description: t('description'),
+    icons: {
+      icon: [
+        { url: '/favicon.ico' },
+        { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+        { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      ],
+      apple: '/apple-touch-icon.png',
+    },
   };
 }
 

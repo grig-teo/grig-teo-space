@@ -31,22 +31,33 @@ export function ProjectCard({
 
   const card = (
     <article
-      className={`flex flex-col border border-border p-6 transition-colors ${
-        detailed ? '' : 'group hover:border-accent'
+      className={`flex h-full flex-col border border-border p-4 transition-colors sm:p-6 ${
+        detailed ? 'min-h-0 sm:min-h-[420px]' : 'min-h-0 sm:min-h-[260px] group hover:border-accent'
       }`}
     >
       <div className="mb-4 flex items-start justify-between gap-4">
-        <h3 className={`font-semibold text-foreground ${detailed ? 'text-xl' : ''}`}>
-          {project.title}
-        </h3>
+        <div className="min-w-0 space-y-2">
+          <h3 className={`font-semibold text-foreground ${detailed ? 'text-xl' : ''}`}>
+            {project.title}
+          </h3>
+          {project.inDevelopment && (
+            <span className="inline-block border border-accent/60 px-2 py-0.5 text-[10px] uppercase tracking-wide text-accent">
+              {t('inDevelopment')}
+            </span>
+          )}
+        </div>
         {!detailed && (
-          <span className="text-accent opacity-70 transition-opacity group-hover:opacity-100">
+          <span className="shrink-0 text-accent opacity-70 transition-opacity group-hover:opacity-100">
             <ExternalIcon />
           </span>
         )}
       </div>
 
-      <p className="mb-4 text-sm leading-relaxed text-muted">
+      <p
+        className={`mb-4 flex-1 text-sm leading-relaxed text-muted ${
+          detailed ? '' : 'line-clamp-4'
+        }`}
+      >
         {detailed ? project.overview : project.description}
       </p>
 
@@ -65,7 +76,7 @@ export function ProjectCard({
         </div>
       )}
 
-      <div className="mt-auto flex flex-wrap gap-2">
+      <div className="mt-auto flex flex-wrap gap-2 pt-2">
         {project.tags.map((tag) => (
           <span key={tag} className="border border-border px-2 py-0.5 text-xs text-muted">
             {tag}
@@ -96,7 +107,7 @@ export function ProjectCard({
       href={project.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group block"
+      className="group block h-full"
     >
       {card}
     </a>
@@ -107,8 +118,8 @@ export function ProjectsPreview({ projects }: { projects: Project[] }) {
   const t = useTranslations('sections');
 
   return (
-    <section id="projects" className="px-6 py-16 md:px-12">
-      <div className="mb-8 flex items-center justify-between">
+    <section id="projects" className="px-4 py-12 sm:px-6 sm:py-16 md:px-12">
+      <div className="mb-6 flex flex-col gap-2 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg text-foreground">{t('projects')}</h2>
         <Link
           href="/projects"
@@ -117,7 +128,7 @@ export function ProjectsPreview({ projects }: { projects: Project[] }) {
           {t('viewAll')}
         </Link>
       </div>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid auto-rows-fr gap-6 md:grid-cols-2 lg:grid-cols-3">
         {projects.map((project) => (
           <ProjectCard key={project.id} project={project} />
         ))}

@@ -3,7 +3,9 @@
     "about": "_about",
     "projects": "_projects",
     "experience": "_experience",
-    "contact": "_contact"
+    "contact": "_contact",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
   },
   "hero": {
     "prompt": "grig-teo:~$"
@@ -22,7 +24,8 @@
     "description": "Selected products and platforms I designed, built, and shipped end to end.",
     "back": "← back home",
     "highlights": "Highlights",
-    "visit": "Visit project"
+    "visit": "Visit project",
+    "inDevelopment": "In development"
   },
   "meta": {
     "title": "grig-teo — Full-Stack Developer",

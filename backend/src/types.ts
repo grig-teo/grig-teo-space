@@ -11,6 +11,7 @@ export interface Project {
   highlights: LocalizedList;
   url: string;
   tags: string[];
+  inDevelopment?: boolean;
 }
 
 export interface ExperienceItem {
@@ -18,6 +19,7 @@ export interface ExperienceItem {
   period: LocalizedString;
   role: LocalizedString;
   company: string;
+  companyUrl?: string;
   description: LocalizedString;
 }
 

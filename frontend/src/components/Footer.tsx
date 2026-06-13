@@ -41,7 +41,7 @@ export function Footer({ profile }: { profile: Profile }) {
   const t = useTranslations('footer');
 
   return (
-    <footer id="contact" className="flex flex-col items-center justify-between gap-6 border-t border-border px-6 py-10 md:flex-row md:px-12">
+    <footer id="contact" className="flex w-full flex-col items-center justify-between gap-6 border-t border-border px-4 py-8 sm:px-6 sm:py-10 md:flex-row md:px-12">
       <a
         href={getCvUrl()}
         download

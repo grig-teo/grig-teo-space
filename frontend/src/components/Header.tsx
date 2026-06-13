@@ -1,37 +1,99 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/navigation';
 import { LanguageSwitcher } from './LanguageSwitcher';
 
 const links = [
-  { key: 'about', href: '#about' },
-  { key: 'projects', href: '#projects' },
-  { key: 'experience', href: '#experience' },
-  { key: 'contact', href: '#contact' },
+  { key: 'about', href: '/#about' },
+  { key: 'projects', href: '/#projects' },
+  { key: 'experience', href: '/#experience' },
+  { key: 'contact', href: '/#contact' },
 ] as const;
+
+function MenuIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden
+    >
+      {open ? (
+        <path d="M6 6l12 12M18 6L6 18" />
+      ) : (
+        <>
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </>
+      )}
+    </svg>
+  );
+}
 
 export function Header() {
   const t = useTranslations('nav');
   const tHero = useTranslations('hero');
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const closeMenu = () => setMenuOpen(false);
 
   return (
-    <header className="flex items-center justify-between px-6 py-6 md:px-12">
-      <a href="#about" className="flex items-center gap-2 text-sm text-muted hover:text-accent transition-colors">
-        <span>{tHero('prompt')}</span>
-        <span className="inline-block h-4 w-2 bg-accent cursor-blink" />
-      </a>
-      <nav className="flex items-center gap-6">
-        {links.map((link) => (
-          <a
-            key={link.key}
-            href={link.href}
-            className="text-sm text-accent hover:underline underline-offset-4"
+    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
+      <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-6 md:px-12">
+        <Link
+          href="/#about"
+          onClick={closeMenu}
+          className="flex min-w-0 items-center gap-2 text-sm text-muted transition-colors hover:text-accent"
+        >
+          <span className="truncate">{tHero('prompt')}</span>
+          <span className="inline-block h-4 w-2 shrink-0 bg-accent cursor-blink" />
+        </Link>
+
+        <div className="flex shrink-0 items-center gap-3">
+          <nav className="hidden items-center gap-4 md:flex lg:gap-6">
+            {links.map((link) => (
+              <Link
+                key={link.key}
+                href={link.href}
+                className="text-sm text-accent hover:underline underline-offset-4"
+              >
+                {t(link.key)}
+              </Link>
+            ))}
+          </nav>
+          <LanguageSwitcher />
+          <button
+            type="button"
+            className="inline-flex items-center justify-center p-1 text-accent md:hidden"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-expanded={menuOpen}
+            aria-label={menuOpen ? t('closeMenu') : t('openMenu')}
           >
-            {t(link.key)}
-          </a>
-        ))}
-        <LanguageSwitcher />
-      </nav>
+            <MenuIcon open={menuOpen} />
+          </button>
+        </div>
+      </div>
+
+      {menuOpen && (
+        <nav className="border-t border-border px-4 py-4 sm:px-6 md:hidden">
+          <div className="flex flex-col gap-4">
+            {links.map((link) => (
+              <Link
+                key={link.key}
+                href={link.href}
+                onClick={closeMenu}
+                className="text-sm text-accent hover:underline underline-offset-4"
+              >
+                {t(link.key)}
+              </Link>
+            ))}
+          </div>
+        </nav>
+      )}
     </header>
   );
 }

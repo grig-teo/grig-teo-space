@@ -10,7 +10,7 @@ const locales: { code: Locale; label: string }[] = [
   { code: 'ro', label: 'RO' },
 ];
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ className = '' }: { className?: string }) {
   const locale = useLocale() as Locale;
   const router = useRouter();
   const pathname = usePathname();
@@ -22,7 +22,7 @@ export function LanguageSwitcher() {
   };
 
   return (
-    <div className="flex gap-1 border border-border px-1 py-0.5 text-xs">
+    <div className={`flex shrink-0 gap-1 border border-border px-1 py-0.5 text-xs ${className}`}>
       {locales.map(({ code, label }) => (
         <button
           key={code}

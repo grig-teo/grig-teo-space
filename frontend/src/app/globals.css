@@ -4,10 +4,12 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: clip;
 }
 
 body {
   @apply bg-background text-foreground font-mono antialiased;
+  overflow-x: clip;
 }
 
 ::selection {

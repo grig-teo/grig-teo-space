@@ -19,6 +19,7 @@ export interface Project {
   highlights: string[];
   url: string;
   tags: string[];
+  inDevelopment?: boolean;
 }
 
 export interface ExperienceItem {
@@ -26,6 +27,7 @@ export interface ExperienceItem {
   period: string;
   role: string;
   company: string;
+  companyUrl?: string;
   description: string;
 }
 
