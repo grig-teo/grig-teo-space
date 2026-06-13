@@ -13,6 +13,8 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.lib.utils import ImageReader
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     Flowable,
     Paragraph,
@@ -25,6 +27,23 @@ from reportlab.platypus import (
 MILK = colors.HexColor("#F8F6F2")
 INK = colors.HexColor("#111111")
 MUTED = colors.HexColor("#444444")
+
+FONTS_DIR = Path(__file__).resolve().parent / "fonts"
+FONT_REGULAR = "DejaVuSans"
+FONT_BOLD = "DejaVuSans-Bold"
+FONT_OBLIQUE = "DejaVuSans-Oblique"
+_FONTS_REGISTERED = False
+
+
+def register_fonts() -> None:
+    global _FONTS_REGISTERED
+    if _FONTS_REGISTERED:
+        return
+
+    pdfmetrics.registerFont(TTFont(FONT_REGULAR, str(FONTS_DIR / "DejaVuSans.ttf")))
+    pdfmetrics.registerFont(TTFont(FONT_BOLD, str(FONTS_DIR / "DejaVuSans-Bold.ttf")))
+    pdfmetrics.registerFont(TTFont(FONT_OBLIQUE, str(FONTS_DIR / "DejaVuSans-Oblique.ttf")))
+    _FONTS_REGISTERED = True
 
 DEFAULT_LANGUAGES = [
     "Russian — Native or Bilingual",
@@ -69,6 +88,7 @@ class ContactRow(Flowable):
         self.height = 62
 
     def draw(self):
+        register_fonts()
         c = self.canv
         block_w = self.width / 4
         email = self.contact["email"]
@@ -91,10 +111,10 @@ class ContactRow(Flowable):
             cx = block_w * i + block_w / 2
             drawer(c, cx, y_top, 7)
             c.setFillColor(MUTED)
-            c.setFont("Helvetica", 7.5)
+            c.setFont(FONT_REGULAR, 7.5)
             c.drawCentredString(cx, y_top - 14, label)
             c.setFillColor(INK)
-            c.setFont("Helvetica", 7)
+            c.setFont(FONT_REGULAR, 7)
             link_y = y_top - 28
             c.drawCentredString(cx, link_y, text)
             c.linkURL(
@@ -124,7 +144,7 @@ class ContactRow(Flowable):
         c.setLineWidth(0.8)
         c.roundRect(cx - r, cy - r, r * 2, r * 2, 1.5, stroke=1, fill=0)
         c.setFillColor(INK)
-        c.setFont("Helvetica-Bold", 7)
+        c.setFont(FONT_BOLD, 7)
         c.drawCentredString(cx, cy - 2.5, "in")
 
     @staticmethod
@@ -137,12 +157,13 @@ class ContactRow(Flowable):
 
 
 def build_styles():
+    register_fonts()
     base = getSampleStyleSheet()
     return {
         "name": ParagraphStyle(
             "Name",
             parent=base["Normal"],
-            fontName="Helvetica-Bold",
+            fontName=FONT_BOLD,
             fontSize=24,
             leading=28,
             textColor=INK,
@@ -151,7 +172,7 @@ def build_styles():
         "title": ParagraphStyle(
             "Title",
             parent=base["Normal"],
-            fontName="Helvetica",
+            fontName=FONT_REGULAR,
             fontSize=11,
             leading=14,
             textColor=MUTED,
@@ -160,7 +181,7 @@ def build_styles():
         "section": ParagraphStyle(
             "Section",
             parent=base["Normal"],
-            fontName="Helvetica-Bold",
+            fontName=FONT_BOLD,
             fontSize=10,
             leading=12,
             textColor=INK,
@@ -170,7 +191,7 @@ def build_styles():
         "job_title": ParagraphStyle(
             "JobTitle",
             parent=base["Normal"],
-            fontName="Helvetica-Bold",
+            fontName=FONT_BOLD,
             fontSize=10,
             leading=13,
             textColor=INK,
@@ -178,7 +199,7 @@ def build_styles():
         "job_meta": ParagraphStyle(
             "JobMeta",
             parent=base["Normal"],
-            fontName="Helvetica",
+            fontName=FONT_REGULAR,
             fontSize=9,
             leading=12,
             textColor=MUTED,
@@ -186,7 +207,7 @@ def build_styles():
         "body": ParagraphStyle(
             "Body",
             parent=base["Normal"],
-            fontName="Helvetica",
+            fontName=FONT_REGULAR,
             fontSize=9,
             leading=13,
             textColor=INK,
@@ -195,7 +216,7 @@ def build_styles():
         "bullet": ParagraphStyle(
             "Bullet",
             parent=base["Normal"],
-            fontName="Helvetica",
+            fontName=FONT_REGULAR,
             fontSize=9,
             leading=13,
             textColor=INK,
@@ -205,7 +226,7 @@ def build_styles():
         "stack": ParagraphStyle(
             "Stack",
             parent=base["Normal"],
-            fontName="Helvetica-Oblique",
+            fontName=FONT_OBLIQUE,
             fontSize=8.5,
             leading=11,
             textColor=MUTED,
@@ -214,7 +235,7 @@ def build_styles():
         "lang": ParagraphStyle(
             "Lang",
             parent=base["Normal"],
-            fontName="Helvetica",
+            fontName=FONT_REGULAR,
             fontSize=9,
             leading=13,
             textColor=INK,
@@ -223,7 +244,7 @@ def build_styles():
         "period": ParagraphStyle(
             "Period",
             parent=base["Normal"],
-            fontName="Helvetica",
+            fontName=FONT_REGULAR,
             fontSize=9,
             leading=12,
             textColor=MUTED,
