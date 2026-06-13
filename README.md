@@ -2,8 +2,7 @@
 
 Personal developer portfolio — Next.js frontend + NestJS backend.
 
-**Domain:** [grig-teo.space](https://grig-teo.space)  
-**VPS:** `168.222.140.86` (SSH alias: `vecin2vecin-vps` in `~/.ssh/config`)
+**Domain:** [grig-teo.space](https://grig-teo.space)
 
 ## Stack
 
@@ -23,11 +22,11 @@ docker compose up --build
 
 ## Deploy to VPS
 
-DNS must point to the server before HTTPS setup:
+DNS must point to your server before HTTPS setup:
 
 ```
-A     grig-teo.space      -> 168.222.140.86
-A     www.grig-teo.space  -> 168.222.140.86
+A     grig-teo.space      -> <your-server-ip>
+A     www.grig-teo.space  -> <your-server-ip>
 ```
 
 Production uses **host nginx** on the VPS (ports 80/443 are shared with other projects).
