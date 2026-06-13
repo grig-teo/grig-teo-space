@@ -1,0 +1,31 @@
+{
+  "nav": {
+    "about": "_about",
+    "projects": "_projects",
+    "experience": "_experience",
+    "contact": "_contact"
+  },
+  "hero": {
+    "prompt": "grig-teo:~$"
+  },
+  "sections": {
+    "projects": "/projects",
+    "experience": "/experience",
+    "viewAll": "toate proiectele →"
+  },
+  "footer": {
+    "downloadCv": "Descarcă CV"
+  },
+  "projectsPage": {
+    "title": "Proiecte — grig-teo",
+    "heading": "/projects",
+    "description": "Produse și platforme selectate pe care le-am proiectat, construit și lansat end-to-end.",
+    "back": "← înapoi acasă",
+    "highlights": "Repere",
+    "visit": "Vizitează proiectul"
+  },
+  "meta": {
+    "title": "grig-teo — Dezvoltator Full-Stack",
+    "description": "Portofoliu Grigore Teodoru — NestJS, Next.js, TypeScript"
+  }
+}

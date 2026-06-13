@@ -1,0 +1,31 @@
+{
+  "nav": {
+    "about": "_about",
+    "projects": "_projects",
+    "experience": "_experience",
+    "contact": "_contact"
+  },
+  "hero": {
+    "prompt": "grig-teo:~$"
+  },
+  "sections": {
+    "projects": "/projects",
+    "experience": "/experience",
+    "viewAll": "view all projects →"
+  },
+  "footer": {
+    "downloadCv": "Download CV"
+  },
+  "projectsPage": {
+    "title": "Projects — grig-teo",
+    "heading": "/projects",
+    "description": "Selected products and platforms I designed, built, and shipped end to end.",
+    "back": "← back home",
+    "highlights": "Highlights",
+    "visit": "Visit project"
+  },
+  "meta": {
+    "title": "grig-teo — Full-Stack Developer",
+    "description": "Portfolio of Grigore Teodoru — NestJS, Next.js, TypeScript"
+  }
+}
