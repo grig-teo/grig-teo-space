@@ -74,17 +74,3 @@ export function BlogList({ posts, locale }: { posts: BlogPost[]; locale: string 
     </div>
   );
 }
-
-export function BlogArticleBody({ body }: { body: string }) {
-  const paragraphs = body.split(/\n\n+/).filter((part) => part.trim());
-
-  return (
-    <div className="space-y-4">
-      {paragraphs.map((paragraph, index) => (
-        <p key={index} className="text-sm leading-relaxed text-muted whitespace-pre-wrap">
-          {paragraph}
-        </p>
-      ))}
-    </div>
-  );
-}

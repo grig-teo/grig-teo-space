@@ -159,3 +159,22 @@ export async function adminSaveBlog(blog: BlogPost[]): Promise<void> {
   });
   if (!res.ok) throw new Error('Failed to save blog');
 }
+
+export async function adminUploadMedia(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const token = getAdminToken();
+  const res = await fetch(`${apiBase()}/api/admin/upload`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to upload file');
+  }
+
+  const data = (await res.json()) as { url: string };
+  return data.url;
+}

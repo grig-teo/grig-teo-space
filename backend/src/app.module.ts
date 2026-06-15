@@ -6,6 +6,7 @@ import { CvModule } from './cv/cv.module';
 import { SiteContent } from './entities/site-content.entity';
 import { PortfolioController } from './portfolio.controller';
 import { PortfolioService } from './portfolio.service';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { PortfolioService } from './portfolio.service';
     }),
     ContentModule,
     CvModule,
+    StorageModule,
     AdminModule,
   ],
   controllers: [PortfolioController],

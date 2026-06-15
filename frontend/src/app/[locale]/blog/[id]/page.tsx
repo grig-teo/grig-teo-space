@@ -1,6 +1,6 @@
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import { BlogArticleBody } from '@/components/Blog';
+import { BlogBodyViewer } from '@/components/BlogBodyViewer';
 import { Link } from '@/i18n/navigation';
 import { getBlogPost, getProfile } from '@/lib/api';
 import type { Locale } from '@/lib/api';
@@ -87,7 +87,7 @@ export default async function BlogArticlePage({ params }: Props) {
           ) : null}
 
           <div className="mt-8 border-t border-border pt-8">
-            <BlogArticleBody body={post.body} />
+            <BlogBodyViewer key={post.body} body={post.body} />
           </div>
         </div>
       </section>

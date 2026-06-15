@@ -16,6 +16,7 @@ import {
   type Project,
   type SiteContent,
 } from '@/lib/admin-api';
+import { BlogBodyEditor } from '@/components/admin/BlogBodyEditor';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -528,18 +529,19 @@ export function AdminEditor() {
                 }
                 multiline
               />
-              <Field
-                label={`Body (${locale})`}
-                value={blogPost.body[locale]}
-                onChange={(value) =>
-                  updateBlogPost(selectedBlog, (item) => ({
-                    ...item,
-                    body: { ...item.body, [locale]: value },
-                  }))
-                }
-                multiline
-                rows={14}
-              />
+              <label className="block text-sm">
+                Body ({locale})
+                <BlogBodyEditor
+                  key={`${blogPost.id}-${locale}`}
+                  value={blogPost.body[locale]}
+                  onChange={(value) =>
+                    updateBlogPost(selectedBlog, (item) => ({
+                      ...item,
+                      body: { ...item.body, [locale]: value },
+                    }))
+                  }
+                />
+              </label>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"

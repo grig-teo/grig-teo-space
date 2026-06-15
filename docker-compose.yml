@@ -16,6 +16,25 @@ services:
       timeout: 5s
       retries: 10
 
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    volumes:
+      - minio_data:/data
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:9000/minio/health/live || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 15s
+
   backend:
     build: ./backend
     ports:
@@ -26,8 +45,17 @@ services:
       DATABASE_URL: postgresql://grigteo:${POSTGRES_PASSWORD:-devpassword}@db:5432/grigteo
       ADMIN_ACCESS_KEY: ${ADMIN_ACCESS_KEY:-dev-access-key}
       JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret}
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: 'false'
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_BUCKET: ${MINIO_BUCKET:-grig-teo-media}
+      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9000/grig-teo-media}
     depends_on:
       db:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     healthcheck:
       test:
@@ -56,3 +84,4 @@ services:
 
 volumes:
   postgres_data:
+  minio_data:

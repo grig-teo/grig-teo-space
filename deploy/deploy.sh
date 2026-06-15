@@ -84,6 +84,23 @@ elif grep -q "^ADMIN_ACCESS_KEY=change-me\$" .env.production 2>/dev/null || ! gr
   ensure_env ADMIN_ACCESS_KEY "\${ADMIN_ACCESS_KEY}"
 fi
 
+if [ -n "${MINIO_ROOT_USER}" ]; then
+  set_env MINIO_ROOT_USER "${MINIO_ROOT_USER}"
+elif grep -q "^MINIO_ROOT_USER=change-me\$" .env.production 2>/dev/null || ! grep -q "^MINIO_ROOT_USER=" .env.production 2>/dev/null; then
+  MINIO_ROOT_USER="grigteo-minio"
+  ensure_env MINIO_ROOT_USER "\${MINIO_ROOT_USER}"
+fi
+
+if [ -n "${MINIO_ROOT_PASSWORD}" ]; then
+  set_env MINIO_ROOT_PASSWORD "${MINIO_ROOT_PASSWORD}"
+elif grep -q "^MINIO_ROOT_PASSWORD=change-me\$" .env.production 2>/dev/null || ! grep -q "^MINIO_ROOT_PASSWORD=" .env.production 2>/dev/null; then
+  MINIO_ROOT_PASSWORD="\$(openssl rand -hex 24)"
+  ensure_env MINIO_ROOT_PASSWORD "\${MINIO_ROOT_PASSWORD}"
+fi
+
+ensure_env MINIO_BUCKET "grig-teo-media"
+set_env MINIO_PUBLIC_URL "https://${DOMAIN}/media"
+
 docker compose --env-file .env.production -f ${COMPOSE_FILE} up -d --build --remove-orphans
 docker compose --env-file .env.production -f ${COMPOSE_FILE} ps
 

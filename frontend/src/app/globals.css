@@ -30,3 +30,26 @@ body {
 .cursor-blink {
   animation: blink 1s step-end infinite;
 }
+
+.blog-body-viewer .bn-editor,
+.admin-blocknote .bn-editor {
+  background: transparent;
+  padding-inline: 0;
+}
+
+.blog-body-viewer .bn-block-group,
+.admin-blocknote .bn-block-group {
+  font-family: inherit;
+}
+
+.blog-body-viewer .bn-default-styles,
+.admin-blocknote .bn-default-styles {
+  font-size: 0.875rem;
+  line-height: 1.625;
+}
+
+.blog-body-viewer .bn-container,
+.admin-blocknote .bn-container {
+  --bn-colors-editor-background: transparent;
+  --bn-colors-editor-text: #111111;
+}
