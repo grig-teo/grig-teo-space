@@ -41,10 +41,20 @@ export interface Profile {
   contact: ContactInfo;
 }
 
+export interface BlogPost {
+  id: string;
+  title: LocalizedString;
+  excerpt: LocalizedString;
+  body: LocalizedString;
+  publishedAt: string;
+  sortOrder?: number;
+}
+
 export interface SiteContent {
   profile: Profile;
   projects: Project[];
   experience: ExperienceItem[];
+  blog: BlogPost[];
 }
 
 const TOKEN_KEY = 'admin_token';
@@ -139,4 +149,13 @@ export async function adminSaveExperience(experience: ExperienceItem[]): Promise
   if (!res.ok) throw new Error('Failed to save experience');
   const data = (await res.json()) as { cvRebuilt?: boolean };
   return data.cvRebuilt ?? false;
+}
+
+export async function adminSaveBlog(blog: BlogPost[]): Promise<void> {
+  const res = await fetch(`${apiBase()}/api/admin/content/blog`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(blog),
+  });
+  if (!res.ok) throw new Error('Failed to save blog');
 }

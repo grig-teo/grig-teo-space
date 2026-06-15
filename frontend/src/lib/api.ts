@@ -38,6 +38,17 @@ export interface ExperienceDetail extends ExperienceItem {
   stack?: string;
 }
 
+export interface BlogPost {
+  id: string;
+  title: string;
+  excerpt: string;
+  publishedAt: string;
+}
+
+export interface BlogPostDetail extends BlogPost {
+  body: string;
+}
+
 function publicApiBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
   return configured ?? '';
@@ -90,6 +101,24 @@ export async function getExperienceIds(): Promise<string[]> {
   const res = await fetch(`${prefix}/experience/ids`, { next: { revalidate: 60 } });
   if (!res.ok) {
     throw new Error(`API error: ${res.status} /experience/ids`);
+  }
+  return res.json() as Promise<string[]>;
+}
+
+export function getBlogPosts(locale: Locale) {
+  return fetchJson<BlogPost[]>('/blog', locale);
+}
+
+export function getBlogPost(id: string, locale: Locale) {
+  return fetchJson<BlogPostDetail>(`/blog/${id}`, locale, true);
+}
+
+export async function getBlogIds(): Promise<string[]> {
+  const base = apiBaseUrl();
+  const prefix = base ? `${base}/api` : '/api';
+  const res = await fetch(`${prefix}/blog/ids`, { next: { revalidate: 60 } });
+  if (!res.ok) {
+    return [];
   }
   return res.json() as Promise<string[]>;
 }

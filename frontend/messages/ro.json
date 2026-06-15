@@ -1,6 +1,7 @@
 {
   "nav": {
     "about": "_about",
+    "blog": "_blog",
     "projects": "_projects",
     "experience": "_experience",
     "contact": "_contact",
@@ -11,9 +12,11 @@
     "prompt": "grig-teo:~$"
   },
   "sections": {
+    "blog": "/blog",
     "projects": "/projects",
     "experience": "/experience",
     "viewAll": "toate proiectele →",
+    "viewAllArticles": "toate articolele →",
     "readMore": "citește mai mult →"
   },
   "footer": {
@@ -42,6 +45,15 @@
     "back": "← înapoi la experiență",
     "highlights": "Repere",
     "stack": "Stack tehnologic"
+  },
+  "blogPage": {
+    "title": "Blog | grig-teo",
+    "heading": "/blog",
+    "description": "Note despre produse, sisteme realtime și livrare full-stack.",
+    "back": "← înapoi acasă",
+    "backToArticles": "← înapoi la articole",
+    "articleTitle": "{title} | grig-teo",
+    "empty": "Niciun articol publicat încă."
   },
   "meta": {
     "title": "Grigore Teodoru | Dezvoltator Full-Stack Remote",

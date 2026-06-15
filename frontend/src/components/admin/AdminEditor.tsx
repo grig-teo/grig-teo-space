@@ -2,10 +2,12 @@
 
 import {
   adminGetContent,
+  adminSaveBlog,
   adminSaveExperience,
   adminSaveProfile,
   adminSaveProjects,
   clearAdminToken,
+  type BlogPost,
   type ExperienceItem,
   type Locale,
   type LocalizedList,
@@ -20,7 +22,7 @@ import { useCallback, useEffect, useState } from 'react';
 const locales: Locale[] = ['en', 'ru', 'ro'];
 const localeLabels: Record<Locale, string> = { en: 'English', ru: 'Russian', ro: 'Romanian' };
 
-type Tab = 'profile' | 'projects' | 'experience';
+type Tab = 'profile' | 'blog' | 'projects' | 'experience';
 
 function linesToList(text: string): string[] {
   return text
@@ -78,16 +80,29 @@ function newExperienceItem(): ExperienceItem {
   };
 }
 
+function newBlogPost(): BlogPost {
+  const suffix = Date.now().toString(36);
+  return {
+    id: `article-${suffix}`,
+    title: emptyLocalizedString(),
+    excerpt: emptyLocalizedString(),
+    body: emptyLocalizedString(),
+    publishedAt: new Date().toISOString().slice(0, 10),
+  };
+}
+
 function Field({
   label,
   value,
   onChange,
   multiline,
+  rows = 4,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   multiline?: boolean;
+  rows?: number;
 }) {
   const className =
     'mt-1 w-full border border-border/60 bg-transparent px-3 py-2 text-sm outline-none focus:border-accent';
@@ -95,7 +110,7 @@ function Field({
     <label className="block text-sm">
       {label}
       {multiline ? (
-        <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={4} className={className} />
+        <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows} className={className} />
       ) : (
         <input value={value} onChange={(e) => onChange(e.target.value)} className={className} />
       )}
@@ -110,6 +125,7 @@ export function AdminEditor() {
   const [content, setContent] = useState<SiteContent | null>(null);
   const [selectedProject, setSelectedProject] = useState(0);
   const [selectedExperience, setSelectedExperience] = useState(0);
+  const [selectedBlog, setSelectedBlog] = useState(0);
   const [status, setStatus] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -118,7 +134,7 @@ export function AdminEditor() {
     setError('');
     try {
       const data = await adminGetContent();
-      setContent(data);
+      setContent({ ...data, blog: data.blog ?? [] });
     } catch {
       setError('Failed to load content. Try signing in again.');
     }
@@ -175,6 +191,20 @@ export function AdminEditor() {
     }
   }
 
+  async function saveBlog() {
+    if (!content) return;
+    setSaving(true);
+    setStatus('');
+    try {
+      await adminSaveBlog(content.blog);
+      setStatus('Blog saved.');
+    } catch {
+      setStatus('Failed to save blog.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function addProject() {
     setContent((prev) => {
       if (!prev) return prev;
@@ -224,6 +254,30 @@ export function AdminEditor() {
     });
   }
 
+  function addBlogPost() {
+    setContent((prev) => {
+      if (!prev) return prev;
+      const blog = [newBlogPost(), ...prev.blog];
+      setSelectedBlog(0);
+      return { ...prev, blog };
+    });
+  }
+
+  function removeBlogPost(index: number) {
+    if (!content) return;
+    const post = content.blog[index];
+    const label = post.title.en || post.id;
+    if (!window.confirm(`Remove article "${label}"? Click Save blog to apply.`)) {
+      return;
+    }
+    setContent((prev) => {
+      if (!prev) return prev;
+      const blog = prev.blog.filter((_, i) => i !== index);
+      setSelectedBlog(Math.max(0, Math.min(index, blog.length - 1)));
+      return { ...prev, blog };
+    });
+  }
+
   function updateProfile(updater: (profile: Profile) => Profile) {
     setContent((prev) => (prev ? { ...prev, profile: updater(prev.profile) } : prev));
   }
@@ -243,6 +297,15 @@ export function AdminEditor() {
       const experience = [...prev.experience];
       experience[index] = updater(experience[index]);
       return { ...prev, experience };
+    });
+  }
+
+  function updateBlogPost(index: number, updater: (post: BlogPost) => BlogPost) {
+    setContent((prev) => {
+      if (!prev) return prev;
+      const blog = [...prev.blog];
+      blog[index] = updater(blog[index]);
+      return { ...prev, blog };
     });
   }
 
@@ -267,6 +330,7 @@ export function AdminEditor() {
 
   const project = content.projects[selectedProject];
   const experienceItem = content.experience[selectedExperience];
+  const blogPost = content.blog[selectedBlog];
 
   return (
     <main className="min-h-screen p-4 md:p-8 max-w-6xl mx-auto">
@@ -285,7 +349,7 @@ export function AdminEditor() {
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        {(['profile', 'projects', 'experience'] as Tab[]).map((item) => (
+        {(['profile', 'blog', 'projects', 'experience'] as Tab[]).map((item) => (
           <button
             key={item}
             type="button"
@@ -397,6 +461,106 @@ export function AdminEditor() {
           >
             Save profile
           </button>
+        </section>
+      ) : null}
+
+      {tab === 'blog' ? (
+        <section className="space-y-4 border border-border/60 p-4 md:p-6">
+          <div className="flex flex-wrap items-center gap-2">
+            {content.blog.map((item, index) => (
+              <button
+                key={`${item.id}-${index}`}
+                type="button"
+                onClick={() => setSelectedBlog(index)}
+                className={`px-3 py-1 text-xs border ${
+                  selectedBlog === index ? 'border-accent text-accent' : 'border-border/60 text-muted'
+                }`}
+              >
+                {item.title.en || item.id}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={addBlogPost}
+              className="px-3 py-1 text-xs border border-accent/60 text-accent"
+            >
+              + Add article
+            </button>
+          </div>
+
+          {blogPost ? (
+            <>
+              <Field
+                label="ID (used in URLs, e.g. /blog/my-article)"
+                value={blogPost.id}
+                onChange={(value) =>
+                  updateBlogPost(selectedBlog, (item) => ({
+                    ...item,
+                    id: slugify(value) || item.id,
+                  }))
+                }
+              />
+              <Field
+                label="Published date (YYYY-MM-DD)"
+                value={blogPost.publishedAt}
+                onChange={(value) =>
+                  updateBlogPost(selectedBlog, (item) => ({ ...item, publishedAt: value }))
+                }
+              />
+              <Field
+                label={`Title (${locale})`}
+                value={blogPost.title[locale]}
+                onChange={(value) =>
+                  updateBlogPost(selectedBlog, (item) => ({
+                    ...item,
+                    title: { ...item.title, [locale]: value },
+                  }))
+                }
+              />
+              <Field
+                label={`Excerpt (${locale})`}
+                value={blogPost.excerpt[locale]}
+                onChange={(value) =>
+                  updateBlogPost(selectedBlog, (item) => ({
+                    ...item,
+                    excerpt: { ...item.excerpt, [locale]: value },
+                  }))
+                }
+                multiline
+              />
+              <Field
+                label={`Body (${locale})`}
+                value={blogPost.body[locale]}
+                onChange={(value) =>
+                  updateBlogPost(selectedBlog, (item) => ({
+                    ...item,
+                    body: { ...item.body, [locale]: value },
+                  }))
+                }
+                multiline
+                rows={14}
+              />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={saveBlog}
+                  disabled={saving}
+                  className="border border-accent/60 px-4 py-2 text-sm hover:bg-accent/10 disabled:opacity-50"
+                >
+                  Save blog
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeBlogPost(selectedBlog)}
+                  className="border border-red-500/60 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10"
+                >
+                  Remove article
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted">No articles yet. Click “Add article” to create one.</p>
+          )}
         </section>
       ) : null}
 

@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ContentService } from '../content/content.service';
-import type { ExperienceItem, Profile, Project } from '../types';
+import type { BlogPost, ExperienceItem, Profile, Project } from '../types';
 import { AdminAuthGuard } from './admin-auth.guard';
 
 @Controller('admin/auth')
@@ -63,5 +63,11 @@ export class AdminContentController {
   async updateExperience(@Body() experience: ExperienceItem[]) {
     await this.content.updateExperience(experience);
     return { experience, cvRebuilt: true };
+  }
+
+  @Put('blog')
+  async updateBlog(@Body() blog: BlogPost[]) {
+    const result = await this.content.updateBlogPosts(blog);
+    return { blog: result };
   }
 }

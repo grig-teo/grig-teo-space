@@ -40,3 +40,12 @@ export interface Profile {
   location: LocalizedString;
   contact: ContactInfo;
 }
+
+export interface BlogPost {
+  id: string;
+  title: LocalizedString;
+  excerpt: LocalizedString;
+  body: LocalizedString;
+  publishedAt: string;
+  sortOrder?: number;
+}

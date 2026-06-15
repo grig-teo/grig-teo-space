@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ContentService } from './content/content.service';
 import { CvService } from './cv/cv.service';
-import type { ExperienceItem, Locale, Profile, Project } from './types';
+import type { BlogPost, ExperienceItem, Locale, Profile, Project } from './types';
 
 @Injectable()
 export class PortfolioService {
@@ -28,6 +28,18 @@ export class PortfolioService {
 
   async getExperienceIds(): Promise<string[]> {
     return this.content.getExperienceIds();
+  }
+
+  async getBlogPosts(): Promise<BlogPost[]> {
+    return this.content.getBlogPosts();
+  }
+
+  async getBlogPostById(id: string): Promise<BlogPost | undefined> {
+    return this.content.getBlogPostById(id);
+  }
+
+  async getBlogIds(): Promise<string[]> {
+    return this.content.getBlogIds();
   }
 
   async getCvStream(locale: Locale) {

@@ -1,6 +1,7 @@
 {
   "nav": {
     "about": "_about",
+    "blog": "_blog",
     "projects": "_projects",
     "experience": "_experience",
     "contact": "_contact",
@@ -11,9 +12,11 @@
     "prompt": "grig-teo:~$"
   },
   "sections": {
+    "blog": "/blog",
     "projects": "/projects",
     "experience": "/experience",
     "viewAll": "view all projects →",
+    "viewAllArticles": "view all articles →",
     "readMore": "read more →"
   },
   "footer": {
@@ -42,6 +45,15 @@
     "back": "← back to experience",
     "highlights": "Highlights",
     "stack": "Tech stack"
+  },
+  "blogPage": {
+    "title": "Blog | grig-teo",
+    "heading": "/blog",
+    "description": "Notes on building products, real-time systems, and full-stack delivery.",
+    "back": "← back home",
+    "backToArticles": "← back to articles",
+    "articleTitle": "{title} | grig-teo",
+    "empty": "No articles published yet."
   },
   "meta": {
     "title": "Gregory Theodor | Remote Full-Stack Developer",

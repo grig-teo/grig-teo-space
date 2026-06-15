@@ -1,18 +1,30 @@
 import type { MetadataRoute } from 'next';
-import { getExperienceIds } from '@/lib/api';
+import { getBlogIds, getExperienceIds } from '@/lib/api';
 import { routing } from '@/i18n/routing';
 
 const baseUrl = 'https://grig-teo.space';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let experienceIds: string[] = [];
+  let blogIds: string[] = [];
   try {
     experienceIds = await getExperienceIds();
   } catch {
     experienceIds = [];
   }
+  try {
+    blogIds = await getBlogIds();
+  } catch {
+    blogIds = [];
+  }
 
-  const paths = ['', '/projects', ...experienceIds.map((id) => `/experience/${id}`)];
+  const paths = [
+    '',
+    '/blog',
+    '/projects',
+    ...blogIds.map((id) => `/blog/${id}`),
+    ...experienceIds.map((id) => `/experience/${id}`),
+  ];
 
   return routing.locales.flatMap((locale) =>
     paths.map((path) => ({

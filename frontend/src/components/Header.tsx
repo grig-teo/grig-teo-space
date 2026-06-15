@@ -5,8 +5,9 @@ import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { LanguageSwitcher } from './LanguageSwitcher';
 
-const links = [
+const baseLinks = [
   { key: 'about', href: '/#about' },
+  { key: 'blog', href: '/#blog' },
   { key: 'projects', href: '/#projects' },
   { key: 'experience', href: '/#experience' },
   { key: 'contact', href: '/#contact' },
@@ -34,10 +35,11 @@ function MenuIcon({ open }: { open: boolean }) {
   );
 }
 
-export function Header() {
+export function Header({ showBlog = true }: { showBlog?: boolean }) {
   const t = useTranslations('nav');
   const tHero = useTranslations('hero');
   const [menuOpen, setMenuOpen] = useState(false);
+  const links = showBlog ? baseLinks : baseLinks.filter((link) => link.key !== 'blog');
 
   const closeMenu = () => setMenuOpen(false);
 

@@ -72,6 +72,39 @@ export class PortfolioController {
     return this.portfolio.getExperienceIds();
   }
 
+  @Get('blog')
+  async blog(@Query('locale') locale?: string) {
+    const loc = this.portfolio.resolveLocale(locale);
+    const posts = await this.portfolio.getBlogPosts();
+    return posts.map((post) => ({
+      id: post.id,
+      title: this.portfolio.pick(post.title, loc),
+      excerpt: this.portfolio.pick(post.excerpt, loc),
+      publishedAt: post.publishedAt,
+    }));
+  }
+
+  @Get('blog/ids')
+  async blogIds() {
+    return this.portfolio.getBlogIds();
+  }
+
+  @Get('blog/:id')
+  async blogDetail(@Param('id') id: string, @Query('locale') locale?: string) {
+    const post = await this.portfolio.getBlogPostById(id);
+    if (!post) {
+      throw new NotFoundException('Blog post not found');
+    }
+    const loc = this.portfolio.resolveLocale(locale);
+    return {
+      id: post.id,
+      title: this.portfolio.pick(post.title, loc),
+      excerpt: this.portfolio.pick(post.excerpt, loc),
+      body: this.portfolio.pick(post.body, loc),
+      publishedAt: post.publishedAt,
+    };
+  }
+
   @Get('experience/:id')
   async experienceDetail(@Param('id') id: string, @Query('locale') locale?: string) {
     const item = await this.portfolio.getExperienceById(id);

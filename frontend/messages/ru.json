@@ -1,6 +1,7 @@
 {
   "nav": {
     "about": "_about",
+    "blog": "_blog",
     "projects": "_projects",
     "experience": "_experience",
     "contact": "_contact",
@@ -11,9 +12,11 @@
     "prompt": "grig-teo:~$"
   },
   "sections": {
+    "blog": "/blog",
     "projects": "/projects",
     "experience": "/experience",
     "viewAll": "все проекты →",
+    "viewAllArticles": "все статьи →",
     "readMore": "подробнее →"
   },
   "footer": {
@@ -42,6 +45,15 @@
     "back": "← назад к опыту",
     "highlights": "Ключевое",
     "stack": "Стек"
+  },
+  "blogPage": {
+    "title": "Блог | grig-teo",
+    "heading": "/blog",
+    "description": "Заметки о продуктах, realtime-системах и full-stack разработке.",
+    "back": "← на главную",
+    "backToArticles": "← ко всем статьям",
+    "articleTitle": "{title} | grig-teo",
+    "empty": "Статьи пока не опубликованы."
   },
   "meta": {
     "title": "Григорий Федоров | Remote Full-Stack разработчик",

@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CvService } from '../cv/cv.service';
 import { ContentKey, SiteContent } from '../entities/site-content.entity';
-import type { ExperienceItem, Profile, Project } from '../types';
+import type { BlogPost, ExperienceItem, Profile, Project } from '../types';
 
 @Injectable()
 export class ContentService {
@@ -36,17 +36,37 @@ export class ContentService {
     return items.map((item) => item.id);
   }
 
+  async getBlogPosts(): Promise<BlogPost[]> {
+    const row = await this.repo.findOne({ where: { key: 'blog' } });
+    if (!row?.data) {
+      return [];
+    }
+    return this.sortBlogPosts(row.data as BlogPost[]);
+  }
+
+  async getBlogPostById(id: string): Promise<BlogPost | undefined> {
+    const posts = await this.getBlogPosts();
+    return posts.find((post) => post.id === id);
+  }
+
+  async getBlogIds(): Promise<string[]> {
+    const posts = await this.getBlogPosts();
+    return posts.map((post) => post.id);
+  }
+
   async getAllContent(): Promise<{
     profile: Profile;
     projects: Project[];
     experience: ExperienceItem[];
+    blog: BlogPost[];
   }> {
-    const [profile, projects, experience] = await Promise.all([
+    const [profile, projects, experience, blog] = await Promise.all([
       this.getProfile(),
       this.getProjects(),
       this.getExperience(),
+      this.getBlogPosts(),
     ]);
-    return { profile, projects, experience };
+    return { profile, projects, experience, blog };
   }
 
   async rebuildCv(): Promise<void> {
@@ -82,6 +102,17 @@ export class ContentService {
     return experience;
   }
 
+  async updateBlogPosts(posts: BlogPost[]): Promise<BlogPost[]> {
+    const normalized = this.sortBlogPosts(
+      posts.map((post, index, arr) => ({
+        ...post,
+        sortOrder: post.sortOrder ?? arr.length - index,
+      })),
+    );
+    await this.saveJson('blog', normalized);
+    return normalized;
+  }
+
   private async getJson<T>(key: ContentKey): Promise<T> {
     const row = await this.repo.findOne({ where: { key } });
     if (!row?.data) {
@@ -92,6 +123,22 @@ export class ContentService {
 
   private async saveJson(key: ContentKey, data: unknown): Promise<void> {
     await this.repo.save({ key, data });
+  }
+
+  private sortBlogPosts(posts: BlogPost[]): BlogPost[] {
+    return [...posts]
+      .map((post, index) => ({
+        ...post,
+        sortOrder: post.sortOrder ?? index,
+      }))
+      .sort((a, b) => {
+        const dateA = Date.parse(a.publishedAt) || 0;
+        const dateB = Date.parse(b.publishedAt) || 0;
+        if (dateB !== dateA) {
+          return dateB - dateA;
+        }
+        return (b.sortOrder ?? 0) - (a.sortOrder ?? 0);
+      });
   }
 
   private sortProjects(projects: Project[]): Project[] {
