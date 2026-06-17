@@ -1,6 +1,7 @@
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
+import { RomanianSpotifyPlayer } from '@/components/RomanianSpotifyPlayer';
 import { routing } from '@/i18n/routing';
 import '../globals.css';
 
@@ -71,7 +72,10 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <html lang={locale}>
       <body>
-        <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
+        <NextIntlClientProvider messages={messages}>
+          <RomanianSpotifyPlayer locale={locale} />
+          {children}
+        </NextIntlClientProvider>
       </body>
     </html>
   );

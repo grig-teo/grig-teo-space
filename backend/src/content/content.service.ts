@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CvService } from '../cv/cv.service';
 import { ContentKey, SiteContent } from '../entities/site-content.entity';
-import type { BlogPost, ExperienceItem, Profile, Project } from '../types';
+import type { BlogPost, ExperienceItem, LocalizedString, Profile, Project } from '../types';
 
 @Injectable()
 export class ContentService {
@@ -19,7 +19,7 @@ export class ContentService {
 
   async getProjects(): Promise<Project[]> {
     const projects = await this.getJson<Project[]>('projects');
-    return this.sortProjects(projects);
+    return this.sortProjects(projects.map((project) => this.normalizeProject(project)));
   }
 
   async getExperience(): Promise<ExperienceItem[]> {
@@ -87,7 +87,7 @@ export class ContentService {
   async updateProjects(projects: Project[]): Promise<Project[]> {
     const normalized = this.sortProjects(
       projects.map((project, index, arr) => ({
-        ...project,
+        ...this.normalizeProject(project),
         sortOrder: arr.length - index,
       })),
     );
@@ -123,6 +123,19 @@ export class ContentService {
 
   private async saveJson(key: ContentKey, data: unknown): Promise<void> {
     await this.repo.save({ key, data });
+  }
+
+  private normalizeProject(project: Project): Project {
+    const url = project.url as LocalizedString | string;
+    const normalizedUrl: LocalizedString =
+      typeof url === 'string'
+        ? { en: url, ru: url, ro: url }
+        : {
+            en: url.en ?? '',
+            ru: url.ru ?? '',
+            ro: url.ro ?? '',
+          };
+    return { ...project, url: normalizedUrl };
   }
 
   private sortBlogPosts(posts: BlogPost[]): BlogPost[] {

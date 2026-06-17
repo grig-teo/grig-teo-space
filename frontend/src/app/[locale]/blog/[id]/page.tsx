@@ -73,15 +73,17 @@ export default async function BlogArticlePage({ params }: Props) {
       <Header />
       <section className="px-4 py-8 sm:px-6 sm:py-12 md:px-12">
         <div className="mx-auto max-w-3xl">
-          <Link
-            href="/blog"
-            className="mb-6 inline-block text-sm text-accent hover:underline underline-offset-4 sm:mb-8"
-          >
-            {t('backToArticles')}
-          </Link>
+          <div className="mb-8 flex flex-col gap-4 sm:mb-10">
+            <Link
+              href="/blog"
+              className="inline-block text-sm text-accent hover:underline underline-offset-4"
+            >
+              {t('backToArticles')}
+            </Link>
 
-          <time className="text-xs text-muted">{formatDate(post.publishedAt, locale)}</time>
-          <h1 className="mt-3 text-2xl font-bold leading-tight sm:text-3xl">{post.title}</h1>
+            <time className="text-xs text-muted">{formatDate(post.publishedAt, locale)}</time>
+          </div>
+          <h1 className="text-2xl font-bold leading-tight sm:text-3xl">{post.title}</h1>
           {post.excerpt ? (
             <p className="mt-6 text-sm leading-relaxed text-muted">{post.excerpt}</p>
           ) : null}

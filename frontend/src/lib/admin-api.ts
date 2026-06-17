@@ -9,7 +9,7 @@ export interface Project {
   description: LocalizedString;
   overview: LocalizedString;
   highlights: LocalizedList;
-  url: string;
+  url: LocalizedString;
   tags: string[];
   inDevelopment?: boolean;
   sortOrder?: number;

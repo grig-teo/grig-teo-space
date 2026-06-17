@@ -31,25 +31,70 @@ body {
   animation: blink 1s step-end infinite;
 }
 
-.blog-body-viewer .bn-editor,
-.admin-blocknote .bn-editor {
+.blog-body-viewer .bn-editor {
   background: transparent;
   padding-inline: 0;
 }
 
-.blog-body-viewer .bn-block-group,
-.admin-blocknote .bn-block-group {
-  font-family: inherit;
+.admin-blocknote .bn-editor {
+  min-height: 32rem;
+  background: #000000;
+  padding-inline: 0;
 }
 
-.blog-body-viewer .bn-default-styles,
+.blog-body-viewer .bn-block-group {
+  font-family: inherit;
+  color: #ffffff;
+}
+
+.admin-blocknote .bn-block-group {
+  font-family: inherit;
+  color: #ffffff;
+}
+
+.blog-body-viewer .bn-default-styles {
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: #ffffff;
+}
+
 .admin-blocknote .bn-default-styles {
   font-size: 0.875rem;
   line-height: 1.625;
+  color: #ffffff;
 }
 
-.blog-body-viewer .bn-container,
-.admin-blocknote .bn-container {
+.blog-body-viewer .bn-container {
   --bn-colors-editor-background: transparent;
-  --bn-colors-editor-text: #111111;
+  --bn-colors-editor-text: #ffffff;
+  --bn-colors-side-menu: #888888;
+  --bn-colors-border: #333333;
+  --bn-colors-hovered-background: #1a1a1a;
+  --bn-colors-selected-background: #262626;
+}
+
+.blog-body-viewer .bn-inline-content {
+  color: #ffffff;
+}
+
+.admin-blocknote .bn-container {
+  --bn-colors-editor-background: #000000;
+  --bn-colors-editor-text: #ffffff;
+  --bn-colors-menu-background: #111111;
+  --bn-colors-menu-text: #ffffff;
+  --bn-colors-tooltip-background: #111111;
+  --bn-colors-tooltip-text: #ffffff;
+  --bn-colors-hovered-background: #1a1a1a;
+  --bn-colors-selected-background: #262626;
+  --bn-colors-disabled-background: #1a1a1a;
+  --bn-colors-disabled-text: #666666;
+  --bn-colors-shadow: rgba(0, 0, 0, 0.4);
+  --bn-colors-border: #333333;
+  --bn-colors-side-menu: #888888;
+  min-height: 32rem;
+  background: #000000;
+}
+
+.admin-blocknote .bn-inline-content {
+  color: #ffffff;
 }

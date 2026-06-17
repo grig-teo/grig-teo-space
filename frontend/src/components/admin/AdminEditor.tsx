@@ -18,12 +18,31 @@ import {
 } from '@/lib/admin-api';
 import { BlogBodyEditor } from '@/components/admin/BlogBodyEditor';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 const locales: Locale[] = ['en', 'ru', 'ro'];
 const localeLabels: Record<Locale, string> = { en: 'English', ru: 'Russian', ro: 'Romanian' };
+const AUTOSAVE_DELAY_MS = 1500;
 
 type Tab = 'profile' | 'blog' | 'projects' | 'experience';
+type AutosaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
+
+function getTabSnapshot(content: SiteContent, tab: Tab): string {
+  switch (tab) {
+    case 'profile':
+      return JSON.stringify(content.profile);
+    case 'blog':
+      return JSON.stringify(content.blog);
+    case 'projects':
+      return JSON.stringify(content.projects);
+    case 'experience':
+      return JSON.stringify(content.experience);
+  }
+}
+
+function emptySnapshots(): Record<Tab, string> {
+  return { profile: '', blog: '', projects: '', experience: '' };
+}
 
 function linesToList(text: string): string[] {
   return text
@@ -52,6 +71,21 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
+function normalizeProject(project: Project & { url?: LocalizedString | string }): Project {
+  const url = project.url;
+  if (typeof url === 'string') {
+    return { ...project, url: { en: url, ru: url, ro: url } };
+  }
+  return {
+    ...project,
+    url: {
+      en: url.en ?? '',
+      ru: url.ru ?? '',
+      ro: url.ro ?? '',
+    },
+  };
+}
+
 function newProject(): Project {
   const suffix = Date.now().toString(36);
   return {
@@ -60,7 +94,7 @@ function newProject(): Project {
     description: emptyLocalizedString(),
     overview: emptyLocalizedString(),
     highlights: emptyLocalizedList(),
-    url: '',
+    url: emptyLocalizedString(),
     tags: [],
     inDevelopment: false,
   };
@@ -127,15 +161,37 @@ export function AdminEditor() {
   const [selectedProject, setSelectedProject] = useState(0);
   const [selectedExperience, setSelectedExperience] = useState(0);
   const [selectedBlog, setSelectedBlog] = useState(0);
-  const [status, setStatus] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>('idle');
   const [error, setError] = useState('');
+  const [ready, setReady] = useState(false);
+
+  const contentRef = useRef<SiteContent | null>(null);
+  const savedSnapshotsRef = useRef<Record<Tab, string>>(emptySnapshots());
+  const savingRef = useRef(false);
+  const pendingTabRef = useRef<Tab | null>(null);
+  const prevTabRef = useRef<Tab>('profile');
+
+  contentRef.current = content;
 
   const load = useCallback(async () => {
     setError('');
+    setReady(false);
     try {
       const data = await adminGetContent();
-      setContent({ ...data, blog: data.blog ?? [] });
+      const nextContent = {
+        ...data,
+        blog: data.blog ?? [],
+        projects: data.projects.map(normalizeProject),
+      };
+      setContent(nextContent);
+      savedSnapshotsRef.current = {
+        profile: JSON.stringify(nextContent.profile),
+        blog: JSON.stringify(nextContent.blog),
+        projects: JSON.stringify(nextContent.projects),
+        experience: JSON.stringify(nextContent.experience),
+      };
+      setAutosaveStatus('saved');
+      setReady(true);
     } catch {
       setError('Failed to load content. Try signing in again.');
     }
@@ -145,64 +201,109 @@ export function AdminEditor() {
     load();
   }, [load]);
 
+  const persistTab = useCallback(async (targetTab: Tab) => {
+    const snapshot = contentRef.current;
+    if (!snapshot) return;
+
+    if (savingRef.current) {
+      pendingTabRef.current = targetTab;
+      return;
+    }
+
+    savingRef.current = true;
+    setAutosaveStatus('saving');
+
+    try {
+      switch (targetTab) {
+        case 'profile':
+          await adminSaveProfile(snapshot.profile);
+          break;
+        case 'blog':
+          await adminSaveBlog(snapshot.blog);
+          break;
+        case 'projects':
+          await adminSaveProjects(snapshot.projects);
+          break;
+        case 'experience':
+          await adminSaveExperience(snapshot.experience);
+          break;
+      }
+
+      savedSnapshotsRef.current[targetTab] = getTabSnapshot(snapshot, targetTab);
+      setAutosaveStatus('saved');
+    } catch {
+      setAutosaveStatus('error');
+    } finally {
+      savingRef.current = false;
+      const pending = pendingTabRef.current;
+      pendingTabRef.current = null;
+      if (pending) {
+        void persistTab(pending);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!ready || !content) return;
+
+    const currentSnapshot = getTabSnapshot(content, tab);
+    if (currentSnapshot === savedSnapshotsRef.current[tab]) {
+      return;
+    }
+
+    setAutosaveStatus('pending');
+    const timer = window.setTimeout(() => {
+      void persistTab(tab);
+    }, AUTOSAVE_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [content, tab, ready, persistTab]);
+
+  useEffect(() => {
+    if (!ready || !content) return;
+
+    const prev = prevTabRef.current;
+    if (prev !== tab) {
+      const prevSnapshot = getTabSnapshot(content, prev);
+      if (prevSnapshot !== savedSnapshotsRef.current[prev]) {
+        void persistTab(prev);
+      }
+      prevTabRef.current = tab;
+    }
+  }, [tab, content, ready, persistTab]);
+
+  useEffect(() => {
+    if (!ready) return;
+
+    return () => {
+      const snapshot = contentRef.current;
+      if (!snapshot) return;
+
+      for (const targetTab of ['profile', 'blog', 'projects', 'experience'] as Tab[]) {
+        if (getTabSnapshot(snapshot, targetTab) !== savedSnapshotsRef.current[targetTab]) {
+          void persistTab(targetTab);
+        }
+      }
+    };
+  }, [ready, persistTab]);
+
   function logout() {
     clearAdminToken();
     router.push('/admin');
   }
 
-  async function saveProfile() {
-    if (!content) return;
-    setSaving(true);
-    setStatus('');
-    try {
-      const cvRebuilt = await adminSaveProfile(content.profile);
-      setStatus(cvRebuilt ? 'Profile saved. CV updated (all languages).' : 'Profile saved.');
-    } catch {
-      setStatus('Failed to save profile.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function saveProjects() {
-    if (!content) return;
-    setSaving(true);
-    setStatus('');
-    try {
-      const cvRebuilt = await adminSaveProjects(content.projects);
-      setStatus(cvRebuilt ? 'Projects saved. CV updated (all languages).' : 'Projects saved.');
-    } catch {
-      setStatus('Failed to save projects.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function saveExperience() {
-    if (!content) return;
-    setSaving(true);
-    setStatus('');
-    try {
-      const cvRebuilt = await adminSaveExperience(content.experience);
-      setStatus(cvRebuilt ? 'Experience saved. CV updated (all languages).' : 'Experience saved.');
-    } catch {
-      setStatus('Failed to save experience.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function saveBlog() {
-    if (!content) return;
-    setSaving(true);
-    setStatus('');
-    try {
-      await adminSaveBlog(content.blog);
-      setStatus('Blog saved.');
-    } catch {
-      setStatus('Failed to save blog.');
-    } finally {
-      setSaving(false);
+  function autosaveLabel(): string {
+    switch (autosaveStatus) {
+      case 'pending':
+        return 'Unsaved changes…';
+      case 'saving':
+        return 'Saving…';
+      case 'saved':
+        return 'All changes saved';
+      case 'error':
+        return 'Autosave failed';
+      default:
+        return 'Autosave enabled';
     }
   }
 
@@ -220,7 +321,7 @@ export function AdminEditor() {
   function removeProject(index: number) {
     if (!content || content.projects.length <= 1) return;
     const project = content.projects[index];
-    if (!window.confirm(`Remove project "${project.id}"? Click Save projects to apply.`)) {
+    if (!window.confirm(`Remove project "${project.id}"? This will autosave.`)) {
       return;
     }
     setContent((prev) => {
@@ -244,7 +345,7 @@ export function AdminEditor() {
     if (!content || content.experience.length <= 1) return;
     const item = content.experience[index];
     const label = item.company || item.id;
-    if (!window.confirm(`Remove experience "${label}"? Click Save experience to apply.`)) {
+    if (!window.confirm(`Remove experience "${label}"? This will autosave.`)) {
       return;
     }
     setContent((prev) => {
@@ -268,7 +369,7 @@ export function AdminEditor() {
     if (!content) return;
     const post = content.blog[index];
     const label = post.title.en || post.id;
-    if (!window.confirm(`Remove article "${label}"? Click Save blog to apply.`)) {
+    if (!window.confirm(`Remove article "${label}"? This will autosave.`)) {
       return;
     }
     setContent((prev) => {
@@ -338,15 +439,28 @@ export function AdminEditor() {
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-xl font-semibold">Content admin</h1>
-          <p className="text-sm text-muted">Edit portfolio texts stored in the database.</p>
+          <p className="text-sm text-muted">Changes save automatically after you stop typing.</p>
         </div>
-        <button
-          type="button"
-          onClick={logout}
-          className="border border-border/60 px-3 py-1.5 text-sm hover:border-accent/60"
-        >
-          Log out
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <span
+            className={`text-xs ${
+              autosaveStatus === 'error'
+                ? 'text-red-400'
+                : autosaveStatus === 'pending'
+                  ? 'text-muted'
+                  : 'text-accent'
+            }`}
+          >
+            {autosaveLabel()}
+          </span>
+          <button
+            type="button"
+            onClick={logout}
+            className="border border-border/60 px-3 py-1.5 text-sm hover:border-accent/60"
+          >
+            Log out
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
@@ -454,14 +568,6 @@ export function AdminEditor() {
               }))
             }
           />
-          <button
-            type="button"
-            onClick={saveProfile}
-            disabled={saving}
-            className="border border-accent/60 px-4 py-2 text-sm hover:bg-accent/10 disabled:opacity-50"
-          >
-            Save profile
-          </button>
         </section>
       ) : null}
 
@@ -543,14 +649,6 @@ export function AdminEditor() {
                 />
               </label>
               <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={saveBlog}
-                  disabled={saving}
-                  className="border border-accent/60 px-4 py-2 text-sm hover:bg-accent/10 disabled:opacity-50"
-                >
-                  Save blog
-                </button>
                 <button
                   type="button"
                   onClick={() => removeBlogPost(selectedBlog)}
@@ -643,9 +741,14 @@ export function AdminEditor() {
             multiline
           />
           <Field
-            label="URL"
-            value={project.url}
-            onChange={(value) => updateProject(selectedProject, (item) => ({ ...item, url: value }))}
+            label={`URL (${locale})`}
+            value={project.url[locale]}
+            onChange={(value) =>
+              updateProject(selectedProject, (item) => ({
+                ...item,
+                url: { ...item.url, [locale]: value },
+              }))
+            }
           />
           <Field
             label="Tags (comma-separated)"
@@ -674,14 +777,6 @@ export function AdminEditor() {
             In development
           </label>
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={saveProjects}
-              disabled={saving}
-              className="border border-accent/60 px-4 py-2 text-sm hover:bg-accent/10 disabled:opacity-50"
-            >
-              Save projects
-            </button>
             {content.projects.length > 1 ? (
               <button
                 type="button"
@@ -806,14 +901,6 @@ export function AdminEditor() {
             }
           />
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={saveExperience}
-              disabled={saving}
-              className="border border-accent/60 px-4 py-2 text-sm hover:bg-accent/10 disabled:opacity-50"
-            >
-              Save experience
-            </button>
             {content.experience.length > 1 ? (
               <button
                 type="button"
@@ -826,8 +913,6 @@ export function AdminEditor() {
           </div>
         </section>
       ) : null}
-
-      {status ? <p className="mt-4 text-sm text-accent">{status}</p> : null}
     </main>
   );
 }

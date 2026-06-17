@@ -47,7 +47,7 @@ export class PortfolioController {
       description: this.portfolio.pick(project.description, loc),
       overview: this.portfolio.pick(project.overview, loc),
       highlights: project.highlights[loc] ?? project.highlights.en,
-      url: project.url,
+      url: this.portfolio.pick(project.url, loc),
       tags: project.tags,
       inDevelopment: project.inDevelopment ?? false,
     }));

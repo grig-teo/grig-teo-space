@@ -15,8 +15,8 @@ export function BlogBodyViewer({ body }: { body: string }) {
   });
 
   return (
-    <div className="blog-body-viewer">
-      <BlockNoteView editor={editor} editable={false} theme="light" />
+    <div className="blog-body-viewer text-foreground">
+      <BlockNoteView editor={editor} editable={false} theme="dark" />
     </div>
   );
 }
