@@ -14,7 +14,8 @@ export class ContentService {
   ) {}
 
   async getProfile(): Promise<Profile> {
-    return this.getJson<Profile>('profile');
+    const profile = await this.getJson<Profile>('profile');
+    return this.normalizeProfile(profile);
   }
 
   async getProjects(): Promise<Project[]> {
@@ -79,9 +80,10 @@ export class ContentService {
   }
 
   async updateProfile(profile: Profile): Promise<Profile> {
-    await this.saveJson('profile', profile);
+    const normalized = this.normalizeProfile(profile);
+    await this.saveJson('profile', normalized);
     await this.rebuildCv();
-    return profile;
+    return normalized;
   }
 
   async updateProjects(projects: Project[]): Promise<Project[]> {
@@ -136,6 +138,36 @@ export class ContentService {
             ro: url.ro ?? '',
           };
     return { ...project, url: normalizedUrl };
+  }
+
+  private normalizeProfile(profile: Profile): Profile {
+    const email = profile.contact.email as LocalizedString | string;
+    const about = (profile as Profile & { about?: LocalizedString | string }).about;
+    const normalizedEmail: LocalizedString =
+      typeof email === 'string'
+        ? { en: email, ru: email, ro: email }
+        : {
+            en: email.en ?? '',
+            ru: email.ru ?? '',
+            ro: email.ro ?? '',
+          };
+    const normalizedAbout: LocalizedString =
+      typeof about === 'string'
+        ? { en: about, ru: about, ro: about }
+        : {
+            en: about?.en ?? '',
+            ru: about?.ru ?? '',
+            ro: about?.ro ?? '',
+          };
+
+    return {
+      ...profile,
+      about: normalizedAbout,
+      contact: {
+        ...profile.contact,
+        email: normalizedEmail,
+      },
+    };
   }
 
   private sortBlogPosts(posts: BlogPost[]): BlogPost[] {

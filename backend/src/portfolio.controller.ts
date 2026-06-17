@@ -28,8 +28,9 @@ export class PortfolioController {
       name: this.portfolio.pick(data.name, loc),
       title: this.portfolio.pick(data.title, loc),
       location: this.portfolio.pick(data.location, loc),
+      about: this.portfolio.pick(data.about, loc),
       contact: {
-        email: data.contact.email,
+        email: this.portfolio.pick(data.contact.email, loc),
         github: data.contact.github,
         linkedin: data.contact.linkedin,
         ...(phone ? { phone } : {}),

@@ -4,6 +4,7 @@ export interface Profile {
   name: string;
   title: string;
   location: string;
+  about: string;
   contact: {
     email: string;
     github: string;

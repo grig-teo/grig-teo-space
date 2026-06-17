@@ -526,12 +526,27 @@ export function AdminEditor() {
             }
           />
           <Field
-            label="Email"
-            value={content.profile.contact.email}
+            label={`About / Life story (${locale})`}
+            value={content.profile.about[locale]}
             onChange={(value) =>
               updateProfile((profile) => ({
                 ...profile,
-                contact: { ...profile.contact, email: value },
+                about: { ...profile.about, [locale]: value },
+              }))
+            }
+            multiline
+            rows={8}
+          />
+          <Field
+            label={`Email (${locale})`}
+            value={content.profile.contact.email[locale]}
+            onChange={(value) =>
+              updateProfile((profile) => ({
+                ...profile,
+                contact: {
+                  ...profile.contact,
+                  email: { ...profile.contact.email, [locale]: value },
+                },
               }))
             }
           />

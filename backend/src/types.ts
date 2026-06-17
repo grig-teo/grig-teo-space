@@ -28,7 +28,7 @@ export interface ExperienceItem {
 }
 
 export interface ContactInfo {
-  email: string;
+  email: LocalizedString;
   github: string;
   linkedin: string;
   phone?: LocalizedString;
@@ -38,6 +38,7 @@ export interface Profile {
   name: LocalizedString;
   title: LocalizedString;
   location: LocalizedString;
+  about: LocalizedString;
   contact: ContactInfo;
 }
 

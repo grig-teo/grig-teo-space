@@ -100,7 +100,7 @@ export class CvService {
         inDevelopment: labels.inDevelopment,
       },
       contact: {
-        email: profile.contact.email,
+        email: this.pick(profile.contact.email, locale),
         website: 'https://grig-teo.space',
         github: profile.contact.github,
         linkedin: profile.contact.linkedin,

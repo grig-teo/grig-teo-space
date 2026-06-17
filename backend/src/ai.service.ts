@@ -133,12 +133,15 @@ export class AiService {
     const name = this.pick(profile.name, locale);
     const title = this.pick(profile.title, locale);
     const location = this.pick(profile.location, locale);
+    const about = this.pick(profile.about, locale);
+    const email = this.pick(profile.contact.email, locale);
     const phone = profile.contact.phone ? this.pick(profile.contact.phone, locale) : '';
     const content = [
       `Name: ${name}`,
       `Title: ${title}`,
       `Location: ${location}`,
-      `Email: ${profile.contact.email}`,
+      `About: ${about}`,
+      `Email: ${email}`,
       `GitHub: ${profile.contact.github}`,
       `LinkedIn: ${profile.contact.linkedin}`,
       `Phone: ${phone}`,
