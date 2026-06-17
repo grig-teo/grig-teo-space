@@ -2,6 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-background: 255 255 255;
+  --color-foreground: 17 24 39;
+  --color-muted: 107 114 128;
+  --color-accent: 59 130 246;
+  --color-border: 209 213 219;
+}
+
+html[data-theme='dark'] {
+  --color-background: 0 0 0;
+  --color-foreground: 255 255 255;
+  --color-muted: 136 136 136;
+  --color-accent: 59 130 246;
+  --color-border: 51 51 51;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    --color-background: 0 0 0;
+    --color-foreground: 255 255 255;
+    --color-muted: 136 136 136;
+    --color-accent: 59 130 246;
+    --color-border: 51 51 51;
+  }
+}
+
 html {
   scroll-behavior: smooth;
   overflow-x: clip;
@@ -44,7 +70,7 @@ body {
 
 .blog-body-viewer .bn-block-group {
   font-family: inherit;
-  color: #ffffff;
+  color: rgb(var(--color-foreground));
 }
 
 .admin-blocknote .bn-block-group {
@@ -55,7 +81,7 @@ body {
 .blog-body-viewer .bn-default-styles {
   font-size: 0.875rem;
   line-height: 1.625;
-  color: #ffffff;
+  color: rgb(var(--color-foreground));
 }
 
 .admin-blocknote .bn-default-styles {
@@ -66,15 +92,15 @@ body {
 
 .blog-body-viewer .bn-container {
   --bn-colors-editor-background: transparent;
-  --bn-colors-editor-text: #ffffff;
-  --bn-colors-side-menu: #888888;
-  --bn-colors-border: #333333;
-  --bn-colors-hovered-background: #1a1a1a;
-  --bn-colors-selected-background: #262626;
+  --bn-colors-editor-text: rgb(var(--color-foreground));
+  --bn-colors-side-menu: rgb(var(--color-muted));
+  --bn-colors-border: rgb(var(--color-border));
+  --bn-colors-hovered-background: color-mix(in srgb, rgb(var(--color-foreground)) 8%, transparent);
+  --bn-colors-selected-background: color-mix(in srgb, rgb(var(--color-foreground)) 14%, transparent);
 }
 
 .blog-body-viewer .bn-inline-content {
-  color: #ffffff;
+  color: rgb(var(--color-foreground));
 }
 
 .admin-blocknote .bn-container {

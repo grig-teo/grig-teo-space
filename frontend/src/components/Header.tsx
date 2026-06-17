@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { ThemeSwitcher } from './ThemeSwitcher';
 
 const baseLinks = [
   { key: 'about', href: '/#about' },
@@ -68,6 +69,7 @@ export function Header({ showBlog = true }: { showBlog?: boolean }) {
             ))}
           </nav>
           <LanguageSwitcher />
+          <ThemeSwitcher />
           <button
             type="button"
             className="inline-flex items-center justify-center p-1 text-accent md:hidden"

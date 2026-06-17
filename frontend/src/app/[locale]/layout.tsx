@@ -1,7 +1,7 @@
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
-import { RomanianSpotifyPlayer } from '@/components/RomanianSpotifyPlayer';
+import { AssistantChatWidget } from '@/components/AssistantChatWidget';
 import { routing } from '@/i18n/routing';
 import '../globals.css';
 
@@ -68,13 +68,15 @@ export default async function LocaleLayout({ children, params }: Props) {
   }
 
   const messages = await getMessages();
+  const themeInitScript = `(function(){try{var k='theme-preference';var p=localStorage.getItem(k)||'system';if(p==='light'||p==='dark'){document.documentElement.setAttribute('data-theme',p);}else{document.documentElement.removeAttribute('data-theme');}}catch(e){}})();`;
 
   return (
-    <html lang={locale}>
+    <html lang={locale} suppressHydrationWarning>
       <body>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <NextIntlClientProvider messages={messages}>
-          <RomanianSpotifyPlayer locale={locale} />
           {children}
+          <AssistantChatWidget locale={locale} />
         </NextIntlClientProvider>
       </body>
     </html>
