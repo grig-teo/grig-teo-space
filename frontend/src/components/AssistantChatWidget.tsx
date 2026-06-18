@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type Props = {
   locale: string;
@@ -11,9 +11,21 @@ type ChatMessage = {
   content: string;
 };
 
+const SESSION_STORAGE_KEY = 'ai_chat_session_id';
+
 function apiPrefix(): string {
   const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
   return configured ? `${configured}/api` : '/api';
+}
+
+function getOrCreateSessionId(): string {
+  const existing = localStorage.getItem(SESSION_STORAGE_KEY);
+  if (existing) {
+    return existing;
+  }
+  const sessionId = crypto.randomUUID();
+  localStorage.setItem(SESSION_STORAGE_KEY, sessionId);
+  return sessionId;
 }
 
 function labels(locale: string) {
@@ -51,12 +63,52 @@ export function AssistantChatWidget({ locale }: Props) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [sessionId, setSessionId] = useState('');
   const text = useMemo(() => labels(locale), [locale]);
+
+  useEffect(() => {
+    setSessionId(getOrCreateSessionId());
+  }, []);
+
+  const loadHistory = useCallback(async () => {
+    if (!sessionId) {
+      return;
+    }
+    setHistoryLoading(true);
+    try {
+      const res = await fetch(
+        `${apiPrefix()}/ai/chat/history?sessionId=${encodeURIComponent(sessionId)}`,
+      );
+      if (!res.ok) {
+        return;
+      }
+      const data = (await res.json()) as {
+        messages?: Array<{ role?: 'user' | 'assistant'; content?: string }>;
+      };
+      const history = (data.messages ?? [])
+        .filter((item) => item.role === 'user' || item.role === 'assistant')
+        .map((item) => ({
+          role: item.role as 'user' | 'assistant',
+          content: item.content?.trim() ?? '',
+        }))
+        .filter((item) => item.content);
+      setMessages(history);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (open && sessionId) {
+      void loadHistory();
+    }
+  }, [open, sessionId, loadHistory]);
 
   async function submitMessage() {
     const message = input.trim();
-    if (!message || loading) {
+    if (!message || loading || !sessionId) {
       return;
     }
 
@@ -68,7 +120,7 @@ export function AssistantChatWidget({ locale }: Props) {
       const res = await fetch(`${apiPrefix()}/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, locale }),
+        body: JSON.stringify({ message, locale, sessionId }),
       });
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
@@ -117,6 +169,7 @@ export function AssistantChatWidget({ locale }: Props) {
 
           <div className="flex-1 space-y-3 overflow-y-auto px-3 py-3 text-sm">
             <div className="max-w-[90%] bg-white/5 px-3 py-2 text-muted">{text.welcome}</div>
+            {historyLoading ? <div className="text-xs text-muted">Loading history...</div> : null}
             {messages.map((item, index) => (
               <div
                 key={`${item.role}-${index}`}

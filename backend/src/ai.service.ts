@@ -1,10 +1,14 @@
 import {
   BadGatewayException,
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { ContentService } from './content/content.service';
+import { AiChatMessage, type AiChatRole } from './entities/ai-chat-message.entity';
 import { LinkedInService } from './linkedin.service';
 import type {
   BlogPost,
@@ -37,14 +41,42 @@ type BlockNoteBlock = {
   children?: BlockNoteBlock[];
 };
 
+type SavedChatMessage = {
+  role: AiChatRole;
+  content: string;
+  createdAt: string;
+};
+
 @Injectable()
 export class AiService {
+  private static readonly maxHistoryMessages = 100;
+
   constructor(
     private readonly content: ContentService,
     private readonly linkedin: LinkedInService,
+    @InjectRepository(AiChatMessage)
+    private readonly chatRepo: Repository<AiChatMessage>,
   ) {}
 
-  async answerQuestion(message: string, locale: Locale): Promise<string> {
+  async getChatHistory(sessionId: string): Promise<SavedChatMessage[]> {
+    const normalizedSessionId = this.normalizeSessionId(sessionId);
+    const rows = await this.chatRepo.find({
+      where: { sessionId: normalizedSessionId },
+      order: { createdAt: 'ASC' },
+      take: AiService.maxHistoryMessages,
+    });
+
+    return rows.map((row) => ({
+      role: row.role,
+      content: row.content,
+      createdAt: row.createdAt.toISOString(),
+    }));
+  }
+
+  async answerQuestion(message: string, locale: Locale, sessionId: string): Promise<string> {
+    const normalizedSessionId = this.normalizeSessionId(sessionId);
+    await this.saveChatMessage(normalizedSessionId, 'user', message, locale);
+
     const apiKey = process.env.DEEPSEEK_API_KEY?.trim();
     if (!apiKey) {
       throw new ServiceUnavailableException('AI chat is not configured yet');
@@ -100,7 +132,30 @@ export class AiService {
       throw new InternalServerErrorException('Empty AI response');
     }
 
+    await this.saveChatMessage(normalizedSessionId, 'assistant', answer, locale);
     return answer;
+  }
+
+  private normalizeSessionId(sessionId: string): string {
+    const value = sessionId.trim();
+    if (!/^[a-zA-Z0-9_-]{8,64}$/.test(value)) {
+      throw new BadRequestException('Invalid chat session id');
+    }
+    return value;
+  }
+
+  private async saveChatMessage(
+    sessionId: string,
+    role: AiChatRole,
+    content: string,
+    locale: Locale,
+  ): Promise<void> {
+    await this.chatRepo.save({
+      sessionId,
+      role,
+      content: content.slice(0, 8000),
+      locale,
+    });
   }
 
   private async buildContextDocs(locale: Locale): Promise<ContextDoc[]> {
