@@ -116,7 +116,7 @@ export class CvService {
         inDevelopment: project.inDevelopment ?? false,
       })),
       experience: experience.map((item) => ({
-        company: item.company,
+        company: this.pick(item.company, locale),
         role: this.pick(item.role, locale),
         period: this.pick(item.period, locale),
         summary: item.summary

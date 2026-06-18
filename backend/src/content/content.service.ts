@@ -24,7 +24,8 @@ export class ContentService {
   }
 
   async getExperience(): Promise<ExperienceItem[]> {
-    return this.getJson<ExperienceItem[]>('experience');
+    const items = await this.getJson<ExperienceItem[]>('experience');
+    return items.map((item) => this.normalizeExperienceItem(item));
   }
 
   async getExperienceById(id: string): Promise<ExperienceItem | undefined> {
@@ -99,9 +100,10 @@ export class ContentService {
   }
 
   async updateExperience(experience: ExperienceItem[]): Promise<ExperienceItem[]> {
-    await this.saveJson('experience', experience);
+    const normalized = experience.map((item) => this.normalizeExperienceItem(item));
+    await this.saveJson('experience', normalized);
     await this.rebuildCv();
-    return experience;
+    return normalized;
   }
 
   async updateBlogPosts(posts: BlogPost[]): Promise<BlogPost[]> {
@@ -168,6 +170,39 @@ export class ContentService {
         email: normalizedEmail,
       },
     };
+  }
+
+  private normalizeExperienceItem(item: ExperienceItem): ExperienceItem {
+    const company = item.company as LocalizedString | string;
+    const normalizedCompany: LocalizedString =
+      typeof company === 'string'
+        ? { en: company, ru: company, ro: company }
+        : {
+            en: company.en ?? '',
+            ru: company.ru ?? '',
+            ro: company.ro ?? '',
+          };
+
+    const companyUrl = item.companyUrl as LocalizedString | string | undefined;
+    let normalizedCompanyUrl: LocalizedString | undefined;
+    if (companyUrl === undefined || companyUrl === null || companyUrl === '') {
+      normalizedCompanyUrl = undefined;
+    } else if (typeof companyUrl === 'string') {
+      normalizedCompanyUrl = companyUrl
+        ? { en: companyUrl, ru: companyUrl, ro: companyUrl }
+        : undefined;
+    } else {
+      const hasAny = Boolean(companyUrl.en || companyUrl.ru || companyUrl.ro);
+      normalizedCompanyUrl = hasAny
+        ? {
+            en: companyUrl.en ?? '',
+            ru: companyUrl.ru ?? '',
+            ro: companyUrl.ro ?? '',
+          }
+        : undefined;
+    }
+
+    return { ...item, company: normalizedCompany, companyUrl: normalizedCompanyUrl };
   }
 
   private sortBlogPosts(posts: BlogPost[]): BlogPost[] {

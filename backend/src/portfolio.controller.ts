@@ -62,8 +62,10 @@ export class PortfolioController {
       id: item.id,
       period: this.portfolio.pick(item.period, loc),
       role: this.portfolio.pick(item.role, loc),
-      company: item.company,
-      companyUrl: item.companyUrl,
+      company: this.portfolio.pick(item.company, loc),
+      companyUrl: item.companyUrl
+        ? this.portfolio.pick(item.companyUrl, loc) || undefined
+        : undefined,
       description: this.portfolio.pick(item.description, loc),
     }));
   }
@@ -117,8 +119,10 @@ export class PortfolioController {
       id: item.id,
       period: this.portfolio.pick(item.period, loc),
       role: this.portfolio.pick(item.role, loc),
-      company: item.company,
-      companyUrl: item.companyUrl,
+      company: this.portfolio.pick(item.company, loc),
+      companyUrl: item.companyUrl
+        ? this.portfolio.pick(item.companyUrl, loc) || undefined
+        : undefined,
       description: this.portfolio.pick(item.description, loc),
       summary: item.summary ? this.portfolio.pick(item.summary, loc) : undefined,
       highlights: item.highlights[loc] ?? item.highlights.en,

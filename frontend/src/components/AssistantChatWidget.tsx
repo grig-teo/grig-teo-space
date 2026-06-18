@@ -144,7 +144,7 @@ export function AssistantChatWidget({ locale }: Props) {
                   }
                 }}
                 placeholder={text.input}
-                className="flex-1 border border-border/80 bg-black/30 px-3 py-2 text-sm outline-none focus:border-accent/70"
+                className="flex-1 border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted outline-none focus:border-accent/70"
               />
               <button
                 type="button"

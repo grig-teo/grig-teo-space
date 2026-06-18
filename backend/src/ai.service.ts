@@ -180,7 +180,7 @@ export class AiService {
     const summary = item.summary ? this.pick(item.summary, locale) : '';
     const stack = item.stack ? this.pick(item.stack, locale) : '';
     const content = [
-      `Company: ${item.company}`,
+      `Company: ${this.pick(item.company, locale)}`,
       `Role: ${this.pick(item.role, locale)}`,
       `Period: ${this.pick(item.period, locale)}`,
       `Description: ${this.pick(item.description, locale)}`,
@@ -192,7 +192,7 @@ export class AiService {
     return {
       type: 'experience',
       id: item.id,
-      title: `${item.company} — ${this.pick(item.role, locale)}`,
+      title: `${this.pick(item.company, locale)} — ${this.pick(item.role, locale)}`,
       content,
     };
   }

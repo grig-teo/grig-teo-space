@@ -100,14 +100,47 @@ function newProject(): Project {
   };
 }
 
+function normalizeExperience(
+  item: ExperienceItem & { company?: LocalizedString | string; companyUrl?: LocalizedString | string },
+): ExperienceItem {
+  const company = item.company;
+  const normalizedCompany: LocalizedString =
+    typeof company === 'string'
+      ? { en: company, ru: company, ro: company }
+      : {
+          en: company?.en ?? '',
+          ru: company?.ru ?? '',
+          ro: company?.ro ?? '',
+        };
+
+  const companyUrl = item.companyUrl;
+  let normalizedCompanyUrl: LocalizedString | undefined;
+  if (companyUrl === undefined || companyUrl === null || companyUrl === '') {
+    normalizedCompanyUrl = undefined;
+  } else if (typeof companyUrl === 'string') {
+    normalizedCompanyUrl = companyUrl ? { en: companyUrl, ru: companyUrl, ro: companyUrl } : undefined;
+  } else {
+    const hasAny = Boolean(companyUrl.en || companyUrl.ru || companyUrl.ro);
+    normalizedCompanyUrl = hasAny
+      ? {
+          en: companyUrl.en ?? '',
+          ru: companyUrl.ru ?? '',
+          ro: companyUrl.ro ?? '',
+        }
+      : undefined;
+  }
+
+  return { ...item, company: normalizedCompany, companyUrl: normalizedCompanyUrl };
+}
+
 function newExperienceItem(): ExperienceItem {
   const suffix = Date.now().toString(36);
   return {
     id: `experience-${suffix}`,
     period: emptyLocalizedString(),
     role: emptyLocalizedString(),
-    company: 'New company',
-    companyUrl: '',
+    company: emptyLocalizedString(),
+    companyUrl: emptyLocalizedString(),
     description: emptyLocalizedString(),
     summary: emptyLocalizedString(),
     highlights: emptyLocalizedList(),
@@ -182,6 +215,7 @@ export function AdminEditor() {
         ...data,
         blog: data.blog ?? [],
         projects: data.projects.map(normalizeProject),
+        experience: data.experience.map(normalizeExperience),
       };
       setContent(nextContent);
       savedSnapshotsRef.current = {
@@ -344,7 +378,7 @@ export function AdminEditor() {
   function removeExperienceItem(index: number) {
     if (!content || content.experience.length <= 1) return;
     const item = content.experience[index];
-    const label = item.company || item.id;
+    const label = item.company.en || item.id;
     if (!window.confirm(`Remove experience "${label}"? This will autosave.`)) {
       return;
     }
@@ -817,7 +851,7 @@ export function AdminEditor() {
                   selectedExperience === index ? 'border-accent text-accent' : 'border-border/60 text-muted'
                 }`}
               >
-                {item.company || item.id}
+                {item.company.en || item.id}
               </button>
             ))}
             <button
@@ -859,17 +893,23 @@ export function AdminEditor() {
             }
           />
           <Field
-            label="Company"
-            value={experienceItem.company}
+            label={`Company (${locale})`}
+            value={experienceItem.company[locale]}
             onChange={(value) =>
-              updateExperienceItem(selectedExperience, (item) => ({ ...item, company: value }))
+              updateExperienceItem(selectedExperience, (item) => ({
+                ...item,
+                company: { ...item.company, [locale]: value },
+              }))
             }
           />
           <Field
-            label="Company URL"
-            value={experienceItem.companyUrl ?? ''}
+            label={`Company URL (${locale})`}
+            value={experienceItem.companyUrl?.[locale] ?? ''}
             onChange={(value) =>
-              updateExperienceItem(selectedExperience, (item) => ({ ...item, companyUrl: value || undefined }))
+              updateExperienceItem(selectedExperience, (item) => ({
+                ...item,
+                companyUrl: { en: '', ru: '', ro: '', ...item.companyUrl, [locale]: value },
+              }))
             }
           />
           <Field

@@ -19,8 +19,8 @@ export interface ExperienceItem {
   id: string;
   period: LocalizedString;
   role: LocalizedString;
-  company: string;
-  companyUrl?: string;
+  company: LocalizedString;
+  companyUrl?: LocalizedString;
   description: LocalizedString;
   summary?: LocalizedString;
   highlights: LocalizedList;
