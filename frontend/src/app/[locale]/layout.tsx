@@ -2,6 +2,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { AssistantChatWidget } from '@/components/AssistantChatWidget';
+import { Background } from '@/components/Background';
 import { routing } from '@/i18n/routing';
 import '../globals.css';
 
@@ -74,6 +75,7 @@ export default async function LocaleLayout({ children, params }: Props) {
     <html lang={locale} suppressHydrationWarning>
       <body>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <Background />
         <NextIntlClientProvider messages={messages}>
           {children}
           <AssistantChatWidget locale={locale} />

@@ -8,7 +8,7 @@ import { ContentService } from './content.service';
 export class BlogInitService implements OnModuleInit {
   private readonly logger = new Logger(BlogInitService.name);
 
-  private static readonly SEED_POSTS = ['supermarkety-bez-api'];
+  private static readonly SEED_POSTS = ['supermarkety-bez-api', 'durov-oslo-freedom-2026'];
 
   constructor(private readonly content: ContentService) {}
 

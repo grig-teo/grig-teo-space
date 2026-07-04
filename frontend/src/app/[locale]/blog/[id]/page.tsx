@@ -1,6 +1,11 @@
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { BlogBodyViewer } from '@/components/BlogBodyViewer';
+import { YoutubeEmbed } from '@/components/YoutubeEmbed';
+import {
+  extractYoutubeVideoIdsFromBlockNote,
+  stripYoutubeUrlBlocksFromBlockNote,
+} from '@/lib/youtube';
 import { Link } from '@/i18n/navigation';
 import { getBlogPost, getProfile } from '@/lib/api';
 import type { Locale } from '@/lib/api';
@@ -68,6 +73,9 @@ export default async function BlogArticlePage({ params }: Props) {
     notFound();
   }
 
+  const youtubeVideoIds = extractYoutubeVideoIdsFromBlockNote(post.body);
+  const bodyWithoutYoutubeUrls = stripYoutubeUrlBlocksFromBlockNote(post.body);
+
   return (
     <main className="min-h-screen">
       <Header />
@@ -88,8 +96,16 @@ export default async function BlogArticlePage({ params }: Props) {
             <p className="mt-6 text-sm leading-relaxed text-muted">{post.excerpt}</p>
           ) : null}
 
+          {youtubeVideoIds.length > 0 ? (
+            <div className="mt-8 space-y-6">
+              {youtubeVideoIds.map((videoId) => (
+                <YoutubeEmbed key={videoId} videoId={videoId} title={post.title} />
+              ))}
+            </div>
+          ) : null}
+
           <div className="mt-8 border-t border-border pt-8">
-            <BlogBodyViewer key={post.body} body={post.body} />
+            <BlogBodyViewer key={bodyWithoutYoutubeUrls} body={bodyWithoutYoutubeUrls} />
           </div>
         </div>
       </section>

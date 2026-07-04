@@ -1,12 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type Props = {
   locale: string;
 };
 
 type ChatMessage = {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
 };
@@ -90,6 +91,7 @@ export function AssistantChatWidget({ locale }: Props) {
       const history = (data.messages ?? [])
         .filter((item) => item.role === 'user' || item.role === 'assistant')
         .map((item) => ({
+          id: crypto.randomUUID(),
           role: item.role as 'user' | 'assistant',
           content: item.content?.trim() ?? '',
         }))
@@ -106,6 +108,45 @@ export function AssistantChatWidget({ locale }: Props) {
     }
   }, [open, sessionId, loadHistory]);
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Tracks the last assistant message we've already scrolled to, so we only
+  // auto-scroll on a *new* answer (not on every messages update).
+  const lastAnswerIdRef = useRef<string | null>(null);
+
+  // (a) Opening the chat scrolls to the bottom (after history finishes loading).
+  useEffect(() => {
+    if (!open || historyLoading) {
+      return;
+    }
+    const el = scrollRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+    // Mark the existing last assistant message as "seen" so the new-answer
+    // effect below doesn't immediately re-scroll to its start on open.
+    const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
+    lastAnswerIdRef.current = lastAssistant?.id ?? null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, historyLoading]);
+
+  // (b) When a new assistant answer arrives while the chat is open, scroll
+  // the message to the top of the scroll area so the answer starts in view.
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== 'assistant') {
+      return;
+    }
+    if (lastAnswerIdRef.current === last.id) {
+      return;
+    }
+    lastAnswerIdRef.current = last.id;
+    const node = document.getElementById(`chat-msg-${last.id}`);
+    node?.scrollIntoView({ block: 'start' });
+  }, [open, messages]);
+
   async function submitMessage() {
     const message = input.trim();
     if (!message || loading || !sessionId) {
@@ -113,7 +154,7 @@ export function AssistantChatWidget({ locale }: Props) {
     }
 
     setInput('');
-    setMessages((prev) => [...prev, { role: 'user', content: message }]);
+    setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: 'user', content: message }]);
     setLoading(true);
 
     try {
@@ -129,6 +170,7 @@ export function AssistantChatWidget({ locale }: Props) {
       setMessages((prev) => [
         ...prev,
         {
+          id: crypto.randomUUID(),
           role: 'assistant',
           content: data.answer?.trim() || 'No answer returned.',
         },
@@ -137,6 +179,7 @@ export function AssistantChatWidget({ locale }: Props) {
       setMessages((prev) => [
         ...prev,
         {
+          id: crypto.randomUUID(),
           role: 'assistant',
           content:
             locale === 'ru'
@@ -167,13 +210,17 @@ export function AssistantChatWidget({ locale }: Props) {
             </button>
           </div>
 
-          <div className="flex-1 space-y-3 overflow-y-auto px-3 py-3 text-sm">
+          <div
+            ref={scrollRef}
+            className="flex-1 space-y-3 overflow-y-auto px-3 py-3 text-sm"
+          >
             <div className="max-w-[90%] bg-white/5 px-3 py-2 text-muted">{text.welcome}</div>
             {historyLoading ? <div className="text-xs text-muted">Loading history...</div> : null}
-            {messages.map((item, index) => (
+            {messages.map((item) => (
               <div
-                key={`${item.role}-${index}`}
-                className={`max-w-[90%] px-3 py-2 ${
+                key={item.id}
+                id={`chat-msg-${item.id}`}
+                className={`max-w-[90%] scroll-mt-2 px-3 py-2 ${
                   item.role === 'user'
                     ? 'ml-auto bg-accent/20 text-foreground'
                     : 'bg-white/5 text-foreground'

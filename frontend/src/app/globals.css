@@ -33,6 +33,74 @@ html {
   overflow-x: clip;
 }
 
+/* Animated gradient-mesh background layer. */
+.bg-mesh {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Show only the palette that matches the active theme. */
+.bg-mesh-light {
+  display: none;
+}
+.bg-mesh-dark {
+  display: block;
+}
+html[data-theme='light'] .bg-mesh-light {
+  display: block;
+}
+html[data-theme='light'] .bg-mesh-dark {
+  display: none;
+}
+@media (prefers-color-scheme: light) {
+  html:not([data-theme]) .bg-mesh-light {
+    display: block;
+  }
+  html:not([data-theme]) .bg-mesh-dark {
+    display: none;
+  }
+}
+
+/* Slow drift — each blob follows a different path so the mesh never repeats. */
+@keyframes bg-mesh-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(120px, 80px) scale(1.08); }
+}
+@keyframes bg-mesh-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-140px, 60px) scale(1.12); }
+}
+@keyframes bg-mesh-drift-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(80px, -100px) scale(1.06); }
+}
+
+.bg-mesh-blob {
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: transform;
+}
+.bg-mesh-1 {
+  animation: bg-mesh-drift-1 22s ease-in-out infinite;
+}
+.bg-mesh-2 {
+  animation: bg-mesh-drift-2 26s ease-in-out infinite;
+}
+.bg-mesh-3 {
+  animation: bg-mesh-drift-3 30s ease-in-out infinite;
+}
+
+/* Respect users who prefer reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .bg-mesh-blob {
+    animation: none;
+  }
+}
+
 body {
   @apply bg-background text-foreground font-mono antialiased;
   overflow-x: clip;
