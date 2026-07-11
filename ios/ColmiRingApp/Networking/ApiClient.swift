@@ -1,9 +1,14 @@
 import Foundation
 import Combine
+import UIKit
 
 /**
  Talks to the backend health endpoints. Batches readings, retries on failure,
  and keeps pending readings on disk so nothing is lost if the phone is offline.
+
+ While the app is in the foreground this uses `URLSession.shared`. When
+ backgrounded it switches to a background URLSession (`BackgroundUploadSession`)
+ so in-flight uploads survive termination and can be retried by iOS.
  */
 @MainActor
 final class ApiClient: ObservableObject {
@@ -20,7 +25,19 @@ final class ApiClient: ObservableObject {
         return dir.appendingPathComponent("pending_readings.json")
     }()
 
-    private init() {}
+    private init() {
+        // Reflect the current queue depth on launch.
+        pendingCount = loadPending().count
+    }
+
+    /// Picks the appropriate URLSession based on app state. Background uploads
+    /// use a background config so they survive termination.
+    private var session: URLSession {
+        if UIApplication.shared.applicationState == .background {
+            return BackgroundUploadSession.shared.urlSession
+        }
+        return URLSession.shared
+    }
 
     /// Subscribe to a readings stream and forward to the backend.
     func subscribe(to readings: some Publisher<HealthReading, Never>) {
@@ -34,6 +51,16 @@ final class ApiClient: ObservableObject {
     /// Manually trigger a flush of all pending readings (Sync now button).
     func syncNow() async {
         await flush()
+    }
+
+    /// Synchronous entry point called from background tasks
+    /// (`BGAppRefreshTask` / `BGProcessingTask`). Schedules a flush on the
+    /// main actor and returns immediately; the task keeps the app alive via
+    /// its expiration handler while the flush runs.
+    func flushAll() {
+        Task { @MainActor in
+            await self.flush()
+        }
     }
 
     // MARK: - Queue + persistence
@@ -78,7 +105,7 @@ final class ApiClient: ObservableObject {
         request.httpBody = body
 
         do {
-            let (_, response) = try await URLSession.shared.data(for: request)
+            let (_, response) = try await session.data(for: request)
             if let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) {
                 pending.removeFirst(min(pending.count, 200))
                 savePending(pending)

@@ -4,23 +4,32 @@ import Combine
 /**
  The app's single primary view: connection + sync status, latest metrics,
  and access to settings.
+
+ The long-lived BLE/demo/API objects are owned by `AppState` (held at the App
+ layer), NOT here, so they survive backgrounding and view re-creation. This
+ view just observes and renders their published state.
  */
 struct ContentView: View {
-    @StateObject private var ble = RingBluetoothManager()
-    @StateObject private var demo = DemoDataFeed()
-    @StateObject private var api = ApiClient.shared
-    @StateObject private var settings = AppSettings.shared
+    @ObservedObject var appState: AppState
 
-    @State private var latestByMetric: [RingMetric: Double] = [:]
-    @State private var cancellables = Set<AnyCancellable>()
     @State private var showingSettings = false
+
+    private var lifecycle: AppLifecycleManager { appState.lifecycle }
+    private var latestByMetric: [RingMetric: Double] { appState.latestByMetric }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    ConnectionCard(ble: ble, demo: demo, demoMode: $settings.demoMode)
-                    SyncLogView(api: api)
+                    ConnectionCard(
+                        ble: lifecycle.ble,
+                        demo: lifecycle.demo,
+                        demoMode: Binding(
+                            get: { appState.settings.demoMode },
+                            set: { appState.settings.demoMode = $0 },
+                        ),
+                    )
+                    SyncLogView(api: lifecycle.api)
 
                     if !latestByMetric.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
@@ -49,41 +58,8 @@ struct ContentView: View {
                 }
             }
             .sheet(isPresented: $showingSettings) {
-                SettingsSheet(settings: settings)
+                SettingsSheet(settings: appState.settings)
             }
-        }
-        .onAppear {
-            wireUp()
-        }
-        .onChange(of: settings.demoMode) { isDemo in
-            if isDemo {
-                ble.disconnect()
-                demo.start()
-            } else {
-                demo.stop()
-            }
-        }
-    }
-
-    /// Route readings (real or demo) to the display + the API client.
-    private func wireUp() {
-        // Real ring readings.
-        ble.readings
-            .sink { reading in handle(reading) }
-            .store(in: &cancellables)
-        // Demo readings.
-        demo.readings
-            .sink { reading in handle(reading) }
-            .store(in: &cancellables)
-        // Both feed the API client.
-        api.subscribe(to: ble.readings.merge(with: demo.readings))
-
-        if settings.demoMode { demo.start() }
-    }
-
-    private func handle(_ reading: HealthReading) {
-        if let metric = RingMetric(rawValue: reading.metric) {
-            latestByMetric[metric] = reading.value
         }
     }
 }

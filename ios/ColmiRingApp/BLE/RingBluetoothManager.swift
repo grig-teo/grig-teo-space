@@ -19,6 +19,10 @@ final class RingBluetoothManager: NSObject, ObservableObject {
         case disconnected, scanning, connecting, connected, failed
     }
 
+    /// Stable identifier CoreBluetooth uses to relaunch this app in the
+    /// background after it has been killed, so the BLE link can be restored.
+    static let restorationIdentifier = "space.grig-teo.colmi-ring.ble"
+
     @Published private(set) var state: ConnectionState = .disconnected
     @Published private(set) var deviceName: String?
     @Published private(set) var rssi: Int?
@@ -37,13 +41,34 @@ final class RingBluetoothManager: NSObject, ObservableObject {
 
     override init() {
         super.init()
-        self.central = CBCentralManager(delegate: self, queue: .main)
+        // The restore identifier opts the central manager into State
+        // Restoration: iOS preserves the connection across app suspension and
+        // can relaunch the app in the background to deliver BLE events even
+        // after the app was killed. `delegateProxy` is `self`.
+        self.central = CBCentralManager(
+            delegate: self,
+            queue: nil,
+            options: [
+                CBCentralManagerOptionRestoreIdentifierKey: Self.restorationIdentifier,
+                CBCentralManagerOptionShowPowerAlertKey: false,
+            ],
+        )
     }
 
     func connect() {
         lastError = nil
         guard central?.state == .poweredOn else {
             state = .disconnected
+            return
+        }
+        // If we already hold a peripheral (e.g. restored), try reconnecting
+        // directly instead of scanning again.
+        if let peripheral, peripheral.state != .connected {
+            state = .connecting
+            central?.connect(peripheral, options: [
+                CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
+                CBConnectPeripheralOptionNotifyOnConnectionKey: true,
+            ])
             return
         }
         state = .scanning
@@ -93,10 +118,29 @@ final class RingBluetoothManager: NSObject, ObservableObject {
 }
 
 extension RingBluetoothManager: CBCentralManagerDelegate {
+    /// Called by CoreBluetooth when iOS relaunches the app in the background
+    /// to deliver events for a central manager that outlived the app. We
+    /// reconstruct the peripheral and re-attach as its delegate so the link
+    /// keeps working without user interaction.
+    func centralManager(_ central: CBCentralManager, willRestoreState dict: [String: Any]) {
+        if let peripherals = dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral] {
+            for peripheral in peripherals where peripheral.name?.uppercased().contains(ColmiProtocol.nameFilter) == true {
+                self.peripheral = peripheral
+                peripheral.delegate = self
+                self.deviceName = peripheral.name
+                self.state = peripheral.state == .connected ? .connected : .disconnected
+            }
+        }
+    }
+
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         switch central.state {
         case .poweredOn:
-            if state == .disconnected { /* wait for user to connect */ }
+            // If we were restored with a known peripheral, re-establish the
+            // link automatically (this is the background-relaunch path).
+            if state == .disconnected, peripheral != nil {
+                connect()
+            }
         case .poweredOff:
             state = .disconnected
             lastError = "Bluetooth is powered off"

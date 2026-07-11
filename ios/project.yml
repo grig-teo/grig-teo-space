@@ -29,6 +29,22 @@ targets:
           - UIInterfaceOrientationPortrait
         NSBluetoothAlwaysUsageDescription: "The app connects to your COLMI R11 smart ring over Bluetooth to read heart rate, blood oxygen, sleep, and activity data."
         NSBluetoothPeripheralUsageDescription: "The app uses Bluetooth to communicate with your COLMI smart ring."
+        # Background execution: keep the BLE link alive, schedule OS wakeups
+        # to flush queued readings, and process uploads after relaunch.
+        UIBackgroundModes:
+          - bluetooth-central
+          - fetch
+          - processing
+        BGTaskSchedulerPermittedIdentifiers:
+          - space.grig-teo.colmi-ring.flush
+          - space.grig-teo.colmi-ring.poll
+        # Temporary ATS exception: allows HTTP to the VPS IP until DNS moves
+        # to the domain and HTTPS is provisioned. Remove after cutover.
+        NSAppTransportSecurity:
+          NSExceptionDomains:
+            "159.195.139.229":
+              NSExceptionAllowsInsecureHTTPLoads: true
+              NSIncludesSubdomains: true
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
     settings:
