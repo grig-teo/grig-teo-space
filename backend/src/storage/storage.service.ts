@@ -35,13 +35,14 @@ export class StorageService implements OnModuleInit {
     await this.ensureBucket();
   }
 
-  async upload(file: Express.Multer.File): Promise<string> {
+  async upload(file: Express.Multer.File, prefix = 'blog/'): Promise<string> {
     if (!this.ready) {
       await this.ensureBucket();
     }
 
+    const normalizedPrefix = prefix.endsWith('/') ? prefix : `${prefix}/`;
     const extension = extname(file.originalname).toLowerCase();
-    const key = `blog/${randomUUID()}${extension}`;
+    const key = `${normalizedPrefix}${randomUUID()}${extension}`;
 
     await this.client.putObject(this.bucket, key, file.buffer, file.size, {
       'Content-Type': file.mimetype,

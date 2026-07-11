@@ -1,65 +1,43 @@
 import SwiftUI
-import Combine
 
 /**
- The app's single primary view: connection + sync status, latest metrics,
- and access to settings.
+ Root view with a bottom tab bar: Profile and Health.
 
- The long-lived BLE/demo/API objects are owned by `AppState` (held at the App
- layer), NOT here, so they survive backgrounding and view re-creation. This
- view just observes and renders their published state.
+ - Profile: grig-teo identity + CV download (per language).
+ - Health:  ring connection, sync, latest metrics, settings.
+
+ Both tabs observe the shared `AppState` so BLE collection and uploads keep
+ running regardless of which tab is active.
  */
 struct ContentView: View {
     @ObservedObject var appState: AppState
-
-    @State private var showingSettings = false
-
-    private var lifecycle: AppLifecycleManager { appState.lifecycle }
-    private var latestByMetric: [RingMetric: Double] { appState.latestByMetric }
+    @StateObject private var profileClient = ProfileClient.shared
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
-                    ConnectionCard(
-                        ble: lifecycle.ble,
-                        demo: lifecycle.demo,
-                        demoMode: Binding(
-                            get: { appState.settings.demoMode },
-                            set: { appState.settings.demoMode = $0 },
-                        ),
-                    )
-                    SyncLogView(api: lifecycle.api)
+        TabView {
+            ProfileView(client: profileClient, settings: appState.settings)
+                .tabItem {
+                    Label("Profile", systemImage: "person.crop.circle")
+                }
 
-                    if !latestByMetric.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Latest readings").font(.headline).padding(.horizontal)
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                                ForEach(RingMetric.allCases, id: \.self) { metric in
-                                    if let value = latestByMetric[metric] {
-                                        MetricCard(metric: metric, value: value)
-                                    }
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-                    }
+            HealthView(appState: appState)
+                .tabItem {
+                    Label("Health", systemImage: "heart.text.clipboard")
                 }
-                .padding(.vertical)
-            }
-            .navigationTitle("COLMI Ring")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showingSettings = true
-                    } label: {
-                        Image(systemName: "gearshape")
-                    }
-                }
-            }
-            .sheet(isPresented: $showingSettings) {
-                SettingsSheet(settings: appState.settings)
-            }
+        }
+        .sheet(item: $profileClient.sharedItem) { shared in
+            ShareSheet(items: [shared.url])
         }
     }
+}
+
+/** Wrapper around UIActivityViewController for the share sheet. */
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

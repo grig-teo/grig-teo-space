@@ -61,6 +61,8 @@ services:
       DEVICE_API_KEY: ${DEVICE_API_KEY:-dev-device-key}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      GLM_API_KEY: ${GLM_API_KEY:-}
+      GLM_MODEL: ${GLM_MODEL:-glm-5.2}
     depends_on:
       db:
         condition: service_healthy
