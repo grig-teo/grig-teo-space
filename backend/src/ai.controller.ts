@@ -1,5 +1,16 @@
-import { Body, Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Ip,
+  Post,
+  Query,
+  Res,
+} from '@nestjs/common';
+import type { Response } from 'express';
 import { AiService } from './ai.service';
+import { AiRateLimiter } from './ai-rate-limiter';
 import type { Locale } from './types';
 
 type ChatRequest = {
@@ -10,7 +21,10 @@ type ChatRequest = {
 
 @Controller('ai')
 export class AiController {
-  constructor(private readonly ai: AiService) {}
+  constructor(
+    private readonly ai: AiService,
+    private readonly rateLimiter: AiRateLimiter,
+  ) {}
 
   @Get('chat/history')
   async history(@Query('sessionId') sessionId?: string) {
@@ -20,7 +34,19 @@ export class AiController {
 
   @Post('chat')
   @HttpCode(200)
-  async chat(@Body() body: ChatRequest) {
+  async chat(
+    @Body() body: ChatRequest,
+    @Ip() ip: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    // Enforce the per-IP question quota. Throws 429 when exceeded.
+    const remaining = this.rateLimiter.consume(ip);
+    res.setHeader('X-RateLimit-Remaining', String(remaining));
+    res.setHeader(
+      'X-RateLimit-Limit',
+      String(AiRateLimiter.MAX_QUESTIONS),
+    );
+
     const message = body.message?.trim() ?? '';
     if (!message) {
       return { answer: 'Please provide a message.' };
@@ -32,6 +58,6 @@ export class AiController {
       locale,
       body.sessionId ?? '',
     );
-    return { answer };
+    return { answer, remaining };
   }
 }

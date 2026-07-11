@@ -38,6 +38,8 @@ function labels(locale: string) {
       open: 'Открыть чат',
       close: 'Закрыть',
       welcome: 'Привет, я Gregory AI и могу ответить на ваши вопросы.',
+      limitReached: 'Вы использовали все 3 вопроса на сегодня. Возвращайтесь завтра!',
+      questionsLeft: (n: number) => `Осталось вопросов: ${n} из 3`,
     };
   }
   if (locale === 'ro') {
@@ -48,6 +50,8 @@ function labels(locale: string) {
       open: 'Deschide chat',
       close: 'Inchide',
       welcome: 'Salut, sunt Gregory AI si pot raspunde la intrebarile tale.',
+      limitReached: 'Ai folosit toate cele 3 intrebari de azi. Revino maine!',
+      questionsLeft: (n: number) => `Intrebari ramase: ${n} din 3`,
     };
   }
   return {
@@ -57,6 +61,8 @@ function labels(locale: string) {
     open: 'Open chat',
     close: 'Close',
     welcome: 'Hi, i am Gregory AI can answer your questions',
+    limitReached: "You've used all 3 questions for today. Come back tomorrow!",
+    questionsLeft: (n: number) => `Questions left: ${n} of 3`,
   };
 }
 
@@ -67,6 +73,8 @@ export function AssistantChatWidget({ locale }: Props) {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState('');
+  const [limitReached, setLimitReached] = useState(false);
+  const [remaining, setRemaining] = useState<number | null>(null);
   const text = useMemo(() => labels(locale), [locale]);
 
   useEffect(() => {
@@ -149,7 +157,7 @@ export function AssistantChatWidget({ locale }: Props) {
 
   async function submitMessage() {
     const message = input.trim();
-    if (!message || loading || !sessionId) {
+    if (!message || loading || !sessionId || limitReached) {
       return;
     }
 
@@ -163,10 +171,29 @@ export function AssistantChatWidget({ locale }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, locale, sessionId }),
       });
+
+      // 429 = per-IP question limit reached. Show the quota message and lock
+      // the input until the window resets.
+      if (res.status === 429) {
+        setLimitReached(true);
+        setRemaining(0);
+        setMessages((prev) => [
+          ...prev,
+          { id: crypto.randomUUID(), role: 'assistant', content: text.limitReached },
+        ]);
+        return;
+      }
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
-      const data = (await res.json()) as { answer?: string };
+
+      const data = (await res.json()) as { answer?: string; remaining?: number };
+      if (typeof data.remaining === 'number') {
+        setRemaining(data.remaining);
+        if (data.remaining === 0) {
+          setLimitReached(true);
+        }
+      }
       setMessages((prev) => [
         ...prev,
         {
@@ -233,6 +260,11 @@ export function AssistantChatWidget({ locale }: Props) {
           </div>
 
           <div className="border-t border-border/60 p-2">
+            {remaining !== null && remaining > 0 && !limitReached ? (
+              <p className="mb-1 px-1 text-[10px] text-muted">
+                {text.questionsLeft(remaining)}
+              </p>
+            ) : null}
             <div className="flex gap-2">
               <input
                 value={input}
@@ -243,13 +275,14 @@ export function AssistantChatWidget({ locale }: Props) {
                     void submitMessage();
                   }
                 }}
-                placeholder={text.input}
-                className="flex-1 border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted outline-none focus:border-accent/70"
+                placeholder={limitReached ? text.limitReached : text.input}
+                disabled={limitReached}
+                className="flex-1 border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted outline-none focus:border-accent/70 disabled:cursor-not-allowed disabled:opacity-50"
               />
               <button
                 type="button"
                 onClick={() => void submitMessage()}
-                disabled={loading || !input.trim()}
+                disabled={loading || !input.trim() || limitReached}
                 className="bg-accent px-3 py-2 text-xs font-semibold text-black disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {text.send}
