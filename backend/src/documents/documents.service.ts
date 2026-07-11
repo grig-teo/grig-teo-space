@@ -63,7 +63,7 @@ const MAX_PAGE_SIZE = 50;
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_HISTORY_MESSAGES = 50;
 const MAX_CONTEXT_CHARS = 24000; // ~fits in GLM's context window with headroom
-const GLM_ENDPOINT = 'https://api.z.ai/api/paas/v4/chat/completions';
+const GLM_ENDPOINT = 'https://api.z.ai/api/coding/paas/v4/chat/completions';
 
 const DOCTOR_SYSTEM_PROMPT =
   'You are a knowledgeable medical doctor assisting the owner of these health records. ' +
