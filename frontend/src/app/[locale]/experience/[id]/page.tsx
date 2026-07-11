@@ -1,7 +1,5 @@
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
 import { Link } from '@/i18n/navigation';
-import { getExperienceDetail, getProfile } from '@/lib/api';
+import { getExperienceDetail } from '@/lib/api';
 import type { Locale } from '@/lib/api';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -48,19 +46,14 @@ export default async function ExperienceDetailPage({ params }: Props) {
   const t = await getTranslations({ locale, namespace: 'experiencePage' });
 
   let item;
-  let profile;
   try {
-    [item, profile] = await Promise.all([
-      getExperienceDetail(id, locale),
-      getProfile(locale),
-    ]);
+    item = await getExperienceDetail(id, locale);
   } catch {
     notFound();
   }
 
   return (
     <main className="min-h-screen">
-      <Header />
       <section className="px-4 py-8 sm:px-6 sm:py-12 md:px-12">
         <Link
           href="/#experience"
@@ -115,7 +108,6 @@ export default async function ExperienceDetailPage({ params }: Props) {
           )}
         </div>
       </section>
-      <Footer profile={profile} />
     </main>
   );
 }

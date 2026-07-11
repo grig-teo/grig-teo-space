@@ -1,5 +1,3 @@
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
 import { BlogBodyViewer } from '@/components/BlogBodyViewer';
 import { YoutubeEmbed } from '@/components/YoutubeEmbed';
 import {
@@ -7,7 +5,7 @@ import {
   stripYoutubeUrlBlocksFromBlockNote,
 } from '@/lib/youtube';
 import { Link } from '@/i18n/navigation';
-import { getBlogPost, getProfile } from '@/lib/api';
+import { getBlogPost } from '@/lib/api';
 import type { Locale } from '@/lib/api';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -66,9 +64,8 @@ export default async function BlogArticlePage({ params }: Props) {
   const t = await getTranslations({ locale, namespace: 'blogPage' });
 
   let post;
-  let profile;
   try {
-    [post, profile] = await Promise.all([getBlogPost(id, locale), getProfile(locale)]);
+    post = await getBlogPost(id, locale);
   } catch {
     notFound();
   }
@@ -78,7 +75,6 @@ export default async function BlogArticlePage({ params }: Props) {
 
   return (
     <main className="min-h-screen">
-      <Header />
       <section className="px-4 py-8 sm:px-6 sm:py-12 md:px-12">
         <div className="mx-auto max-w-3xl">
           <div className="mb-8 flex flex-col gap-4 sm:mb-10">
@@ -109,7 +105,6 @@ export default async function BlogArticlePage({ params }: Props) {
           </div>
         </div>
       </section>
-      <Footer profile={profile} />
     </main>
   );
 }

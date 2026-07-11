@@ -1,8 +1,6 @@
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
 import { BlogList } from '@/components/Blog';
 import { Link } from '@/i18n/navigation';
-import { getBlogPosts, getProfile } from '@/lib/api';
+import { getBlogPosts } from '@/lib/api';
 import type { Locale } from '@/lib/api';
 import { getTranslations } from 'next-intl/server';
 
@@ -42,11 +40,10 @@ export default async function BlogPage({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'blogPage' });
 
-  const [profile, posts] = await Promise.all([getProfile(locale), getBlogPosts(locale)]);
+  const posts = await getBlogPosts(locale);
 
   return (
     <main className="min-h-screen">
-      <Header />
       <section className="px-4 py-8 sm:px-6 sm:py-12 md:px-12">
         <Link
           href="/#blog"
@@ -62,7 +59,6 @@ export default async function BlogPage({ params }: Props) {
           <p className="text-sm text-muted">{t('empty')}</p>
         )}
       </section>
-      <Footer profile={profile} />
     </main>
   );
 }

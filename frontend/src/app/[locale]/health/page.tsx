@@ -1,8 +1,6 @@
-import { Header } from '@/components/Header';
 import { HealthWidget } from '@/components/HealthWidget';
-import { Footer } from '@/components/Footer';
 import { Link } from '@/i18n/navigation';
-import { getProfile, getPublicHealth } from '@/lib/api';
+import { getPublicHealth } from '@/lib/api';
 import type { Locale } from '@/lib/api';
 import { getTranslations } from 'next-intl/server';
 
@@ -47,14 +45,10 @@ export default async function HealthPage({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'health' });
 
-  const [profile, health] = await Promise.all([
-    getProfile(locale),
-    getPublicHealth(),
-  ]);
+  const health = await getPublicHealth();
 
   return (
     <main className="min-h-screen">
-      <Header />
       <section className="px-4 py-8 sm:px-6 sm:py-12 md:px-12">
         <Link
           href="/"
@@ -68,7 +62,6 @@ export default async function HealthPage({ params }: Props) {
           <HealthWidget payload={health} />
         )}
       </section>
-      <Footer profile={profile} />
     </main>
   );
 }

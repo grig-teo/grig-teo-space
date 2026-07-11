@@ -1,8 +1,6 @@
-import { Header } from '@/components/Header';
 import { ProjectCard } from '@/components/Projects';
-import { Footer } from '@/components/Footer';
 import { Link } from '@/i18n/navigation';
-import { getProfile, getProjects } from '@/lib/api';
+import { getProjects } from '@/lib/api';
 import type { Locale } from '@/lib/api';
 import { getTranslations } from 'next-intl/server';
 
@@ -47,14 +45,10 @@ export default async function ProjectsPage({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'projectsPage' });
 
-  const [profile, projects] = await Promise.all([
-    getProfile(locale),
-    getProjects(locale),
-  ]);
+  const projects = await getProjects(locale);
 
   return (
     <main className="min-h-screen">
-      <Header />
       <section className="px-4 py-8 sm:px-6 sm:py-12 md:px-12">
         <Link
           href="/"
@@ -72,7 +66,6 @@ export default async function ProjectsPage({ params }: Props) {
           ))}
         </div>
       </section>
-      <Footer profile={profile} />
     </main>
   );
 }
