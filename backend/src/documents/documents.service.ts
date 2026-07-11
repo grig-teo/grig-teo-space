@@ -299,7 +299,9 @@ export class DocumentsService {
         model,
         messages,
         temperature: 0.3,
-        max_tokens: 1024,
+        // Generous ceiling so structured medical answers (bullets, ranges,
+        // explanations) aren't cut off mid-sentence. GLM-5.2 supports this.
+        max_tokens: 4096,
       }),
     });
 

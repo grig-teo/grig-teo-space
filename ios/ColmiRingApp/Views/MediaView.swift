@@ -21,15 +21,47 @@ struct MediaView: View {
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 3), count: 3)
 
     @State private var snapshots: [MediaLibraryWrapper.AssetSnapshot] = []
+    /// Drives the FAB's spinning icon while a sync is in progress.
+    @State private var fabRotation: Double = 0
+    /// Item awaiting delete confirmation (long-press → Delete backup).
+    @State private var pendingDelete: MediaLibraryWrapper.AssetSnapshot?
+    @State private var isDeleting = false
 
     var body: some View {
         NavigationStack {
             content
                 .navigationTitle("Media")
                 .overlay(alignment: .bottomTrailing) { fab }
+                .confirmationDialog(
+                    "Delete backup?",
+                    isPresented: Binding(
+                        get: { pendingDelete != nil },
+                        set: { if !$0 { pendingDelete = nil } }
+                    ),
+                    titleVisibility: .visible
+                ) {
+                    Button("Delete backup", role: .destructive) {
+                        guard let item = pendingDelete else { return }
+                        Task {
+                            isDeleting = true
+                            await syncer.delete(localId: item.id)
+                            isDeleting = false
+                            pendingDelete = nil
+                        }
+                    }
+                    Button("Cancel", role: .cancel) { pendingDelete = nil }
+                } message: {
+                    Text("Removes the backed-up copy from your server. The photo or video stays in your photo library.")
+                }
                 .task { await refresh() }
                 .onChange(of: library.access) { _ in
                     Task { await refresh() }
+                }
+                .onChange(of: syncer.isBusy) { busy in
+                    // Keep the FAB icon spinning for the whole sync run.
+                    withAnimation(.linear(duration: 1).repeatForever(autoreverses: false)) {
+                        fabRotation = busy ? 360 : 0
+                    }
                 }
         }
     }
@@ -50,6 +82,15 @@ struct MediaView: View {
                                 MediaThumbnailCell(snapshot: snapshot, uploaded: syncer.isUploaded(snapshot.id))
                             }
                             .buttonStyle(.plain)
+                            .contextMenu {
+                                if syncer.isUploaded(snapshot.id) {
+                                    Button(role: .destructive) {
+                                        pendingDelete = snapshot
+                                    } label: {
+                                        Label("Delete backup", systemImage: "trash")
+                                    }
+                                }
+                            }
                         }
                     }
                     .padding(.bottom, 96) // clearance for the FAB
@@ -107,12 +148,13 @@ struct MediaView: View {
                     else { await syncer.startSync() }
                 }
             } label: {
-                Image(systemName: syncer.isBusy ? "xmark.circle.fill" : "arrow.triangle.2.circlepath.circle.fill")
-                    .font(.system(size: 30))
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 26, weight: .semibold))
                     .frame(width: 60, height: 60)
                     .foregroundColor(.white)
-                    .background(Circle().fill(syncer.isBusy ? Color.red : Color.blue))
+                    .background(Circle().fill(Color.blue))
                     .shadow(radius: 4, y: 2)
+                    .rotationEffect(.degrees(fabRotation))
             }
             .padding(.trailing, 20)
             .padding(.bottom, 24)

@@ -165,6 +165,7 @@ final class MediaSyncer: ObservableObject {
         let assetLocalId: String
         let success: Bool
         let error: String?
+        let serverId: String?
     }
 
     /// Uploads one asset on the foreground session and returns a result.
@@ -186,32 +187,56 @@ final class MediaSyncer: ObservableObject {
             let (request, bodyFile) = try client.makeUploadRequest(fileURL: fileURL, descriptor: descriptor)
             try? FileManager.default.removeItem(at: fileURL) // source copy no longer needed
 
-            let (_, response) = try await URLSession.shared.upload(for: request, fromFile: bodyFile)
+            let (data, response) = try await URLSession.shared.upload(for: request, fromFile: bodyFile)
             try? FileManager.default.removeItem(at: bodyFile)
             guard let http = response as? HTTPURLResponse else {
-                return AssetResult(assetLocalId: snapshot.id, success: false, error: "No HTTP response")
+                return AssetResult(assetLocalId: snapshot.id, success: false, error: "No HTTP response", serverId: nil)
             }
             guard (200..<300).contains(http.statusCode) else {
                 let msg = "HTTP \(http.statusCode)"
-                return AssetResult(assetLocalId: snapshot.id, success: false, error: msg)
+                return AssetResult(assetLocalId: snapshot.id, success: false, error: msg, serverId: nil)
             }
-            return AssetResult(assetLocalId: snapshot.id, success: true, error: nil)
+            // Capture the server-assigned id so the grid can delete it later.
+            let serverId = (try? JSONDecoder().decode(MediaItem.self, from: data))?.id
+            return AssetResult(assetLocalId: snapshot.id, success: true, error: nil, serverId: serverId)
         } catch let urlError as URLError {
-            return AssetResult(assetLocalId: snapshot.id, success: false, error: urlError.localizedDescription)
+            return AssetResult(assetLocalId: snapshot.id, success: false, error: urlError.localizedDescription, serverId: nil)
         } catch {
-            return AssetResult(assetLocalId: snapshot.id, success: false, error: error.localizedDescription)
+            return AssetResult(assetLocalId: snapshot.id, success: false, error: error.localizedDescription, serverId: nil)
         }
     }
 
     /// Applies a finished upload's result to published state.
     private func applyResult(_ result: AssetResult) {
         if result.success {
-            markUploaded(assetLocalId: result.assetLocalId)
+            markUploaded(assetLocalId: result.assetLocalId, serverId: result.serverId)
             uploadedCount += 1
         } else {
             failedCount += 1
             lastError = result.error
         }
+    }
+
+    /**
+     Deletes a media item from the backend (and clears the local uploaded
+     marker so the green check disappears). Called from the grid's long-press
+     context menu. `localOnly=true` just forgets the marker without hitting the
+     server (for items that failed to upload).
+     */
+    func delete(localId: String, localOnly: Bool = false) async {
+        let serverId = uploaded[localId]
+        if !localOnly, let serverId {
+            do {
+                try await client.delete(id: serverId)
+            } catch {
+                lastError = "Delete failed: \(error.localizedDescription)"
+                return
+            }
+        }
+        uploaded.removeValue(forKey: localId)
+        uploadedRevision &+= 1
+        if uploadedCount > 0 { uploadedCount -= 1 }
+        saveState()
     }
 
     // MARK: - Background path
@@ -263,9 +288,11 @@ final class MediaSyncer: ObservableObject {
 
     // MARK: - State persistence
 
-    private func markUploaded(assetLocalId: String) {
+    private func markUploaded(assetLocalId: String, serverId: String? = nil) {
         guard uploaded[assetLocalId] == nil else { return }
-        uploaded[assetLocalId] = "uploaded"
+        // Store the server id when known (foreground path); fall back to a
+        // sentinel for the background path where we don't parse the response.
+        uploaded[assetLocalId] = serverId ?? "uploaded"
         uploadedRevision &+= 1
         saveState()
     }

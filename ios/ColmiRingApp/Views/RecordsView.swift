@@ -29,17 +29,22 @@ struct RecordsView: View {
                     .listRowBackground(Color.clear)
             }
             ForEach(items) { item in
-                RecordRow(item: item)
-                    .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12))
-                    .listRowSeparator(.hidden)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            delete(item)
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
+                NavigationLink {
+                    RecordDetailView(documentId: item.id, title: item.title)
+                } label: {
+                    RecordRow(item: item)
+                }
+                .buttonStyle(.plain)
+                .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12))
+                .listRowSeparator(.hidden)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        delete(item)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
                     }
-                    .onAppear { loadMoreIfNeeded(currentItem: item) }
+                }
+                .onAppear { loadMoreIfNeeded(currentItem: item) }
             }
             if isLoading {
                 HStack { Spacer(); ProgressView(); Spacer() }
@@ -167,7 +172,9 @@ struct RecordRow: View {
                 .frame(width: 36)
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(item.title).font(.body.bold())
+                    Text(item.title)
+                        .font(.body.bold())
+                        .lineLimit(1)
                     if item.pageCount > 1 {
                         Text("\(item.pageCount)p")
                             .font(.caption2.bold())
@@ -177,18 +184,20 @@ struct RecordRow: View {
                             .background(Capsule().fill(Color.teal))
                     }
                 }
-                if !item.snippet.isEmpty {
-                    Text(item.snippet)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(3)
-                }
+                // Always reserve 2 lines of snippet space so every row is the
+                // same height, whether the snippet is short, long, or empty.
+                Text(item.snippet.isEmpty ? "—" : item.snippet)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 Text(formattedDate)
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
         }
         .padding()
+        .frame(height: 96)
         .background(RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemBackground)))
     }
 

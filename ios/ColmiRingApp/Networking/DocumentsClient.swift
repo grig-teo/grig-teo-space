@@ -25,6 +25,28 @@ struct DocumentList: Codable {
     let hasMore: Bool
 }
 
+/** A single page within a document detail. `imageUrl` is a full public URL. */
+struct DocumentPage: Codable, Identifiable {
+    let id: String
+    let pageNumber: Int
+    let ocrText: String
+    let imageUrl: String
+}
+
+/** Full document detail: the list-item fields plus all pages. */
+struct DocumentDetail: Codable {
+    let id: String
+    let title: String
+    let snippet: String
+    let imageUrl: String
+    let thumbUrl: String?
+    let pageCount: Int
+    let language: String?
+    let source: String
+    let recordedAt: String
+    let pages: [DocumentPage]
+}
+
 struct ChatMessage: Codable, Identifiable {
     var id = UUID()
     let role: String        // "user" | "assistant"
@@ -78,6 +100,23 @@ final class DocumentsClient: ObservableObject {
             throw URLError(.badServerResponse)
         }
         return try JSONDecoder().decode(DocumentList.self, from: data)
+    }
+
+    // MARK: - Detail (full document incl. all pages)
+
+    func detail(documentId: String) async throws -> DocumentDetail {
+        guard let url = URL(string: "\(base)/api/health-docs/\(documentId)") else {
+            throw URLError(.badURL)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        for (k, v) in authHeaders() { request.setValue(v, forHTTPHeaderField: k) }
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        return try JSONDecoder().decode(DocumentDetail.self, from: data)
     }
 
     // MARK: - Upload (multipart: image + ocrText + title + language)
