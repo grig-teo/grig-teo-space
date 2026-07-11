@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
+  Param,
   Post,
   Query,
   UploadedFile,
@@ -19,7 +21,7 @@ import { DocumentsService } from './documents.service';
  * device key (`X-Device-Key`), same as the ring readings.
  *
  * OCR text is extracted on-device (Apple Vision) and uploaded alongside the
- * image — the backend never runs OCR.
+ * image — the backend never runs OCR. A document may have multiple pages.
  */
 @Controller('health-docs')
 @UseGuards(DeviceKeyGuard)
@@ -45,6 +47,29 @@ export class DocumentsController {
     return this.docs.create({ image, ocrText, title, language, source, recordedAt });
   }
 
+  /** Append a page (image + OCR text) to an existing document. */
+  @Post(':id/pages')
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: memoryStorage(),
+      limits: { fileSize: 25 * 1024 * 1024 },
+    }),
+  )
+  @HttpCode(201)
+  async addPage(
+    @Param('id') id: string,
+    @UploadedFile() image?: Express.Multer.File,
+    @Body('ocrText') ocrText?: string,
+  ) {
+    return this.docs.addPage(id, { image, ocrText });
+  }
+
+  /** Document detail incl. all pages. */
+  @Get(':id')
+  async detail(@Param('id') id: string) {
+    return this.docs.getDetail(id);
+  }
+
   @Get()
   async list(
     @Query('query') query?: string,
@@ -56,6 +81,12 @@ export class DocumentsController {
       page: page ? Number(page) : 1,
       pageSize: pageSize ? Number(pageSize) : 20,
     });
+  }
+
+  /** Permanently delete a document and all its pages. */
+  @Delete(':id')
+  async delete(@Param('id') id: string) {
+    return this.docs.delete(id);
   }
 
   @Post('chat')

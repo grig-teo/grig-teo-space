@@ -51,6 +51,28 @@ export class StorageService implements OnModuleInit {
     return `${this.publicUrl}/${key}`;
   }
 
+  /**
+   * Removes an object previously created via `upload()`, identified by its
+   * public URL. Silently does nothing if the URL doesn't belong to this
+   * bucket or the object is already gone.
+   */
+  async removeByUrl(url: string): Promise<void> {
+    if (!this.ready) {
+      await this.ensureBucket();
+    }
+    const prefix = `${this.publicUrl}/`;
+    if (!url.startsWith(prefix)) return;
+    const key = url.slice(prefix.length);
+    if (!key) return;
+    try {
+      await this.client.removeObject(this.bucket, key);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to remove object "${key}": ${error instanceof Error ? error.message : error}`,
+      );
+    }
+  }
+
   private async ensureBucket(): Promise<void> {
     const maxAttempts = 10;
 

@@ -2,7 +2,8 @@ import SwiftUI
 
 /**
  Records page: list of scanned health documents with search, infinite-scroll
- pagination, a FAB to scan a new document, and an AI-doctor chat button.
+ pagination, swipe-to-delete, a FAB to scan a new (possibly multi-page)
+ document, and an AI-doctor chat button.
 
  Reached from the Health hub → "Records" button.
  */
@@ -16,40 +17,44 @@ struct RecordsView: View {
     @State private var isLoading: Bool = false
     @State private var error: String?
 
-    @State private var showingScanner = false
+    @State private var showingBuilder = false
     @State private var showingChat = false
-    @State private var scanState: ScanState = .idle
-
-    enum ScanState: Equatable {
-        case idle
-        case recognizing
-        case uploading
-        case done(String?)
-    }
+    @State private var deletedIds = Set<String>()
 
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 12) {
-                if items.isEmpty && !isLoading {
-                    emptyState
-                }
-                ForEach(items) { item in
-                    RecordRow(item: item)
-                        .onAppear { loadMoreIfNeeded(currentItem: item) }
-                }
-                if isLoading {
-                    ProgressView()
-                        .padding(.vertical, 16)
-                }
-                if let error {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                        .padding(.horizontal)
-                }
+        List {
+            if items.isEmpty && !isLoading {
+                emptyState
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
             }
-            .padding(.top, 8)
+            ForEach(items) { item in
+                RecordRow(item: item)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12))
+                    .listRowSeparator(.hidden)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            delete(item)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                    .onAppear { loadMoreIfNeeded(currentItem: item) }
+            }
+            if isLoading {
+                HStack { Spacer(); ProgressView(); Spacer() }
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            }
+            if let error {
+                Text(error)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            }
         }
+        .listStyle(.plain)
         .navigationTitle("Records")
         .searchable(text: $query, prompt: "Search documents")
         .toolbar {
@@ -63,7 +68,7 @@ struct RecordsView: View {
         }
         .overlay(alignment: .bottomTrailing) {
             Button {
-                showingScanner = true
+                showingBuilder = true
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 24, weight: .semibold))
@@ -73,23 +78,11 @@ struct RecordsView: View {
             }
             .padding(20)
         }
-        .sheet(isPresented: $showingScanner) {
-            ScannerView { image in
-                handleScan(image)
-            }
+        .sheet(isPresented: $showingBuilder) {
+            DocumentBuilderView { reload() }
         }
         .sheet(isPresented: $showingChat) {
             RecordsChatView()
-        }
-        .overlay {
-            if case .recognizing = scanState { scanOverlay("Recognizing text…") }
-            if case .uploading = scanState { scanOverlay("Uploading…") }
-            if case .done(let msg) = scanState {
-                scanOverlay(msg ?? "Done")
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { scanState = .idle }
-                    }
-            }
         }
         .onAppear { if items.isEmpty { reload() } }
         .onChange(of: query) { _ in reload() }
@@ -109,15 +102,6 @@ struct RecordsView: View {
         .padding(.top, 60)
     }
 
-    private func scanOverlay(_ text: String) -> some View {
-        VStack(spacing: 16) {
-            ProgressView()
-            Text(text).font(.subheadline)
-        }
-        .padding(28)
-        .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial))
-    }
-
     // MARK: - Data
 
     private func reload() {
@@ -125,12 +109,12 @@ struct RecordsView: View {
         page = 1
         hasMore = true
         items = []
+        deletedIds.removeAll()
         Task { await load(page: 1) }
     }
 
     private func loadMoreIfNeeded(currentItem: DocumentItem) {
         guard hasMore, !isLoading else { return }
-        // Trigger near the last item.
         let thresholdIndex = items.index(items.endIndex, offsetBy: -3, limitedBy: items.startIndex) ?? items.startIndex
         if currentItem.id == items[thresholdIndex].id {
             Task { await load(page: page + 1) }
@@ -151,61 +135,61 @@ struct RecordsView: View {
         isLoading = false
     }
 
-    // MARK: - Scan → OCR → upload
-
-    private func handleScan(_ image: UIImage) {
-        scanState = .recognizing
+    private func delete(_ item: DocumentItem) {
+        // Optimistic removal.
+        deletedIds.insert(item.id)
+        withAnimation { items.removeAll { $0.id == item.id } }
         Task {
-            let text = await TextRecognizer.recognizeText(in: image)
-            scanState = .uploading
             do {
-                let title = titleFrom(text: text)
-                if let jpegData = image.jpegData(compressionQuality: 0.8) {
-                    try await client.upload(imageData: jpegData, ocrText: text, title: title, language: nil)
-                }
-                scanState = .done("Saved")
-                reload()
+                try await client.delete(documentId: item.id)
             } catch {
-                scanState = .done("Upload failed: \(error.localizedDescription)")
+                // Restore on failure.
+                let message = error.localizedDescription
+                await MainActor.run {
+                    deletedIds.remove(item.id)
+                    self.error = "Delete failed: \(message)"
+                    reload()
+                }
             }
         }
     }
-
-    private func titleFrom(text: String) -> String? {
-        let firstLine = text.split(separator: "\n").first.map(String.init)?.trimmingCharacters(in: .whitespaces)
-        guard let line = firstLine, !line.isEmpty else { return nil }
-        return line.count > 80 ? String(line.prefix(80)) + "…" : line
-    }
 }
 
-/** A single document row: icon + title + snippet + date. */
+/** A single document row: icon + title + snippet + date + page badge. */
 struct RecordRow: View {
     let item: DocumentItem
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "doc.text.fill")
-                    .font(.title2)
-                    .foregroundColor(.teal)
-                    .frame(width: 36)
-                VStack(alignment: .leading, spacing: 4) {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "doc.text.fill")
+                .font(.title2)
+                .foregroundColor(.teal)
+                .frame(width: 36)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
                     Text(item.title).font(.body.bold())
-                    if !item.snippet.isEmpty {
-                        Text(item.snippet)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(3)
+                    if item.pageCount > 1 {
+                        Text("\(item.pageCount)p")
+                            .font(.caption2.bold())
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.teal))
                     }
-                    Text(formattedDate)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
                 }
+                if !item.snippet.isEmpty {
+                    Text(item.snippet)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(3)
+                }
+                Text(formattedDate)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             }
         }
         .padding()
         .background(RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemBackground)))
-        .padding(.horizontal)
     }
 
     private var formattedDate: String {

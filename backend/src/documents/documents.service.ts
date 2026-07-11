@@ -3,11 +3,13 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { HealthDocument, type HealthDocSource } from '../entities/health-document.entity';
+import { HealthDocumentPage } from '../entities/health-document-page.entity';
 import {
   HealthDocChatMessage,
   type HealthDocChatRole,
@@ -25,6 +27,18 @@ export type CreateDocumentInput = {
   recordedAt?: string;
 };
 
+export type AddPageInput = {
+  ocrText?: string;
+  image?: Express.Multer.File;
+};
+
+export type DocumentPageDto = {
+  id: string;
+  pageNumber: number;
+  ocrText: string;
+  imageUrl: string;
+};
+
 export type DocumentListItem = {
   id: string;
   title: string;
@@ -35,6 +49,10 @@ export type DocumentListItem = {
   language: string | null;
   source: string;
   recordedAt: string;
+};
+
+export type DocumentDetail = DocumentListItem & {
+  pages: DocumentPageDto[];
 };
 
 export type DocumentListResult = {
@@ -62,7 +80,7 @@ const SNIPPET_LENGTH = 140;
 const MAX_PAGE_SIZE = 50;
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_HISTORY_MESSAGES = 50;
-const MAX_CONTEXT_CHARS = 24000; // ~fits in GLM's context window with headroom
+const MAX_CONTEXT_CHARS = 24000;
 const GLM_ENDPOINT = 'https://api.z.ai/api/coding/paas/v4/chat/completions';
 
 const DOCTOR_SYSTEM_PROMPT =
@@ -88,6 +106,8 @@ export class DocumentsService {
   constructor(
     @InjectRepository(HealthDocument)
     private readonly docRepo: Repository<HealthDocument>,
+    @InjectRepository(HealthDocumentPage)
+    private readonly pageRepo: Repository<HealthDocumentPage>,
     @InjectRepository(HealthDocChatMessage)
     private readonly chatRepo: Repository<HealthDocChatMessage>,
     private readonly storage: StorageService,
@@ -96,15 +116,12 @@ export class DocumentsService {
   // --- Upload + storage --------------------------------------------------
 
   async create(input: CreateDocumentInput): Promise<HealthDocument> {
-    const ocrText = (input.ocrText ?? '').trim();
-    if (!input.image) {
-      throw new BadRequestException('An image file is required');
-    }
-
-    const imageUrl = await this.storage.upload(input.image, 'documents');
+    const page = this.validatePageInput(input.image, input.ocrText);
+    const imageUrl = await this.storage.upload(page.image, 'documents');
+    const ocrText = page.ocrText;
     const title = (input.title ?? '').trim() || this.titleFromText(ocrText) || 'Scanned document';
 
-    const doc = this.docRepo.create({
+    const doc = await this.docRepo.save({
       title: title.slice(0, 160),
       ocrText: ocrText.slice(0, 100000),
       imageUrl,
@@ -114,7 +131,89 @@ export class DocumentsService {
       source: input.source ?? 'app',
       recordedAt: this.parseDate(input.recordedAt) ?? new Date(),
     });
-    return this.docRepo.save(doc);
+
+    await this.pageRepo.save({
+      documentId: doc.id,
+      pageNumber: 1,
+      ocrText: ocrText.slice(0, 100000),
+      imageUrl,
+    });
+    return doc;
+  }
+
+  /** Appends a new page (image + OCR text) to an existing document. */
+  async addPage(documentId: string, input: AddPageInput): Promise<HealthDocumentPage> {
+    const doc = await this.docRepo.findOne({ where: { id: documentId } });
+    if (!doc) {
+      throw new NotFoundException('Document not found');
+    }
+    const page = this.validatePageInput(input.image, input.ocrText);
+    const imageUrl = await this.storage.upload(page.image, 'documents');
+
+    // Backfill: docs created before the page-entity refactor store their
+    // content only on the parent row. Materialize that as page 1 first.
+    await this.ensureFirstPageExists(doc);
+
+    const existing = await this.pageRepo.count({ where: { documentId } });
+    const pageNumber = existing + 1;
+
+    const saved = await this.pageRepo.save({
+      documentId,
+      pageNumber,
+      ocrText: page.ocrText.slice(0, 100000),
+      imageUrl,
+    });
+
+    // Update the parent doc's aggregated OCR text + page count.
+    doc.pageCount = pageNumber;
+    doc.ocrText = await this.aggregateOcrText(documentId);
+    await this.docRepo.save(doc);
+    return saved;
+  }
+
+  /** Permanently deletes a document and all its pages (+ MinIO objects). */
+  async delete(documentId: string): Promise<{ id: string }> {
+    const doc = await this.docRepo.findOne({ where: { id: documentId } });
+    if (!doc) {
+      throw new NotFoundException('Document not found');
+    }
+    const pages = await this.pageRepo.find({ where: { documentId } });
+
+    // Best-effort removal of stored images (don't fail the delete on storage errors).
+    await this.storage.removeByUrl(doc.imageUrl);
+    for (const page of pages) {
+      if (page.imageUrl !== doc.imageUrl) {
+        await this.storage.removeByUrl(page.imageUrl);
+      }
+    }
+
+    await this.pageRepo.delete({ documentId });
+    await this.docRepo.delete(documentId);
+    return { id: documentId };
+  }
+
+  /** Full detail incl. all pages (for the iOS document viewer). */
+  async getDetail(documentId: string): Promise<DocumentDetail> {
+    const doc = await this.docRepo.findOne({ where: { id: documentId } });
+    if (!doc) {
+      throw new NotFoundException('Document not found');
+    }
+    await this.ensureFirstPageExists(doc);
+    const pages = await this.pageRepo.find({
+      where: { documentId },
+      order: { pageNumber: 'ASC' },
+    });
+    const base = this.toListItem(doc, pages.length);
+    return {
+      ...base,
+      pageCount: pages.length,
+      pages: pages.map((p) => ({
+        id: p.id,
+        pageNumber: p.pageNumber,
+        ocrText: p.ocrText,
+        imageUrl: p.imageUrl,
+      })),
+    };
   }
 
   // --- Paginated, searchable list ----------------------------------------
@@ -142,8 +241,12 @@ export class DocumentsService {
     }
 
     const [rows, total] = await qb.getManyAndCount();
+
+    // Fetch page counts in one query for the visible rows.
+    const counts = await this.pageCountsFor(rows.map((r) => r.id));
+
     return {
-      items: rows.map((row) => this.toListItem(row)),
+      items: rows.map((row) => this.toListItem(row, counts[row.id] ?? row.pageCount)),
       page,
       pageSize,
       total,
@@ -151,7 +254,7 @@ export class DocumentsService {
     };
   }
 
-  // --- AI doctor chat (GLM-5.2 over Z.ai) --------------------------------
+  // --- AI doctor chat (GLM over Z.ai) ------------------------------------
 
   async getChatHistory(sessionId: string): Promise<SavedChatMessage[]> {
     const normalized = this.normalizeSessionId(sessionId);
@@ -185,7 +288,7 @@ export class DocumentsService {
       ...history,
     ];
 
-    const model = process.env.GLM_MODEL?.trim() || 'glm-4.6';
+    const model = process.env.GLM_MODEL?.trim() || 'glm-5.2';
     const response = await fetch(GLM_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -219,19 +322,58 @@ export class DocumentsService {
 
   // --- Helpers -----------------------------------------------------------
 
+  /**
+   * Backfills a page-1 row for documents created before the page-entity
+   * refactor (their content lived only on the parent row). No-op once a page
+   * row exists. Keeps detail/addPage/delete consistent for legacy data.
+   */
+  private async ensureFirstPageExists(doc: HealthDocument): Promise<void> {
+    const count = await this.pageRepo.count({ where: { documentId: doc.id } });
+    if (count > 0) return;
+    await this.pageRepo.save({
+      documentId: doc.id,
+      pageNumber: 1,
+      ocrText: doc.ocrText,
+      imageUrl: doc.imageUrl,
+    });
+  }
+
+  /** Concatenates every page's OCR text, in page order, as search/AI context. */
+  private async aggregateOcrText(documentId: string): Promise<string> {
+    const pages = await this.pageRepo.find({
+      where: { documentId },
+      order: { pageNumber: 'ASC' },
+    });
+    return pages.map((p) => p.ocrText.trim()).filter(Boolean).join('\n\n---\n\n');
+  }
+
+  private async pageCountsFor(ids: string[]): Promise<Record<string, number>> {
+    if (ids.length === 0) return {};
+    const rows = await this.pageRepo
+      .createQueryBuilder('p')
+      .select('p.document_id', 'documentId')
+      .addSelect('COUNT(*)::int', 'count')
+      .where('p.document_id IN (:...ids)', { ids })
+      .groupBy('p.document_id')
+      .getRawMany<{ documentid: string; count: number }>();
+    const map: Record<string, number> = {};
+    for (const row of rows) {
+      map[row.documentid] = row.count;
+    }
+    return map;
+  }
+
   private async buildContext(question: string): Promise<string> {
     const docs = await this.docRepo.find({
       order: { recordedAt: 'DESC' },
       take: 100,
     });
 
-    // Rank docs by simple keyword overlap with the question so the most
-    // relevant ones fit within the context budget.
     const terms = this.tokenize(question);
     const scored = docs
       .map((doc) => {
         const haystack = `${doc.title} ${doc.ocrText}`.toLowerCase();
-        let score = terms.reduce((acc, t) => acc + (haystack.includes(t) ? 1 : 0), 0);
+        const score = terms.reduce((acc, t) => acc + (haystack.includes(t) ? 1 : 0), 0);
         return { doc, score };
       })
       .sort((a, b) => b.score - a.score || b.doc.recordedAt.getTime() - a.doc.recordedAt.getTime());
@@ -241,12 +383,9 @@ export class DocumentsService {
     for (const { doc, score } of scored) {
       const trimmed = doc.ocrText.trim();
       if (!trimmed) continue;
-      // Drop docs that have zero keyword overlap once we already have content,
-      // to keep the prompt focused (still included if nothing matched at all).
       if (score === 0 && blocks.length >= 3) continue;
 
-      const block =
-        `[${doc.recordedAt.toISOString().slice(0, 10)}] ${doc.title}\n` + trimmed;
+      const block = `[${doc.recordedAt.toISOString().slice(0, 10)}] ${doc.title}\n` + trimmed;
       if (used + block.length > MAX_CONTEXT_CHARS) break;
       blocks.push(block);
       used += block.length;
@@ -262,11 +401,20 @@ export class DocumentsService {
       order: { createdAt: 'DESC' },
       take: 8,
     });
-    // Chronological, excluding the just-saved user question (it's already in the prompt).
     return rows
       .reverse()
       .slice(0, -1)
       .map((r) => ({ role: r.role, content: r.content }));
+  }
+
+  private validatePageInput(
+    image: Express.Multer.File | undefined,
+    ocrText: string | undefined,
+  ): { image: Express.Multer.File; ocrText: string } {
+    if (!image) {
+      throw new BadRequestException('An image file is required');
+    }
+    return { image, ocrText: (ocrText ?? '').trim() };
   }
 
   private normalizeSessionId(sessionId: string): string {
@@ -289,7 +437,7 @@ export class DocumentsService {
     });
   }
 
-  private toListItem(doc: HealthDocument): DocumentListItem {
+  private toListItem(doc: HealthDocument, pageCount?: number): DocumentListItem {
     const text = doc.ocrText.replace(/\s+/g, ' ').trim();
     return {
       id: doc.id,
@@ -297,7 +445,7 @@ export class DocumentsService {
       snippet: text.length > SNIPPET_LENGTH ? `${text.slice(0, SNIPPET_LENGTH)}…` : text,
       imageUrl: doc.imageUrl,
       thumbUrl: doc.thumbUrl,
-      pageCount: doc.pageCount,
+      pageCount: pageCount ?? doc.pageCount,
       language: doc.language,
       source: doc.source,
       recordedAt: doc.recordedAt.toISOString(),

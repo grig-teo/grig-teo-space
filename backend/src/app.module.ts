@@ -9,6 +9,7 @@ import { CvModule } from './cv/cv.module';
 import { AiChatMessage } from './entities/ai-chat-message.entity';
 import { HealthDocChatMessage } from './entities/health-doc-chat-message.entity';
 import { HealthDocument } from './entities/health-document.entity';
+import { HealthDocumentPage } from './entities/health-document-page.entity';
 import { HealthNote } from './entities/health-note.entity';
 import { HealthReading } from './entities/health-reading.entity';
 import { SiteContent } from './entities/site-content.entity';
@@ -31,6 +32,7 @@ import { StorageModule } from './storage/storage.module';
         HealthReading,
         HealthNote,
         HealthDocument,
+        HealthDocumentPage,
         HealthDocChatMessage,
       ],
       synchronize: true,

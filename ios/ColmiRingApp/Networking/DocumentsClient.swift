@@ -93,19 +93,94 @@ final class DocumentsClient: ObservableObject {
         for (k, v) in authHeaders() { request.setValue(v, forHTTPHeaderField: k) }
 
         var body = Data()
-        // image file part
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"image\"; filename=\"scan.jpg\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
-        body.append(imageData)
-        body.append("\r\n".data(using: .utf8)!)
-        // ocrText part
+        body.appendImagePart(boundary: boundary, name: "image", filename: "scan.jpg", contentType: "image/jpeg", data: imageData)
         body.appendFormField(boundary: boundary, name: "ocrText", value: ocrText)
         if let title { body.appendFormField(boundary: boundary, name: "title", value: title) }
         if let language { body.appendFormField(boundary: boundary, name: "language", value: language) }
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
 
         request.httpBody = body
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw URLError(URLError.Code(rawValue: code))
+        }
+    }
+
+    /** Creates a document with its first page; returns the new document id. */
+    @discardableResult
+    func createDocument(imageData: Data, ocrText: String, title: String?, language: String?) async throws -> String {
+        let boundary = UUID().uuidString
+        guard let url = URL(string: "\(base)/api/health-docs") else {
+            throw URLError(.badURL)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        for (k, v) in authHeaders() { request.setValue(v, forHTTPHeaderField: k) }
+
+        var body = Data()
+        body.appendImagePart(boundary: boundary, name: "image", filename: "scan.jpg", contentType: "image/jpeg", data: imageData)
+        body.appendFormField(boundary: boundary, name: "ocrText", value: ocrText)
+        if let title { body.appendFormField(boundary: boundary, name: "title", value: title) }
+        if let language { body.appendFormField(boundary: boundary, name: "language", value: language) }
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+
+        request.httpBody = body
+
+        let (responseData, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw URLError(URLError.Code(rawValue: code))
+        }
+        if let dict = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
+           let id = dict["id"] as? String {
+            return id
+        }
+        throw URLError(.cannotParseResponse)
+    }
+
+    /** Appends a page to an existing document; returns the new page's document id. */
+    @discardableResult
+    func addPage(to documentId: String, imageData: Data, ocrText: String) async throws -> String {
+        let boundary = UUID().uuidString
+        guard let url = URL(string: "\(base)/api/health-docs/\(documentId)/pages") else {
+            throw URLError(.badURL)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        for (k, v) in authHeaders() { request.setValue(v, forHTTPHeaderField: k) }
+
+        var body = Data()
+        body.appendImagePart(boundary: boundary, name: "image", filename: "scan.jpg", contentType: "image/jpeg", data: imageData)
+        body.appendFormField(boundary: boundary, name: "ocrText", value: ocrText)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+
+        request.httpBody = body
+
+        let (responseData, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw URLError(URLError.Code(rawValue: code))
+        }
+        // Return the parent document id so the caller can refresh detail.
+        if let dict = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
+           let id = dict["documentId"] as? String {
+            return id
+        }
+        return documentId
+    }
+
+    /** Permanently deletes a document and all its pages. */
+    func delete(documentId: String) async throws {
+        guard let url = URL(string: "\(base)/api/health-docs/\(documentId)") else {
+            throw URLError(.badURL)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        for (k, v) in authHeaders() { request.setValue(v, forHTTPHeaderField: k) }
 
         let (_, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
@@ -161,5 +236,13 @@ private extension Data {
         append("--\(boundary)\r\n".data(using: .utf8)!)
         append("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n".data(using: .utf8)!)
         append("\(value)\r\n".data(using: .utf8)!)
+    }
+
+    mutating func appendImagePart(boundary: String, name: String, filename: String, contentType: String, data: Data) {
+        append("--\(boundary)\r\n".data(using: .utf8)!)
+        append("Content-Disposition: form-data; name=\"\(name)\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        append("Content-Type: \(contentType)\r\n\r\n".data(using: .utf8)!)
+        append(data)
+        append("\r\n".data(using: .utf8)!)
     }
 }
