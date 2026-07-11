@@ -194,3 +194,82 @@ will get 404s until that deploy happens — surface this to the user.
 - **Don't run migrations.** TypeORM `synchronize: true` handles schema; there
   is no migration tooling. Be cautious with destructive column-type changes.
 - **Don't deploy without confirmation** unless the user said to.
+
+## Code-review graph (structural map of the codebase)
+
+This repo is indexed by **code-review-graph** (a local MCP server) into a
+persistent structural graph at `.code-review-graph/graph.db`. Its
+`mcp__code-review-graph__*` tools answer structural questions — "who calls
+`MediaService.create`?", "what does this change impact?", "which execution
+flows are affected?", "find this symbol's neighborhood" — in **one tool call**
+instead of fanning out many Grep/Read passes that re-read the same files.
+Prefer the graph tools for exploration; fall back to Grep/Glob/Read only when
+the graph doesn't cover what you need.
+
+It is registered as the `code-review-graph` MCP server in `.mcp.json`
+(`uvx code-review-graph serve`, stdio). The `.code-review-graph/` cache and any
+machine-local tool settings are gitignored — only `.mcp.json` and this doc are
+committed, so the graph is rebuilt per-machine.
+
+### Read the graph first (every task)
+
+Before reading source files or writing code for a task, orient yourself with a
+quick graph pass — pick the ones relevant to the task, don't run all of them:
+
+- `get_minimal_context_tool` — graph stats + top communities/flows + suggested
+  next tools in ~100 tokens. The cheapest entry point; call it first.
+- `semantic_search_nodes_tool` / `query_graph_tool` — find the symbol you'll
+  touch and its neighborhood (callers_of, callees_of, imports_of, tests_for).
+- `get_impact_radius_tool` / `detect_changes_tool` — what an edit ripples into;
+  risk-scored change review.
+- `get_architecture_overview_tool` / `list_communities_tool` — the high-level
+  map for broader or unfamiliar areas.
+
+The goal is to read *fewer* files, *more deliberately* — let the graph point
+you at the exact files and lines to open.
+
+### Keep the graph fresh
+
+**The graph is a snapshot.** It does not auto-update as files change. After any
+non-trivial code change (new/renamed/removed functions or classes, a new file,
+a changed signature), refresh it with an **incremental** re-parse so the tools
+stay accurate:
+
+```bash
+cd /Users/grig/Projects/grig_teo_space && uvx --from code-review-graph code-review-graph update
+```
+
+- This re-parses only changed files (fast). A full rebuild
+  (`... code-review-graph build`) is rarely needed — only if the graph seems
+  corrupt or after a large refactor across many files.
+- Run `update` once the code edits of a task are in place (typically right
+  before or after the build/reinstall). Pure docs/config edits don't require a
+  refresh — only changes to TypeScript/Swift structure do.
+- If a query returns nothing for a symbol you just added, the graph is stale:
+  run `update` and retry. Bare generic names ("update", "create", "list") may
+  be de-noised by the engine — qualify them (`MediaService.create`,
+  `MediaSyncer.uploadOne`) for accurate results.
+
+### Triage dead-code findings before deleting
+
+`refactor_tool(mode="dead_code")` lists unreferenced functions/classes, but
+**the static analyzer produces false positives** — triage every finding before
+removing anything:
+
+- **Framework overrides are NEVER dead.** Anything invoked by polymorphism that
+  the analyzer can't trace reads "unused" but deleting it breaks the app. In
+  this repo that includes NestJS lifecycle hooks (`onModuleInit`), guard
+  `canActivate`, TypeORM relations, and SwiftUI delegate methods
+  (`urlSession(_:task:didCompleteWithError:)`, `BGTaskScheduler` handlers,
+  `PHImageManager` callbacks). These are called by the framework, not by name.
+- **Verify with grep, not just the graph.** The graph misses some call patterns
+  (reflection, dynamic dispatch, string-based DI). For each candidate, confirm
+  zero callers with `grep -rn "<symbol>" backend/src ios/ColmiRingApp` before
+  removing. The grep is the source of truth.
+- **Keep public API surface you intend to wire up.** If a helper is unused
+  *now* but is part of a façade you plan to call soon, flag it to the user
+  rather than silently deleting.
+
+Remove the genuinely dead symbols, then rebuild + reinstall (iOS) or rebuild
+(backend) after the removals — a deletion that breaks the build means the
+symbol wasn't actually dead; revert it and re-examine.
