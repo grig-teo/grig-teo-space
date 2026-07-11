@@ -122,14 +122,22 @@ struct ChatBubble: View {
     var body: some View {
         HStack {
             if isUser { Spacer() }
-            Text(text)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(isUser ? Color.accentColor : Color(.secondarySystemBackground))
-                )
-                .foregroundColor(isUser ? .white : .primary)
+            // Assistant answers contain markdown (bold, bullets, line breaks)
+            // from the GLM doctor; user messages are plain text.
+            Group {
+                if isUser {
+                    Text(text)
+                } else {
+                    MarkdownText(text: text)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(isUser ? Color.accentColor : Color(.secondarySystemBackground))
+            )
+            .foregroundColor(isUser ? .white : .primary)
             if !isUser { Spacer() }
         }
     }
