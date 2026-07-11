@@ -29,6 +29,8 @@ targets:
           - UIInterfaceOrientationPortrait
         NSBluetoothAlwaysUsageDescription: "The app connects to your COLMI R11 smart ring over Bluetooth to read heart rate, blood oxygen, sleep, and activity data."
         NSBluetoothPeripheralUsageDescription: "The app uses Bluetooth to communicate with your COLMI smart ring."
+        NSCameraUsageDescription: "The app uses the camera to scan physical health documents (lab results, prescriptions) and extract their text."
+        NSPhotoLibraryUsageDescription: "The app needs photo access to select existing document scans when the camera is unavailable."
         # Background execution: keep the BLE link alive, schedule OS wakeups
         # to flush queued readings, and process uploads after relaunch.
         UIBackgroundModes:

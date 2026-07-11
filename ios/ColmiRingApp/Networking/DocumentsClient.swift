@@ -1,0 +1,165 @@
+import Foundation
+
+/**
+ Talks to the backend's scanned-documents endpoints (/api/health-docs).
+ Auth is the shared device key (X-Device-Key), same as ring readings.
+ */
+
+struct DocumentItem: Codable, Identifiable {
+    let id: String
+    let title: String
+    let snippet: String
+    let imageUrl: String
+    let thumbUrl: String?
+    let pageCount: Int
+    let language: String?
+    let source: String
+    let recordedAt: String
+}
+
+struct DocumentList: Codable {
+    let items: [DocumentItem]
+    let page: Int
+    let pageSize: Int
+    let total: Int
+    let hasMore: Bool
+}
+
+struct ChatMessage: Codable, Identifiable {
+    var id = UUID()
+    let role: String        // "user" | "assistant"
+    let content: String
+    let createdAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case role, content, createdAt
+    }
+}
+
+struct ChatHistory: Codable {
+    let messages: [ChatMessage]
+}
+
+struct ChatResponse: Codable {
+    let answer: String?
+    let error: String?
+}
+
+@MainActor
+final class DocumentsClient: ObservableObject {
+    static let shared = DocumentsClient()
+
+    private let settings = AppSettings.shared
+
+    private func authHeaders() -> [String: String] {
+        ["X-Device-Key": settings.deviceKey]
+    }
+
+    private var base: String {
+        settings.backendURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    }
+
+    // MARK: - List (paginated + searchable)
+
+    func list(query: String?, page: Int, pageSize: Int = 20) async throws -> DocumentList {
+        var path = "/api/health-docs?page=\(page)&pageSize=\(pageSize)"
+        if let q = query?.trimmingCharacters(in: .whitespaces), !q.isEmpty {
+            path += "&query=\(q.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
+        }
+        guard let url = URL(string: "\(base)\(path)") else {
+            throw URLError(.badURL)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        for (k, v) in authHeaders() { request.setValue(v, forHTTPHeaderField: k) }
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        return try JSONDecoder().decode(DocumentList.self, from: data)
+    }
+
+    // MARK: - Upload (multipart: image + ocrText + title + language)
+
+    func upload(imageData: Data, ocrText: String, title: String?, language: String?) async throws {
+        let boundary = UUID().uuidString
+        guard let url = URL(string: "\(base)/api/health-docs") else {
+            throw URLError(.badURL)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        for (k, v) in authHeaders() { request.setValue(v, forHTTPHeaderField: k) }
+
+        var body = Data()
+        // image file part
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"image\"; filename=\"scan.jpg\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        body.append(imageData)
+        body.append("\r\n".data(using: .utf8)!)
+        // ocrText part
+        body.appendFormField(boundary: boundary, name: "ocrText", value: ocrText)
+        if let title { body.appendFormField(boundary: boundary, name: "title", value: title) }
+        if let language { body.appendFormField(boundary: boundary, name: "language", value: language) }
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+
+        request.httpBody = body
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw URLError(URLError.Code(rawValue: code))
+        }
+    }
+
+    // MARK: - AI doctor chat
+
+    func chat(message: String, sessionId: String) async throws -> String {
+        guard let url = URL(string: "\(base)/api/health-docs/chat") else {
+            throw URLError(.badURL)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        for (k, v) in authHeaders() { request.setValue(v, forHTTPHeaderField: k) }
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "message": message,
+            "sessionId": sessionId,
+        ])
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            // Surface server error message (e.g. GLM balance) to the UI.
+            if let err = try? JSONDecoder().decode(ChatResponse.self, from: data), let msg = err.error {
+                throw NSError(domain: "DocumentsClient", code: (response as? HTTPURLResponse)?.statusCode ?? 0, userInfo: [NSLocalizedDescriptionKey: msg])
+            }
+            throw URLError(.badServerResponse)
+        }
+        let decoded = try JSONDecoder().decode(ChatResponse.self, from: data)
+        return decoded.answer ?? "(no answer)"
+    }
+
+    func history(sessionId: String) async throws -> [ChatMessage] {
+        guard let url = URL(string: "\(base)/api/health-docs/chat/history?sessionId=\(sessionId)") else {
+            throw URLError(.badURL)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        for (k, v) in authHeaders() { request.setValue(v, forHTTPHeaderField: k) }
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        return try JSONDecoder().decode(ChatHistory.self, from: data).messages
+    }
+}
+
+private extension Data {
+    mutating func appendFormField(boundary: String, name: String, value: String) {
+        append("--\(boundary)\r\n".data(using: .utf8)!)
+        append("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n".data(using: .utf8)!)
+        append("\(value)\r\n".data(using: .utf8)!)
+    }
+}

@@ -1,61 +1,73 @@
 import SwiftUI
 
 /**
- Health tab: ring connection + sync status + latest metrics, plus a settings
- entry point. This is the original single primary view, now scoped to the
- Health tab of the bottom nav.
+ Health hub: entry point for the Health tab. Two large navigation buttons:
+ - Ring:    ring connection, sync, latest metrics.
+ - Records: scanned health documents + AI doctor chat.
  */
 struct HealthView: View {
     @ObservedObject var appState: AppState
-
-    @State private var showingSettings = false
-
-    private var lifecycle: AppLifecycleManager { appState.lifecycle }
-    private var latestByMetric: [RingMetric: Double] { appState.latestByMetric }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    ConnectionCard(
-                        ble: lifecycle.ble,
-                        demo: lifecycle.demo,
-                        demoMode: Binding(
-                            get: { appState.settings.demoMode },
-                            set: { appState.settings.demoMode = $0 },
-                        ),
-                    )
-                    SyncLogView(api: lifecycle.api)
+                    NavigationLink {
+                        RingView(appState: appState)
+                    } label: {
+                        HubButton(
+                            title: "Ring",
+                            subtitle: "Connection, sync & live metrics",
+                            systemImage: "sensor.tag.radiowaves.forward",
+                            color: .pink,
+                        )
+                    }
 
-                    if !latestByMetric.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Latest readings").font(.headline).padding(.horizontal)
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                                ForEach(RingMetric.allCases, id: \.self) { metric in
-                                    if let value = latestByMetric[metric] {
-                                        MetricCard(metric: metric, value: value)
-                                    }
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
+                    NavigationLink {
+                        RecordsView()
+                    } label: {
+                        HubButton(
+                            title: "Records",
+                            subtitle: "Scanned documents & AI doctor",
+                            systemImage: "doc.viewfinder",
+                            color: .teal,
+                        )
                     }
                 }
-                .padding(.vertical)
+                .padding()
             }
             .navigationTitle("Health")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showingSettings = true
-                    } label: {
-                        Image(systemName: "gearshape")
-                    }
-                }
-            }
-            .sheet(isPresented: $showingSettings) {
-                SettingsSheet(settings: appState.settings)
-            }
         }
+    }
+}
+
+/** A large tappable card used on the Health hub. */
+struct HubButton: View {
+    let title: String
+    let subtitle: String
+    let systemImage: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 16) {
+            Image(systemName: systemImage)
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(width: 56, height: 56)
+                .background(RoundedRectangle(cornerRadius: 14).fill(color))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.title3.bold())
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .foregroundColor(.secondary)
+        }
+        .padding()
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
+        .contentShape(Rectangle())
     }
 }

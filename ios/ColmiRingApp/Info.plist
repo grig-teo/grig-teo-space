@@ -42,6 +42,10 @@
 	<string>The app connects to your COLMI R11 smart ring over Bluetooth to read heart rate, blood oxygen, sleep, and activity data.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
 	<string>The app uses Bluetooth to communicate with your COLMI smart ring.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>The app uses the camera to scan physical health documents (lab results, prescriptions) and extract their text.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>The app needs photo access to select existing document scans when the camera is unavailable.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
