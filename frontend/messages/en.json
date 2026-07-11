@@ -5,6 +5,7 @@
     "projects": "_projects",
     "experience": "_experience",
     "contact": "_contact",
+    "health": "_health",
     "openMenu": "Open menu",
     "closeMenu": "Close menu"
   },
@@ -59,5 +60,14 @@
     "title": "Gregory Theodor | Remote Full-Stack Developer",
     "description": "Remote full-stack developer from Moldova — TypeScript, NestJS, Next.js, WebRTC, iOS & Android. Debate Room, Vecin2Vecin. Freelance-ready. CV & projects.",
     "keywords": "remote full-stack developer, freelance developer Moldova, TypeScript developer, NestJS developer, Next.js developer, WebRTC developer, iOS Android developer, mobile app developer, marketplace developer, Gregory Theodor, Grigore Teodoru"
+  },
+  "health": {
+    "title": "Health",
+    "description": "Live biometric stats from my COLMI smart ring.",
+    "notAvailable": "Health stats are not available right now.",
+    "avg": "avg",
+    "range": "range",
+    "lastDays": "Last {days} days",
+    "noData": "No data yet"
   }
 }

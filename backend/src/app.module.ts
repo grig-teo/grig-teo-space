@@ -6,7 +6,10 @@ import { AdminModule } from './admin/admin.module';
 import { ContentModule } from './content/content.module';
 import { CvModule } from './cv/cv.module';
 import { AiChatMessage } from './entities/ai-chat-message.entity';
+import { HealthNote } from './entities/health-note.entity';
+import { HealthReading } from './entities/health-reading.entity';
 import { SiteContent } from './entities/site-content.entity';
+import { HealthModule } from './health/health.module';
 import { LinkedInController } from './linkedin.controller';
 import { LinkedInService } from './linkedin.service';
 import { PortfolioController } from './portfolio.controller';
@@ -18,7 +21,7 @@ import { StorageModule } from './storage/storage.module';
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
-      entities: [SiteContent, AiChatMessage],
+      entities: [SiteContent, AiChatMessage, HealthReading, HealthNote],
       synchronize: true,
     }),
     TypeOrmModule.forFeature([SiteContent, AiChatMessage]),
@@ -26,6 +29,7 @@ import { StorageModule } from './storage/storage.module';
     CvModule,
     StorageModule,
     AdminModule,
+    HealthModule,
   ],
   controllers: [PortfolioController, AiController, LinkedInController],
   providers: [PortfolioService, AiService, LinkedInService],

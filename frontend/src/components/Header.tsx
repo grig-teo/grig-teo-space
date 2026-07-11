@@ -11,6 +11,7 @@ const baseLinks = [
   { key: 'blog', href: '/#blog' },
   { key: 'projects', href: '/#projects' },
   { key: 'experience', href: '/#experience' },
+  { key: 'health', href: '/health' },
   { key: 'contact', href: '/#contact' },
 ] as const;
 
@@ -36,11 +37,15 @@ function MenuIcon({ open }: { open: boolean }) {
   );
 }
 
-export function Header({ showBlog = true }: { showBlog?: boolean }) {
+export function Header({ showBlog = true, showHealth = false }: { showBlog?: boolean; showHealth?: boolean }) {
   const t = useTranslations('nav');
   const tHero = useTranslations('hero');
   const [menuOpen, setMenuOpen] = useState(false);
-  const links = showBlog ? baseLinks : baseLinks.filter((link) => link.key !== 'blog');
+  const links = baseLinks.filter((link) => {
+    if (link.key === 'blog' && !showBlog) return false;
+    if (link.key === 'health' && !showHealth) return false;
+    return true;
+  });
 
   const closeMenu = () => setMenuOpen(false);
 

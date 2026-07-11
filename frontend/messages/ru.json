@@ -5,6 +5,7 @@
     "projects": "_projects",
     "experience": "_experience",
     "contact": "_contact",
+    "health": "_health",
     "openMenu": "Открыть меню",
     "closeMenu": "Закрыть меню"
   },
@@ -59,5 +60,14 @@
     "title": "Григорий Федоров | Remote Full-Stack разработчик",
     "description": "Удалённый full-stack разработчик — TypeScript, NestJS, Next.js, WebRTC, iOS и Android. Debate Room, Vecin2Vecin. Фриланс, проекты и CV.",
     "keywords": "удалённый full-stack разработчик, фриланс разработчик, разработчик TypeScript, разработчик NestJS, разработчик Next.js, WebRTC разработчик, мобильный разработчик iOS Android, разработчик маркетплейсов, Григорий Федоров, Grigore Teodoru"
+  },
+  "health": {
+    "title": "Здоровье",
+    "description": "Биометрические показатели с моего умного кольца COLMI.",
+    "notAvailable": "Показатели здоровья сейчас недоступны.",
+    "avg": "среднее",
+    "range": "диапазон",
+    "lastDays": "Последние {days} дн.",
+    "noData": "Пока нет данных"
   }
 }

@@ -1,0 +1,37 @@
+name: ColmiRingApp
+options:
+  bundleIdPrefix: space.grig-teo
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    DEVELOPMENT_TEAM: "99LK64WRBG"
+    CODE_SIGN_STYLE: Automatic
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+targets:
+  ColmiRingApp:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: ColmiRingApp
+    info:
+      path: ColmiRingApp/Info.plist
+      properties:
+        CFBundleDisplayName: COLMI Ring
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        UILaunchScreen:
+          UIColorName: ""
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSBluetoothAlwaysUsageDescription: "The app connects to your COLMI R11 smart ring over Bluetooth to read heart rate, blood oxygen, sleep, and activity data."
+        NSBluetoothPeripheralUsageDescription: "The app uses Bluetooth to communicate with your COLMI smart ring."
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: space.grig-teo.colmi-ring
+        TARGETED_DEVICE_FAMILY: "1,2"

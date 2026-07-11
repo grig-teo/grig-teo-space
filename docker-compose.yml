@@ -58,6 +58,9 @@ services:
       LINKEDIN_CLIENT_SECRET: ${LINKEDIN_CLIENT_SECRET:-}
       LINKEDIN_REDIRECT_URI: ${LINKEDIN_REDIRECT_URI:-}
       SITE_URL: ${SITE_URL:-http://localhost:3000}
+      DEVICE_API_KEY: ${DEVICE_API_KEY:-dev-device-key}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
     depends_on:
       db:
         condition: service_healthy
@@ -73,6 +76,18 @@ services:
       timeout: 5s
       retries: 8
       start_period: 30s
+
+  telegram:
+    build: ./telegram
+    restart: unless-stopped
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      DEVICE_API_KEY: ${DEVICE_API_KEY:-dev-device-key}
+      TELEGRAM_BACKEND_URL: http://backend:3001
+    depends_on:
+      backend:
+        condition: service_healthy
 
   frontend:
     build:

@@ -179,3 +179,92 @@ export async function adminUploadMedia(file: File): Promise<string> {
   const data = (await res.json()) as { url: string };
   return data.url;
 }
+
+// --- Health pipeline ------------------------------------------------------
+
+export type HealthMetric =
+  | 'heart_rate'
+  | 'spo2'
+  | 'steps'
+  | 'calories'
+  | 'distance_km'
+  | 'stress'
+  | 'hrv'
+  | 'sleep_duration_h'
+  | 'sleep_quality';
+
+export type MetricSeriesPoint = {
+  recordedAt: string;
+  value: number;
+};
+
+export type MetricSummary = {
+  metric: HealthMetric;
+  count: number;
+  avg: number | null;
+  min: number | null;
+  max: number | null;
+  latest: MetricSeriesPoint | null;
+};
+
+export type HealthAlert = {
+  metric: HealthMetric;
+  level: 'warning' | 'critical';
+  message: string;
+  value: number;
+  recordedAt: string;
+};
+
+export type HealthOverview = {
+  from: string;
+  to: string;
+  metrics: Array<MetricSummary & { series: MetricSeriesPoint[] }>;
+  notes: Array<{
+    id: string;
+    content: string;
+    mood: string | null;
+    source: string;
+    recordedAt: string;
+  }>;
+  alerts: HealthAlert[];
+};
+
+export type MetricPublicConfig = {
+  show: boolean;
+  label?: string;
+};
+
+export type HealthPublicConfig = {
+  enabled: boolean;
+  displayName: string;
+  windowDays: number;
+  metrics: Partial<Record<HealthMetric, MetricPublicConfig>>;
+};
+
+export async function adminGetHealthOverview(days = 7): Promise<HealthOverview> {
+  const res = await fetch(`${apiBase()}/api/admin/health/overview?days=${days}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to load health overview');
+  return res.json();
+}
+
+export async function adminGetHealthConfig(): Promise<HealthPublicConfig> {
+  const res = await fetch(`${apiBase()}/api/admin/health/config`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to load health config');
+  return res.json();
+}
+
+export async function adminSaveHealthConfig(
+  config: HealthPublicConfig,
+): Promise<HealthPublicConfig> {
+  const res = await fetch(`${apiBase()}/api/admin/health/config`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(config),
+  });
+  if (!res.ok) throw new Error('Failed to save health config');
+  return res.json();
+}

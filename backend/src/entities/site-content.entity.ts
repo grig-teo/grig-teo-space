@@ -1,6 +1,11 @@
 import { Column, Entity, PrimaryColumn, UpdateDateColumn } from 'typeorm';
 
-export type ContentKey = 'profile' | 'projects' | 'experience' | 'blog';
+export type ContentKey =
+  | 'profile'
+  | 'projects'
+  | 'experience'
+  | 'blog'
+  | 'health_public';
 
 @Entity('site_content')
 export class SiteContent {

@@ -129,3 +129,41 @@ export function getCvUrl(locale: Locale = 'en'): string {
   const prefix = base ? `${base}/api` : '/api';
   return `${prefix}/cv?locale=${locale}`;
 }
+
+// --- Public health page ---------------------------------------------------
+
+export type PublicHealthMetric = {
+  metric: string;
+  label: string;
+  unit: string | null;
+  summary: {
+    avg: number | null;
+    min: number | null;
+    max: number | null;
+    latest: { recordedAt: string; value: number } | null;
+  };
+  series: { recordedAt: string; value: number }[];
+};
+
+export type PublicHealthPayload = {
+  enabled: boolean;
+  displayName: string;
+  windowDays: number;
+  metrics: PublicHealthMetric[];
+};
+
+/** Returns null when the public health page is disabled (404-safe). */
+export async function getPublicHealth(): Promise<PublicHealthPayload | null> {
+  const base = apiBaseUrl();
+  const prefix = base ? `${base}/api` : '/api';
+  try {
+    const res = await fetch(`${prefix}/health/public`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as PublicHealthPayload;
+    return data.enabled ? data : null;
+  } catch {
+    return null;
+  }
+}
