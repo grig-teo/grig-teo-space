@@ -6,6 +6,7 @@
 	<array>
 		<string>space.grig-teo.colmi-ring.flush</string>
 		<string>space.grig-teo.colmi-ring.poll</string>
+		<string>space.grig-teo.colmi-ring.media-sync</string>
 	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
@@ -44,8 +45,10 @@
 	<string>The app uses Bluetooth to communicate with your COLMI smart ring.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>The app uses the camera to scan physical health documents (lab results, prescriptions) and extract their text.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>The app may save media back to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>The app needs photo access to select existing document scans when the camera is unavailable.</string>
+	<string>The app reads your photo library to display your media and back up your photos and videos to your private server.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -1,10 +1,11 @@
 import SwiftUI
 
 /**
- Root view with a bottom tab bar: Profile and Health.
+ Root view with a bottom tab bar: Profile, Health, Media.
 
  - Profile: grig-teo identity + CV download (per language).
  - Health:  ring connection, sync, latest metrics, settings.
+ - Media:   photo/video gallery grid + one-tap backup to the backend.
 
  Both tabs observe the shared `AppState` so BLE collection and uploads keep
  running regardless of which tab is active.
@@ -23,6 +24,11 @@ struct ContentView: View {
             HealthView(appState: appState)
                 .tabItem {
                     Label("Health", systemImage: "heart.text.clipboard")
+                }
+
+            MediaView()
+                .tabItem {
+                    Label("Media", systemImage: "photo.on.rectangle.angled")
                 }
         }
         .sheet(item: $profileClient.sharedItem) { shared in

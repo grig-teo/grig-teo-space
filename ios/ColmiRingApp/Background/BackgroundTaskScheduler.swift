@@ -25,6 +25,7 @@ final class BackgroundTaskScheduler {
 
     static let flushIdentifier = "space.grig-teo.colmi-ring.flush"
     static let pollIdentifier = "space.grig-teo.colmi-ring.poll"
+    static let mediaSyncIdentifier = "space.grig-teo.colmi-ring.media-sync"
 
     private init() {}
 
@@ -51,13 +52,24 @@ final class BackgroundTaskScheduler {
             else { task.setTaskCompleted(success: false); return }
             self.handlePoll(task)
         }
+
+        BGTaskScheduler.shared.register(
+            forTaskWithIdentifier: Self.mediaSyncIdentifier,
+            using: nil,
+        ) { [weak self] task in
+            guard let self,
+                  let task = task as? BGAppRefreshTask
+            else { task.setTaskCompleted(success: false); return }
+            self.handleMediaSync(task)
+        }
     }
 
-    /// Request the next wakeup for both tasks. Call this whenever the app
+    /// Request the next wakeup for all tasks. Call this whenever the app
     /// backgrounds and after each task completes.
     func scheduleNext() {
         scheduleFlush()
         schedulePoll()
+        scheduleMediaSync()
     }
 
     // MARK: - Flush (frequent, lightweight)
@@ -112,6 +124,27 @@ final class BackgroundTaskScheduler {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 25) {
             lifecycle.stopPolling()
+            task.setTaskCompleted(success: true)
+        }
+    }
+
+    // MARK: - Media sync (periodic backup of the photo library)
+
+    private func scheduleMediaSync() {
+        let request = BGAppRefreshTaskRequest(identifier: Self.mediaSyncIdentifier)
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 2 * 60 * 60) // ~2h
+        do { try BGTaskScheduler.shared.submit(request) } catch { /* will retry later */ }
+    }
+
+    private func handleMediaSync(_ task: BGAppRefreshTask) {
+        scheduleMediaSync()
+        task.expirationHandler = { task.setTaskCompleted(success: false) }
+
+        Task { @MainActor in
+            await MediaSyncer.shared.syncIfNeeded()
+            // Give the (foreground) uploads a moment to kick off; the background
+            // URLSession continues transferring after the task completes.
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
             task.setTaskCompleted(success: true)
         }
     }

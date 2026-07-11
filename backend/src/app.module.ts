@@ -12,9 +12,11 @@ import { HealthDocument } from './entities/health-document.entity';
 import { HealthDocumentPage } from './entities/health-document-page.entity';
 import { HealthNote } from './entities/health-note.entity';
 import { HealthReading } from './entities/health-reading.entity';
+import { MediaItem } from './entities/media-item.entity';
 import { SiteContent } from './entities/site-content.entity';
 import { DocumentsModule } from './documents/documents.module';
 import { HealthModule } from './health/health.module';
+import { MediaModule } from './media/media.module';
 import { LinkedInController } from './linkedin.controller';
 import { LinkedInService } from './linkedin.service';
 import { PortfolioController } from './portfolio.controller';
@@ -34,6 +36,7 @@ import { StorageModule } from './storage/storage.module';
         HealthDocument,
         HealthDocumentPage,
         HealthDocChatMessage,
+        MediaItem,
       ],
       synchronize: true,
     }),
@@ -44,6 +47,7 @@ import { StorageModule } from './storage/storage.module';
     AdminModule,
     HealthModule,
     DocumentsModule,
+    MediaModule,
   ],
   controllers: [PortfolioController, AiController, LinkedInController],
   providers: [PortfolioService, AiService, LinkedInService, AiRateLimiter],
