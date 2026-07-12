@@ -579,7 +579,11 @@ export class HealthService {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({ model, messages, temperature: 0.4, max_tokens: 256 }),
+      // GLM-5.2 is a reasoning model: it emits reasoning_content + content,
+      // and the reasoning eats most of the token budget. A small max_tokens
+      // leaves nothing for the actual answer (content comes back empty), so
+      // we give it headroom well beyond what a 60-word tip needs.
+      body: JSON.stringify({ model, messages, temperature: 0.4, max_tokens: 2048 }),
     });
     if (!response.ok) {
       const raw = await response.text();
