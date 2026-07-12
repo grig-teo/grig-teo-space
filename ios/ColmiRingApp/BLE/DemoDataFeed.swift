@@ -59,7 +59,10 @@ final class DemoDataFeed: ObservableObject {
         beginBackgroundTask()
         defer { endBackgroundTask() }
 
-        let cycle: [RingMetric] = [.heartRate, .spo2, .steps, .hrv, .stress]
+        let cycle: [RingMetric] = [
+            .heartRate, .spo2, .steps, .hrv, .stress,
+            .calories, .distanceKm, .sleepDurationH, .sleepQuality,
+        ]
         let metric = cycle[step % cycle.count]
         step += 1
 
@@ -70,6 +73,10 @@ final class DemoDataFeed: ObservableObject {
         case .steps: value = Double.random(in: 5...40)
         case .hrv: value = Double.random(in: 28...72)
         case .stress: value = Double.random(in: 10...45)
+        case .calories: value = Double.random(in: 1400...2800)
+        case .distanceKm: value = Double.random(in: 1.2...10.5)
+        case .sleepDurationH: value = Double.random(in: 5.5...8.8)
+        case .sleepQuality: value = Double.random(in: 62...94)
         default: value = 0
         }
 
