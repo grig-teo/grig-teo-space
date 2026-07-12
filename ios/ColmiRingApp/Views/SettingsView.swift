@@ -1,13 +1,12 @@
 import SwiftUI
 
 /**
- App settings page, pushed onto the Health hub's NavigationStack via the
- toolbar gear icon. Owns the demo-mode toggle and the Security section
- (Face ID / passcode app lock).
+ App settings page, reached from the bottom-nav Settings tab. Owns only the
+ Face ID / passcode app lock.
 
  The app-lock toggle is gated on a `verifyIdentity` prompt so enabling or
  disabling it always requires authentication. A "Lock now" button forces the
- lock screen for testing.
+ lock screen for testing. The demo-mode toggle lives on the Ring page.
  */
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
@@ -21,12 +20,6 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section {
-                Toggle("Demo data feed", isOn: $settings.demoMode)
-            } footer: {
-                Text("When on, the app emits simulated readings instead of reading the real ring. Use this to test the pipeline before the ring is paired.")
-            }
-
             Section {
                 Toggle("Require Face ID", isOn: $appLockToggle)
                 Button("Lock now") { appLock.lockNow() }
@@ -42,12 +35,6 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.red)
                 }
-            }
-
-            Section("About") {
-                LabeledContent("Protocol", value: "COLMI R02-family (placeholder)")
-                LabeledContent("Backend", value: settings.backendURL)
-                LabeledContent("Bundle id", value: Bundle.main.bundleIdentifier ?? "—")
             }
         }
         .navigationTitle("Settings")

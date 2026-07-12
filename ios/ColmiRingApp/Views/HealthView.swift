@@ -60,15 +60,6 @@ struct HealthView: View {
                 .padding()
             }
             .navigationTitle("Health")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink {
-                        SettingsView(settings: appState.settings)
-                    } label: {
-                        Image(systemName: "gearshape")
-                    }
-                }
-            }
             .overlay(alignment: .bottomTrailing) {
                 Button {
                     showingChat = true

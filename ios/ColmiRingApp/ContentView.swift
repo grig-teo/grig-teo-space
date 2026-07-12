@@ -1,11 +1,12 @@
 import SwiftUI
 
 /**
- Root view with a bottom tab bar: Profile, Health, Media.
+ Root view with a bottom tab bar: Profile, Health, Media, Settings.
 
  - Profile: grig-teo identity + CV download (per language).
  - Health:  ring connection, sync, latest metrics, settings.
  - Media:   photo/video gallery grid + one-tap backup to the backend.
+ - Settings: demo mode, Face ID app lock, backend info.
 
  Both tabs observe the shared `AppState` so BLE collection and uploads keep
  running regardless of which tab is active.
@@ -34,6 +35,14 @@ struct ContentView: View {
                     Label("Media", systemImage: "photo.stack")
                 }
                 .tag(2)
+
+            NavigationStack {
+                SettingsView(settings: appState.settings)
+            }
+            .tabItem {
+                Label("Settings", systemImage: "gearshape")
+            }
+            .tag(3)
         }
         .onChange(of: appState.deepLinkTips) { open in
             // Widget deep link: switch to the Health tab; HealthView pushes
