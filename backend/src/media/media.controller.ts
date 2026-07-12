@@ -76,6 +76,16 @@ export class MediaController {
     });
   }
 
+  /**
+   * All backed-up asset-local ids. The app calls this after a reinstall to
+   * rebuild its uploaded registry, so it won't re-upload the whole library.
+   * Must be declared before `@Get(':id')` or "ids" matches the path param.
+   */
+  @Get('ids')
+  async ids() {
+    return this.media.allAssetLocalIds();
+  }
+
   @Get(':id')
   async detail(@Param('id') id: string) {
     const item = await this.media.findOne(id);

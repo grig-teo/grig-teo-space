@@ -22,6 +22,9 @@ export type CreateMediaInput = {
 
 export type MediaListItem = {
   id: string;
+  /** Stable device-local asset id. Exposed so the app can rebuild its
+   *  uploaded registry after a reinstall (the local copy is wiped). */
+  assetLocalId: string;
   kind: string;
   filename: string;
   mimeType: string;
@@ -110,6 +113,16 @@ export class MediaService {
     return item;
   }
 
+  /**
+   * Returns the `assetLocalId` of every backed-up item. Used by the app to
+   * rebuild its local uploaded registry after a reinstall (when the on-device
+   * copy is gone), so it doesn't re-upload the whole library.
+   */
+  async allAssetLocalIds(): Promise<{ assetLocalIds: string[] }> {
+    const rows = await this.repo.find({ select: ['assetLocalId'] });
+    return { assetLocalIds: rows.map((r) => r.assetLocalId) };
+  }
+
   async list(params: {
     page?: number;
     pageSize?: number;
@@ -167,6 +180,7 @@ export class MediaService {
   toListItem(row: MediaItem): MediaListItem {
     return {
       id: row.id,
+      assetLocalId: row.assetLocalId,
       kind: row.kind,
       filename: row.filename,
       mimeType: row.mimeType,

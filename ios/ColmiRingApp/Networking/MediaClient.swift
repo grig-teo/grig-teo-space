@@ -45,7 +45,32 @@ final class MediaClient: ObservableObject {
         return try JSONDecoder().decode(MediaPage.self, from: data)
     }
 
-    // MARK: - Upload
+    // MARK: - Reconcile
+
+  /**
+   Fetches the asset-local ids of every item already on the backend. Used
+   after a reinstall (when the local uploaded registry is gone) to rebuild it,
+   so the app doesn't re-upload the whole library.
+   */
+  func uploadedAssetIds() async throws -> Set<String> {
+    guard let url = URL(string: "\(base)/api/media/ids") else { throw URLError(.badURL) }
+    var request = URLRequest(url: url)
+    request.httpMethod = "GET"
+    for (k, v) in authHeaders() { request.setValue(v, forHTTPHeaderField: k) }
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+    guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+    }
+    let payload = try JSONDecoder().decode(AssetIdsResponse.self, from: data)
+    return Set(payload.assetLocalIds)
+  }
+
+  private struct AssetIdsResponse: Decodable {
+    let assetLocalIds: [String]
+  }
+
+  // MARK: - Upload
 
     /// Metadata carried alongside the binary in the multipart form fields.
     struct UploadDescriptor {

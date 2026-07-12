@@ -62,6 +62,10 @@ final class MediaSyncer: ObservableObject {
     private var stopRequested = false
     /// Guard against overlapping runs (e.g. onAppear + FAB).
     private var running = false
+    /// True once we've reconciled the local registry against the server this
+    /// launch. Prevents repeated fetches and limits the rebuild to the case it
+    /// fixes: a fresh install with an empty `media_sync_state.json`.
+    private var reconciled = false
 
     private init() {
         loadState()
@@ -110,6 +114,14 @@ final class MediaSyncer: ObservableObject {
         lastError = nil
         failedCount = 0
         status = .scanning
+
+        // After a reinstall the local registry (`media_sync_state.json`) is
+        // gone, so `uploaded` is empty and every library asset would look
+        // pending — re-uploading the whole library. Rebuild it from the
+        // server's source of truth first, so already-backed-up assets are
+        // correctly skipped. Runs once per launch, only when the file is
+        // absent or empty.
+        await reconcileIfNeeded()
 
         let snapshots = library.allSnapshots()
         totalCount = snapshots.count
@@ -287,6 +299,24 @@ final class MediaSyncer: ObservableObject {
     }
 
     // MARK: - State persistence
+
+    /**
+     Seeds the uploaded registry from the backend when the local file is
+     missing or empty (i.e. a fresh install). Best-effort: on network failure
+     we leave the registry as-is so a normal sync still works (the backend's
+     own `assetLocalId` dedup prevents real duplicates regardless).
+     */
+    private func reconcileIfNeeded() async {
+        guard !reconciled else { return }
+        reconciled = true
+        guard uploaded.isEmpty else { return }
+        guard let ids = try? await client.uploadedAssetIds() else { return }
+        for id in ids {
+            uploaded[id] = "uploaded"
+        }
+        uploadedRevision &+= 1
+        saveState()
+    }
 
     private func markUploaded(assetLocalId: String, serverId: String? = nil) {
         guard uploaded[assetLocalId] == nil else { return }
