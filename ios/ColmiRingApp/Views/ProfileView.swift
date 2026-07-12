@@ -1,21 +1,21 @@
 import SwiftUI
 
 /**
- Profile tab: shows the profile photo and a single "Download CV" button that
- opens a menu to choose a language (English / Russian / Romanian). Tapping a
- language downloads the PDF and presents the iOS share sheet so the user can
- save or send it.
+ Profile tab: shows the profile photo, a small "CV" pill (alongside the site
+ link) that opens a language menu to download the CV, and today's stress graph
+ by hour.
  */
 struct ProfileView: View {
     @ObservedObject var client: ProfileClient
     @ObservedObject var settings: AppSettings
+    @StateObject private var stressClient = StressSeriesClient.shared
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                     header
-                    cvButton
+                    StressChartView(client: stressClient)
                     if let error = client.lastError {
                         Text(error)
                             .font(.caption)
@@ -39,17 +39,23 @@ struct ProfileView: View {
                 .clipShape(Circle())
                 .overlay(Circle().stroke(Color(.separator), lineWidth: 0.5))
                 .shadow(color: .black.opacity(0.1), radius: 6, y: 3)
-            Link(destination: URL(string: "https://grig-teo.space")!) {
-                Text("grig-teo.space")
-                    .font(.subheadline)
-                    .foregroundColor(.accentColor)
+
+            HStack(spacing: 8) {
+                Link(destination: URL(string: "https://grig-teo.space")!) {
+                    Text("grig-teo.space")
+                        .font(.subheadline)
+                        .foregroundColor(.accentColor)
+                }
+                cvPill
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
     }
 
-    private var cvButton: some View {
+    /// Small label pill that opens the CV language menu. Sits inline with the
+    /// site link rather than taking a full-width button.
+    private var cvPill: some View {
         Menu {
             ForEach(CVLanguage.allCases) { language in
                 Button {
@@ -59,19 +65,20 @@ struct ProfileView: View {
                 }
             }
         } label: {
-            HStack {
+            HStack(spacing: 4) {
                 if client.downloadingLanguage != nil {
                     ProgressView()
+                        .controlSize(.small)
                 } else {
                     Image(systemName: "square.and.arrow.down")
                 }
-                Text(client.downloadingLanguage != nil ? "Downloading…" : "Download CV")
+                Text("CV")
             }
-            .font(.body.weight(.medium))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(RoundedRectangle(cornerRadius: 12).fill(Color.accentColor))
-            .foregroundColor(.white)
+            .font(.caption.weight(.medium))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Capsule().fill(Color.accentColor.opacity(0.15)))
+            .foregroundColor(.accentColor)
         }
         .disabled(client.downloadingLanguage != nil)
     }
