@@ -17,6 +17,12 @@ final class AppSettings: ObservableObject {
         didSet { UserDefaults.standard.set(demoMode, forKey: "demoMode") }
     }
 
+    /** When on, the app requires Face ID (or the device passcode) on launch
+     *  and on return from background. Mirrors `demoMode`'s UserDefaults pattern. */
+    @Published var appLockEnabled: Bool {
+        didSet { UserDefaults.standard.set(appLockEnabled, forKey: "appLockEnabled") }
+    }
+
     /** Backend base URL, baked into Info.plist at build time. Trailing slash
      *  trimmed so URL construction joins cleanly. Read-only at runtime. */
     let backendURL: String
@@ -29,5 +35,6 @@ final class AppSettings: ObservableObject {
             .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         self.deviceKey = info?["DEVICE_API_KEY"] as? String ?? "dev-device-key"
         self.demoMode = UserDefaults.standard.bool(forKey: "demoMode")
+        self.appLockEnabled = UserDefaults.standard.bool(forKey: "appLockEnabled")
     }
 }

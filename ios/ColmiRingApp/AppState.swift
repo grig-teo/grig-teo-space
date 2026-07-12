@@ -18,6 +18,9 @@ final class AppState: ObservableObject {
 
     let lifecycle: AppLifecycleManager
     let settings: AppSettings
+    /// Optional Face ID / passcode lock. Observed by `ColmiRingApp` to gate
+    /// the root view and by `SettingsSheet`'s Security toggle.
+    let appLock = AppLockManager.shared
 
     /// Set by a widget deep link (grigteo://tips) to ask the Health tab to
     /// push the Tip history page. HealthView clears it after navigating.

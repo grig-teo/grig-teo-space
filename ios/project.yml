@@ -33,6 +33,9 @@ targets:
         NSBluetoothAlwaysUsageDescription: "The app connects to your COLMI R11 smart ring over Bluetooth to read heart rate, blood oxygen, sleep, and activity data."
         NSBluetoothPeripheralUsageDescription: "The app uses Bluetooth to communicate with your COLMI smart ring."
         NSCameraUsageDescription: "The app uses the camera to scan physical health documents (lab results, prescriptions) and extract their text."
+        # Required for the optional app lock: iOS crashes the first Face ID
+        # evaluatePolicy call without this string.
+        NSFaceIDUsageDescription: "Face ID protects access to your personal health data."
         NSPhotoLibraryUsageDescription: "The app reads your photo library to display your media and back up your photos and videos to your private server."
         NSPhotoLibraryAddUsageDescription: "The app may save media back to your photo library."
         # Background execution: keep the BLE link alive, schedule OS wakeups
