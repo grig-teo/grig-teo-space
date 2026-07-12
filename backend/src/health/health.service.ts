@@ -375,10 +375,13 @@ export class HealthService {
 
   /** Stores a tip unless it duplicates the most recent one (avoids repeats). */
   private async saveTipIfNew(content: string, generatedAt: Date): Promise<void> {
-    const latest = await this.tipRepo.findOne({
+    // find + take:1 instead of findOne because TypeORM requires a `where`
+    // clause for findOne in this version.
+    const latest = await this.tipRepo.find({
       order: { generatedAt: 'DESC' },
+      take: 1,
     });
-    if (latest?.content === content) return;
+    if (latest[0]?.content === content) return;
     await this.tipRepo.save({ content, generatedAt });
   }
 
