@@ -1,41 +1,31 @@
 import SwiftUI
 
-/** Edits height (cm) and weight (kg). Values are saved to the backend via
- *  BodyStatsClient and feed the AI doctor's context. BMI is computed
- *  server-side and shown read-only. */
+/** Edits height (cm) and weight (kg). Values are auto-saved to the backend via
+ *  BodyStatsClient (no Save button) and feed the AI doctor's context. BMI is
+ *  computed server-side and shown read-only. */
 struct BodyStatsView: View {
     @StateObject private var client = BodyStatsClient.shared
 
     @State private var heightCm: Int = 185
     @State private var weightKg: Int = 94
-    @State private var saving = false
-    @State private var savedFlash = false
+    /// True only after the initial load has populated the steppers, so the
+    /// auto-save doesn't fire from the load itself.
+    @State private var ready = false
+    @State private var debouncer: Task<Void, Never>?
 
     var body: some View {
         Form {
             Section("Measurements") {
                 Stepper("Height: \(heightCm) cm", value: $heightCm, in: 100...250)
+                    .onChange(of: heightCm) { _ in scheduleSave() }
                 Stepper("Weight: \(weightKg) kg", value: $weightKg, in: 30...300)
+                    .onChange(of: weightKg) { _ in scheduleSave() }
             }
             if let stats = client.stats {
                 Section("Computed") {
                     LabeledContent("BMI", value: String(format: "%.1f", stats.bmi))
                     let category = bmiCategory(stats.bmi)
                     LabeledContent("Category", value: category)
-                }
-            }
-            Section {
-                Button {
-                    Task { await save() }
-                } label: {
-                    HStack {
-                        if saving { ProgressView() }
-                        Text(saving ? "Saving…" : "Save")
-                    }
-                }
-                .disabled(saving)
-                if savedFlash {
-                    Text("Saved ✓").foregroundColor(.green).font(.caption)
                 }
             }
             if let error = client.lastError {
@@ -53,15 +43,17 @@ struct BodyStatsView: View {
             heightCm = stats.heightCm
             weightKg = stats.weightKg
         }
+        ready = true
     }
 
-    private func save() async {
-        saving = true
-        let ok = await client.save(heightCm: heightCm, weightKg: weightKg)
-        saving = false
-        if ok {
-            savedFlash = true
-            Task { try? await Task.sleep(nanoseconds: 1_500_000_000); savedFlash = false }
+    /// Debounces the save so rapid stepper taps coalesce into one upload.
+    private func scheduleSave() {
+        guard ready else { return }
+        debouncer?.cancel()
+        debouncer = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard !Task.isCancelled else { return }
+            await client.save(heightCm: heightCm, weightKg: weightKg)
         }
     }
 
