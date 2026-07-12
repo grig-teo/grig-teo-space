@@ -325,6 +325,22 @@ export class HealthService {
     return { tip, generatedAt: now.toISOString() };
   }
 
+  /**
+   * Combined payload for the iOS home-screen widget: today's summary plus the
+   * hourly tip, in a single request. The summary always renders; the tip is
+   * best-effort so a GLM failure (502/503/500) never blocks the status.
+   */
+  async getWidgetPayload(): Promise<{ summary: HealthSummary; tip: HourlyTipResult }> {
+    const summary = await this.getSummary(1);
+    let tip: HourlyTipResult;
+    try {
+      tip = await this.getHourlyTip();
+    } catch {
+      tip = { tip: null, generatedAt: new Date().toISOString(), skippedReason: 'error' };
+    }
+    return { summary, tip };
+  }
+
   async getOverview(days: number): Promise<HealthOverview> {
     const { from, to } = this.window(days);
     const [readings, notes, alerts] = await Promise.all([

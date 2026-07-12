@@ -15,6 +15,9 @@ __pycache__/
 ios/ColmiRingApp.xcodeproj
 ios/ColmiRingApp.xcodeproj/**
 ios/build/
+# Local build-time secrets (backend URL + device key baked into the app/widget).
+# Shared.xcconfig.example is committed; Shared.xcconfig is not.
+ios/Shared.xcconfig
 
 # Agent tooling
 .zcode/

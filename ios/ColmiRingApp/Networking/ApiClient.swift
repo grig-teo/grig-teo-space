@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import UIKit
+import WidgetKit
 
 /**
  Talks to the backend health endpoints. Batches readings, retries on failure,
@@ -169,6 +170,8 @@ final class ApiClient: ObservableObject {
                 pendingCount = remaining.count
                 lastSyncAt = Date()
                 lastError = nil
+                // Refresh the home-screen widget so it reflects the new data.
+                WidgetCenter.shared.reloadAllTimelines()
             } else {
                 let code = (response as? HTTPURLResponse)?.statusCode ?? -1
                 lastError = "Server rejected upload (HTTP \(code))"

@@ -58,6 +58,12 @@ export class HealthController {
     return this.health.getHourlyTip();
   }
 
+  @Get('widget')
+  @UseGuards(DeviceKeyGuard)
+  async widget() {
+    return this.health.getWidgetPayload();
+  }
+
   @Get('public')
   async publicPayload() {
     return this.health.getPublicPayload();

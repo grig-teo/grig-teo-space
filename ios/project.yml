@@ -17,6 +17,9 @@ targets:
     deploymentTarget: "16.0"
     sources:
       - path: ColmiRingApp
+    dependencies:
+      - target: HealthWidget
+        embed: true
     info:
       path: ColmiRingApp/Info.plist
       properties:
@@ -52,11 +55,20 @@ targets:
               NSIncludesSubdomains: true
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
+        # Backend URL + device key baked in at build time from Shared.xcconfig
+        # (gitignored; see Shared.xcconfig.example). Lets the widget extension
+        # use the same values without an App Group. URL is reassembled from
+        # scheme + host because xcconfig treats `//` as a comment.
+        BACKEND_URL: $(APP_BACKEND_SCHEME)://$(APP_BACKEND_HOST)
+        DEVICE_API_KEY: $(APP_DEVICE_KEY)
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: space.grig-teo.colmi-ring
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    configFiles:
+      Debug: Shared.xcconfig
+      Release: Shared.xcconfig
   ColmiRingAppTests:
     type: bundle.unit-test
     platform: iOS
@@ -73,3 +85,40 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: space.grig-teo.colmi-ring.tests
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES
+  HealthWidget:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: Widget
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: Health Widget
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        # Same ATS exception as the host app — allows HTTP to the VPS IP until
+        # DNS/HTTPS is provisioned. Keep in sync with ColmiRingApp's Info.plist.
+        NSAppTransportSecurity:
+          NSExceptionDomains:
+            "159.195.139.229":
+              NSExceptionAllowsInsecureHTTPLoads: true
+              NSIncludesSubdomains: true
+        # Backend URL + device key baked in at build time (same Shared.xcconfig
+        # as the host app) so the widget can reach the backend without an App
+        # Group. Read via Bundle.main.object(forInfoDictionaryKey:) at runtime.
+        BACKEND_URL: $(APP_BACKEND_SCHEME)://$(APP_BACKEND_HOST)
+        DEVICE_API_KEY: $(APP_DEVICE_KEY)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: space.grig-teo.colmi-ring.Widget
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: NO
+    configFiles:
+      Debug: Shared.xcconfig
+      Release: Shared.xcconfig

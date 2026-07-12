@@ -1,0 +1,20 @@
+//
+// Shared.xcconfig.example
+//
+// Build-time configuration for the ColmiRingApp host app and the HealthWidget
+// extension. Copy this file to `Shared.xcconfig`, fill in the values, and
+// `Shared.xcconfig` is gitignored — the real device key never gets committed.
+//
+// The same file is referenced by both targets in project.yml, so the app and
+// the widget build with identical backend URL + device key, baked into each
+// binary's Info.plist. This avoids any App Group / shared-container setup
+// (which would require a paid Apple Developer account).
+//
+// NOTE: xcconfig treats `//` as a line comment, so we cannot write a bare
+// `https://host` (it would be truncated at `//`). Split the scheme from the
+// host; the Info.plist reassembles them into the full URL via variable
+// expansion: `$(APP_BACKEND_SCHEME)://$(APP_BACKEND_HOST)`.
+
+APP_BACKEND_SCHEME = https
+APP_BACKEND_HOST = grig-teo.space
+APP_DEVICE_KEY = change-me

@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BACKEND_URL</key>
+	<string>$(APP_BACKEND_SCHEME)://$(APP_BACKEND_HOST)</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>space.grig-teo.colmi-ring.flush</string>
@@ -26,6 +28,8 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>DEVICE_API_KEY</key>
+	<string>$(APP_DEVICE_KEY)</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSExceptionDomains</key>
