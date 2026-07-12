@@ -184,6 +184,9 @@ const MAX_SERIES_POINTS = 1000;
 const TIP_STALENESS_HOURS = 3;
 /** Window of readings fed to GLM as the "right now" context. */
 const TIP_WINDOW_HOURS = 1;
+/** A generated tip is reused (served to every consumer) for this long before
+ *  a fresh one is generated. Caps GLM calls + history rows at one per hour. */
+const TIP_CACHE_MS = 60 * 60 * 1000;
 const TIP_ENDPOINT = 'https://api.z.ai/api/coding/paas/v4/chat/completions';
 
 const TIP_SYSTEM_PROMPT =
@@ -330,9 +333,21 @@ export class HealthService {
    * Generates a single actionable GLM health tip from the last hour of ring
    * readings. Returns null (with skippedReason) when data is stale or absent
    * so the Telegram bot can stay silent instead of advising on old numbers.
+   *
+   * Caching: once a tip is generated it is reused for TIP_CACHE_MS (1 hour)
+   * across every consumer — widget, Telegram bot, iOS app. A GLM call (and a
+   * new history row) happens only when the cache expires, so the cadence is
+   * strictly one tip per hour regardless of how often the endpoint is hit.
    */
   async getHourlyTip(): Promise<HourlyTipResult> {
     const now = new Date();
+
+    // Serve the cached tip if it's still fresh. All consumers share it.
+    const cached = await this.latestTip();
+    if (cached && now.getTime() - cached.generatedAt.getTime() < TIP_CACHE_MS) {
+      return { tip: cached.content, generatedAt: cached.generatedAt.toISOString() };
+    }
+
     const cutoff = new Date(now.getTime() - TIP_STALENESS_HOURS * 3_600_000);
     const readings = await this.readingRepo.find({
       where: { recordedAt: MoreThan(cutoff) },
@@ -342,15 +357,20 @@ export class HealthService {
     if (readings.length === 0) {
       return { tip: null, generatedAt: now.toISOString(), skippedReason: 'no_data' };
     }
-    const latest = readings[readings.length - 1];
-    if (latest.recordedAt.getTime() < cutoff.getTime()) {
-      return { tip: null, generatedAt: now.toISOString(), skippedReason: 'stale' };
-    }
 
     const context = this.buildTipContext(readings, now);
     const tip = await this.glmComplete(TIP_SYSTEM_PROMPT, context);
     await this.saveTipIfNew(tip, now);
     return { tip, generatedAt: now.toISOString() };
+  }
+
+  /** Most recently persisted tip, or null if none exists. */
+  private async latestTip(): Promise<HealthTip | null> {
+    const rows = await this.tipRepo.find({
+      order: { generatedAt: 'DESC' },
+      take: 1,
+    });
+    return rows[0] ?? null;
   }
 
   /** Returns paginated tip history (newest first). */
