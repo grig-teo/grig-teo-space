@@ -28,6 +28,15 @@ final class StressSeriesClient: ObservableObject {
             /// Average stress for that hour, or nil if the hour had no readings.
             let value: Double?
             let count: Int
+            /// ISO timestamp of the most recent reading in this hour, or nil when
+            /// the hour had no data. Shown on the chart as the collection time.
+            let latestAt: String?
+
+            /// Parsed collection time of the most recent reading, or nil.
+            var collectedAt: Date? {
+                guard let latestAt else { return nil }
+                return ISO8601DateFormatter.shared.date(from: latestAt)
+            }
         }
     }
 

@@ -74,6 +74,9 @@ export type HourlyBucket = {
   value: number | null;
   /** Number of readings averaged into the bucket. */
   count: number;
+  /** ISO timestamp of the most recent reading in the bucket, or null when
+   *  the hour had none — shown by the iOS chart as the collection time. */
+  latestAt: string | null;
 };
 
 export type HourlySeries = {
@@ -485,21 +488,26 @@ export class HealthService {
       order: { recordedAt: 'ASC' },
     });
 
-    // Accumulate per-hour sums and counts over the window.
+    // Accumulate per-hour sums and counts over the window. `latestAt` tracks
+    // the most recent reading time in each bucket so the chart can show when
+    // the data was actually collected (readings arrive ordered ASC by time).
     const sums = new Array(24).fill(0);
     const counts = new Array(24).fill(0);
+    const latestAtMs = new Array(24).fill(0);
     let unit: string | null = null;
     for (const r of readings) {
       if (unit === null) unit = r.unit ?? DEFAULT_UNITS[safeMetric];
       const hour = r.recordedAt.getHours();
       sums[hour] += r.value;
       counts[hour] += 1;
+      latestAtMs[hour] = Math.max(latestAtMs[hour], r.recordedAt.getTime());
     }
 
     const buckets: HourlyBucket[] = sums.map((sum, hour) => ({
       hour,
       value: counts[hour] > 0 ? Math.round((sum / counts[hour]) * 100) / 100 : null,
       count: counts[hour],
+      latestAt: counts[hour] > 0 ? new Date(latestAtMs[hour]).toISOString() : null,
     }));
 
     return {
