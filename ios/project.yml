@@ -95,9 +95,10 @@ targets:
   HealthWidget:
     type: app-extension
     platform: iOS
-    # iOS 17+ enables interactive widget buttons (Button(intent:) + AppIntent)
-    # for the in-widget refresh button. The host app stays at iOS 16.
-    deploymentTarget: "17.0"
+    # iOS 18+ enables interactive widget buttons (Button(intent:) + AppIntent)
+    # and symbolEffect(.rotate) for the refresh button. The host app stays at
+    # iOS 16; the device runs iOS 26.
+    deploymentTarget: "18.0"
     sources:
       - path: Widget
     dependencies:

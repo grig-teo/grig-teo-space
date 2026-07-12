@@ -95,13 +95,16 @@ private struct MediumLayout: View {
 // MARK: - Shared components
 
 /** Refresh button wired to RefreshWidgetIntent via WidgetKit's AppIntent
- *  support. Triggers a timeline reload that re-fetches from the backend. */
+ *  support. Triggers a timeline reload that re-fetches from the backend.
+ *  The icon plays a one-shot rotation whenever the view (re)appears — which
+ *  happens right after the tap, since the intent reloads the timeline. */
 private struct RefreshButton: View {
     var body: some View {
         Button(intent: RefreshWidgetIntent()) {
             Image(systemName: "arrow.clockwise")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .symbolEffect(.rotate)
         }
         .buttonStyle(.plain)
     }
