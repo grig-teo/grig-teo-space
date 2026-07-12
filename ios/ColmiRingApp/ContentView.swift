@@ -31,7 +31,7 @@ struct ContentView: View {
 
             MediaView()
                 .tabItem {
-                    Label("Media", systemImage: "photo.onrectangle.angled")
+                    Label("Media", systemImage: "photo.stack")
                 }
                 .tag(2)
         }
