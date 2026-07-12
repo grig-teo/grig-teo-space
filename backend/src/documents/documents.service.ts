@@ -14,6 +14,7 @@ import {
   HealthDocChatMessage,
   type HealthDocChatRole,
 } from '../entities/health-doc-chat-message.entity';
+import { HealthService, METRIC_LABELS } from '../health/health.service';
 import { StorageService } from '../storage/storage.service';
 
 // --- DTOs ----------------------------------------------------------------
@@ -85,19 +86,24 @@ const GLM_ENDPOINT = 'https://api.z.ai/api/coding/paas/v4/chat/completions';
 
 const DOCTOR_SYSTEM_PROMPT =
   'You are a knowledgeable medical doctor assisting the owner of these health records. ' +
-  'You will be given the text content of medical documents they scanned (lab results, ' +
-  'prescriptions, doctor notes, etc.) as context.\n\n' +
+  'You are given THREE kinds of context:\n' +
+  '1. Their body stats (height, weight, BMI).\n' +
+  '2. Their smart-ring metrics from the last 24 hours (heart rate, SpO2, steps, calories, ' +
+  'distance, stress, HRV, sleep).\n' +
+  '3. The text content of medical documents they scanned (lab results, prescriptions, ' +
+  'doctor notes, etc.).\n\n' +
   'How to answer:\n' +
-  '- Analyze the provided documents and explain what the values, terms, and findings mean ' +
-  'in clear, accessible language.\n' +
+  '- Use ALL available context: cross-reference the ring data and body stats with the ' +
+  'scanned documents when relevant (e.g. relate resting heart rate trends to lab values).\n' +
+  '- Explain values, terms, and findings in clear, accessible language.\n' +
   '- Highlight anything that appears outside normal ranges or worth attention.\n' +
-  '- Connect information across documents when relevant (e.g. trends over time).\n' +
+  '- Connect information across sources when relevant (e.g. trends over time).\n' +
   '- Be concise and structured (use short paragraphs or bullet points).\n\n' +
   'IMPORTANT safety boundaries:\n' +
   '- You are NOT a replacement for a real physician. Always remind the user to consult ' +
   'their doctor before making medical decisions, changing medication, or acting on your ' +
   'analysis, especially for anything urgent or concerning.\n' +
-  '- If the answer is not present in the provided documents, say so plainly rather than ' +
+  '- If the answer is not present in the provided context, say so plainly rather than ' +
   'speculating. Do not invent lab values or diagnoses.\n' +
   '- In any perceived emergency, tell the user to contact emergency services immediately.';
 
@@ -111,6 +117,7 @@ export class DocumentsService {
     @InjectRepository(HealthDocChatMessage)
     private readonly chatRepo: Repository<HealthDocChatMessage>,
     private readonly storage: StorageService,
+    private readonly health: HealthService,
   ) {}
 
   // --- Upload + storage --------------------------------------------------
@@ -284,7 +291,7 @@ export class DocumentsService {
 
     const messages: GlmMessage[] = [
       { role: 'system', content: DOCTOR_SYSTEM_PROMPT },
-      { role: 'user', content: `Health documents:\n${context}\n\nMy question:\n${message}` },
+      { role: 'user', content: `Health context:\n${context}\n\nMy question:\n${message}` },
       ...history,
     ];
 
@@ -366,6 +373,18 @@ export class DocumentsService {
   }
 
   private async buildContext(question: string): Promise<string> {
+    // Body stats + ring summary are fetched alongside the document selection so
+    // the AI doctor sees the full health picture, not just scanned records.
+    const [docBlock, bodyBlock, ringBlock] = await Promise.all([
+      this.buildDocContext(question),
+      this.buildBodyContext(),
+      this.buildRingContext(),
+    ]);
+    return [bodyBlock, ringBlock, docBlock].filter(Boolean).join('\n\n---\n\n');
+  }
+
+  /** Selects scanned documents by keyword overlap with the question. */
+  private async buildDocContext(question: string): Promise<string> {
     const docs = await this.docRepo.find({
       order: { recordedAt: 'DESC' },
       take: 100,
@@ -392,9 +411,32 @@ export class DocumentsService {
       blocks.push(block);
       used += block.length;
     }
-    return blocks.length > 0
-      ? blocks.join('\n\n---\n\n')
-      : 'No scanned health documents available yet.';
+    if (blocks.length === 0) return 'No scanned health documents available yet.';
+    const header = blocks.length === 1 ? 'Scanned document:' : 'Scanned documents:';
+    return `${header}\n${blocks.join('\n\n---\n\n')}`;
+  }
+
+  /** Compact body-stats block (height, weight, BMI). */
+  private async buildBodyContext(): Promise<string> {
+    const body = await this.health.getBodyStats();
+    return `Body stats (updated ${body.updatedAt.slice(0, 10)}):\n` +
+      `- Height: ${body.heightCm} cm\n` +
+      `- Weight: ${body.weightKg} kg\n` +
+      `- BMI: ${body.bmi}`;
+  }
+
+  /** Last-24h ring averages for the 9 metrics. */
+  private async buildRingContext(): Promise<string> {
+    const summary = await this.health.getSummary(1);
+    const lines = summary.metrics
+      .filter((m) => m.count > 0)
+      .map((m) => {
+        const label = METRIC_LABELS[m.metric] ?? m.metric;
+        const latest = m.latest ? `, latest ${m.latest.value}` : '';
+        return `- ${label}: avg ${m.avg}${latest}`;
+      });
+    if (lines.length === 0) return 'Ring data: no readings in the last 24 hours.';
+    return `Ring metrics (last 24 hours, averages):\n${lines.join('\n')}`;
   }
 
   private async recentHistory(sessionId: string): Promise<GlmMessage[]> {

@@ -1,23 +1,27 @@
+import AppIntents
 import WidgetKit
 import SwiftUI
 
 /** Home-screen widget showing the latest stress index, sleep recovery, and the
  *  hourly GLM health tip. Fetches the combined payload from the backend in the
  *  timeline provider; the host app triggers a reload via WidgetCenter after
- *  each readings flush, and the OS refreshes on its own roughly every 30 min.
+ *  each readings flush, and the in-widget refresh button lets the user force a
+ *  reload on demand.
  *
- *  Supports `.systemSmall` and `.systemMedium`. Display-only (iOS 16+). */
+ *  Supports `.systemSmall` and `.systemMedium`. iOS 17+ (interactive button). */
 @main
 struct HealthWidget: Widget {
     let kind: String = "HealthWidget"
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: HealthTimelineProvider()) { entry in
-            HealthWidgetView(payload: entry.payload, family: entry.family)
-                .containerBackgroundCompat()
+            HealthWidgetView(payload: entry.payload, updatedAt: entry.date, family: entry.family)
+                .containerBackground(for: .widget) {
+                    Color(.systemGroupedBackground)
+                }
         }
         .configurationDisplayName("Health")
-        .description("Stress, sleep, and your latest health tip.")
+        .description("Stress, sleep, your latest health tip, and a refresh button.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
@@ -37,7 +41,8 @@ struct HealthTimelineProvider: TimelineProvider {
         Task {
             let payload = await WidgetClient.fetchPayload()
             let entry = HealthEntry(date: .now, payload: payload, family: context.family)
-            // Refresh every 30 minutes; the app also triggers reloads on sync.
+            // Refresh every 30 minutes; the app also triggers reloads on sync,
+            // and the user can force one with the refresh button.
             let next = Date().addingTimeInterval(30 * 60)
             completion(Timeline(entries: [entry], policy: .after(next)))
         }
@@ -50,28 +55,23 @@ struct HealthEntry: TimelineEntry {
     let family: WidgetFamily
 }
 
-// MARK: - Background compat
+// MARK: - Refresh intent
 
-/** iOS 17+ uses `containerBackground`; iOS 16 needs the background applied
- *  directly. This wraps both so the widget renders correctly on 16–26. */
-private extension View {
-    @ViewBuilder
-    func containerBackgroundCompat() -> some View {
-        if #available(iOS 17.0, *) {
-            self.containerBackground(for: .widget) {
-                Color(.systemGroupedBackground)
-            }
-        } else {
-            self.background(Color(.systemGroupedBackground))
-        }
+/** Tapped by the widget's refresh button. Asks WidgetKit to re-run the timeline
+ *  provider, which re-fetches from the backend. The button re-enables once the
+ *  reload completes (the timeline entry's date updates). */
+struct RefreshWidgetIntent: AppIntent {
+    static var title: LocalizedStringResource = "Refresh Health Widget"
+    static var description = IntentDescription("Fetches the latest health data and tip.")
+
+    func perform() async throws -> some IntentResult {
+        WidgetCenter.shared.reloadAllTimelines()
+        return .result()
     }
 }
 
-#if DEBUG
-@available(iOS 17.0, *)
 #Preview(as: .systemSmall) {
     HealthWidget()
 } timeline: {
     HealthEntry(date: .now, payload: nil, family: .systemSmall)
 }
-#endif

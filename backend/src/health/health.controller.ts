@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   Post,
+  Put,
   Query,
   UnauthorizedException,
   UseGuards,
@@ -62,6 +63,33 @@ export class HealthController {
   @UseGuards(DeviceKeyGuard)
   async widget() {
     return this.health.getWidgetPayload();
+  }
+
+  @Get('tips')
+  @UseGuards(DeviceKeyGuard)
+  async tips(
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.health.listTips(
+      Number(limit ?? 20),
+      Number(offset ?? 0),
+    );
+  }
+
+  @Get('body')
+  @UseGuards(DeviceKeyGuard)
+  async getBody() {
+    return this.health.getBodyStats();
+  }
+
+  @Put('body')
+  @UseGuards(DeviceKeyGuard)
+  async updateBody(@Body() body: { heightCm?: number; weightKg?: number }) {
+    return this.health.updateBodyStats({
+      heightCm: Number(body?.heightCm),
+      weightKg: Number(body?.weightKg),
+    });
   }
 
   @Get('public')

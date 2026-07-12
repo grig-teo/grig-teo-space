@@ -2,8 +2,8 @@ import SwiftUI
 
 /**
  Records page: list of scanned health documents with search, infinite-scroll
- pagination, swipe-to-delete, a FAB to scan a new (possibly multi-page)
- document, and an AI-doctor chat button.
+ pagination, swipe-to-delete, and a FAB to scan a new (possibly multi-page)
+ document. The AI-doctor chat now lives on the Health hub (bottom-right button).
 
  Reached from the Health hub → "Records" button.
  */
@@ -18,7 +18,6 @@ struct RecordsView: View {
     @State private var error: String?
 
     @State private var showingBuilder = false
-    @State private var showingChat = false
     @State private var deletedIds = Set<String>()
 
     var body: some View {
@@ -62,15 +61,6 @@ struct RecordsView: View {
         .listStyle(.plain)
         .navigationTitle("Records")
         .searchable(text: $query, prompt: "Search documents")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showingChat = true
-                } label: {
-                    Image(systemName: "stethoscope")
-                }
-            }
-        }
         .overlay(alignment: .bottomTrailing) {
             Button {
                 showingBuilder = true
@@ -85,9 +75,6 @@ struct RecordsView: View {
         }
         .sheet(isPresented: $showingBuilder) {
             DocumentBuilderView { reload() }
-        }
-        .sheet(isPresented: $showingChat) {
-            RecordsChatView()
         }
         .onAppear { if items.isEmpty { reload() } }
         .onChange(of: query) { _ in reload() }

@@ -1,12 +1,13 @@
 import SwiftUI
 
 /**
- Health hub: entry point for the Health tab. Two large navigation buttons:
- - Ring:    ring connection, sync, latest metrics.
- - Records: scanned health documents + AI doctor chat.
+ Health hub: entry point for the Health tab. Navigation buttons to the ring
+ metrics, scanned records, body stats, and tip history. A floating button at
+ the bottom-right opens the AI doctor chat (moved here from the Records page).
  */
 struct HealthView: View {
     @ObservedObject var appState: AppState
+    @State private var showingChat = false
 
     var body: some View {
         NavigationStack {
@@ -28,15 +29,55 @@ struct HealthView: View {
                     } label: {
                         HubButton(
                             title: "Records",
-                            subtitle: "Scanned documents & AI doctor",
+                            subtitle: "Scanned documents",
                             systemImage: "doc.viewfinder",
                             color: .teal,
+                        )
+                    }
+
+                    NavigationLink {
+                        BodyStatsView()
+                    } label: {
+                        HubButton(
+                            title: "Body Stats",
+                            subtitle: "Height, weight & BMI",
+                            systemImage: "figure.stand",
+                            color: .indigo,
+                        )
+                    }
+
+                    NavigationLink {
+                        TipHistoryView()
+                    } label: {
+                        HubButton(
+                            title: "Health Tip",
+                            subtitle: "Hourly AI-generated advice",
+                            systemImage: "lightbulb",
+                            color: .yellow,
                         )
                     }
                 }
                 .padding()
             }
             .navigationTitle("Health")
+            .overlay(alignment: .bottomTrailing) {
+                Button {
+                    showingChat = true
+                } label: {
+                    Image(systemName: "stethoscope")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 56, height: 56)
+                        .background(Circle().fill(Color.teal).shadow(radius: 4, y: 2))
+                }
+                .padding(20)
+            }
+            .sheet(isPresented: $showingChat) {
+                RecordsChatView()
+            }
+            .navigationDestination(isPresented: $appState.deepLinkTips) {
+                TipHistoryView()
+            }
         }
     }
 }

@@ -13,23 +13,32 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var appState: AppState
     @StateObject private var profileClient = ProfileClient.shared
+    @State private var selectedTab = 1
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             ProfileView(client: profileClient, settings: appState.settings)
                 .tabItem {
                     Label("Profile", systemImage: "person.crop.circle")
                 }
+                .tag(0)
 
             HealthView(appState: appState)
                 .tabItem {
                     Label("Health", systemImage: "heart.text.clipboard")
                 }
+                .tag(1)
 
             MediaView()
                 .tabItem {
-                    Label("Media", systemImage: "photo.on.rectangle.angled")
+                    Label("Media", systemImage: "photo.onrectangle.angled")
                 }
+                .tag(2)
+        }
+        .onChange(of: appState.deepLinkTips) { open in
+            // Widget deep link: switch to the Health tab; HealthView pushes
+            // the Tip page and clears the flag itself.
+            if open { selectedTab = 1 }
         }
         .sheet(item: $profileClient.sharedItem) { shared in
             ShareSheet(items: [shared.url])

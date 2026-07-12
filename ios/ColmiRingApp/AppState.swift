@@ -19,6 +19,10 @@ final class AppState: ObservableObject {
     let lifecycle: AppLifecycleManager
     let settings: AppSettings
 
+    /// Set by a widget deep link (grigteo://tips) to ask the Health tab to
+    /// push the Tip history page. HealthView clears it after navigating.
+    @Published var deepLinkTips = false
+
     /// Convenience passthroughs so views can bind directly. The BLE/demo
     /// sources are boxed once into stable `AnyRingDataSource` instances so
     /// SwiftUI's `@ObservedObject` keeps a consistent observation identity

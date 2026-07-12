@@ -174,6 +174,27 @@ exception). Code committed locally does **not** affect prod until
 `deploy/deploy.sh` runs. If a task adds/changes a backend route, the iOS app
 will get 404s until that deploy happens — surface this to the user.
 
+### Commit, push, and deploy after every task
+
+**This is a hard rule, not a suggestion.** When a task is finished (code
+written, builds pass, iOS rebuilt + reinstalled on the connected device,
+code-review graph refreshed), do all three before considering it done:
+
+1. **Commit** to `main` with a clear message (trunk-based — no feature branches).
+2. **Push** to `origin/main`.
+3. **Deploy** with `VPS_HOST=politrack-vps bash deploy/deploy.sh`.
+
+Do this even when the user doesn't explicitly ask — it's the default workflow
+for this repo. Deploying is normally an outward-facing action requiring
+confirmation, but for this single-user, single-branch, single-server project
+the user has pre-authorized it as part of task completion. Still: announce each
+step as it happens, and report any failures honestly (a failed deploy must be
+surfaced, not buried).
+
+The only exceptions are pure iOS-only changes that touch no backend code —
+those still get committed and pushed, but the deploy is a no-op (the VPS serves
+no Swift) and can be skipped. When in doubt, deploy.
+
 ## Things to avoid
 
 - **Don't commit secrets.** `.env`, `.env.production`, `.env.secrets` (if any),

@@ -14,6 +14,7 @@ import {
   HealthSource,
 } from '../entities/health-reading.entity';
 import { HealthNote, HealthNoteSource } from '../entities/health-note.entity';
+import { HealthTip } from '../entities/health-tip.entity';
 
 // --- Public exposure configuration ---------------------------------------
 
@@ -199,10 +200,34 @@ const TIP_SYSTEM_PROMPT =
   '- Do not diagnose or give medical advice. If a value looks concerning, ' +
   'briefly suggest they check with a doctor.';
 
+/** Default body stats (used until the user sets their own). */
+const DEFAULT_BODY_STATS = { heightCm: 185, weightKg: 94 };
+
 type HourlyTipResult = {
   tip: string | null;
   generatedAt: string;
   skippedReason?: string;
+};
+
+/** Body stats stored as a single JSONB row (key 'body_stats' in site_content). */
+export type BodyStats = {
+  heightCm: number;
+  weightKg: number;
+  /** Read-only, computed from height + weight. */
+  bmi: number;
+  updatedAt: string;
+};
+
+export type TipListItem = {
+  id: string;
+  content: string;
+  generatedAt: string;
+};
+
+export type TipListPage = {
+  items: TipListItem[];
+  total: number;
+  hasMore: boolean;
 };
 
 type GlmMessage = {
@@ -219,6 +244,8 @@ export class HealthService {
     private readonly noteRepo: Repository<HealthNote>,
     @InjectRepository(SiteContent)
     private readonly contentRepo: Repository<SiteContent>,
+    @InjectRepository(HealthTip)
+    private readonly tipRepo: Repository<HealthTip>,
   ) {}
 
   // --- Ingest -------------------------------------------------------------
@@ -322,7 +349,81 @@ export class HealthService {
 
     const context = this.buildTipContext(readings, now);
     const tip = await this.glmComplete(TIP_SYSTEM_PROMPT, context);
+    await this.saveTipIfNew(tip, now);
     return { tip, generatedAt: now.toISOString() };
+  }
+
+  /** Returns paginated tip history (newest first). */
+  async listTips(limit = 20, offset = 0): Promise<TipListPage> {
+    const safeLimit = Math.min(Math.max(1, limit), 100);
+    const safeOffset = Math.max(0, offset);
+    const [rows, total] = await this.tipRepo.findAndCount({
+      order: { generatedAt: 'DESC' },
+      take: safeLimit,
+      skip: safeOffset,
+    });
+    return {
+      items: rows.map((r) => ({
+        id: r.id,
+        content: r.content,
+        generatedAt: r.generatedAt.toISOString(),
+      })),
+      total,
+      hasMore: safeOffset + rows.length < total,
+    };
+  }
+
+  /** Stores a tip unless it duplicates the most recent one (avoids repeats). */
+  private async saveTipIfNew(content: string, generatedAt: Date): Promise<void> {
+    const latest = await this.tipRepo.findOne({
+      order: { generatedAt: 'DESC' },
+    });
+    if (latest?.content === content) return;
+    await this.tipRepo.save({ content, generatedAt });
+  }
+
+  // --- Body stats ---------------------------------------------------------
+
+  async getBodyStats(): Promise<BodyStats> {
+    const row = await this.contentRepo.findOne({
+      where: { key: 'body_stats' as ContentKey },
+    });
+    const data = (row?.data ?? {}) as Partial<BodyStats>;
+    const heightCm = Number(data.heightCm) || DEFAULT_BODY_STATS.heightCm;
+    const weightKg = Number(data.weightKg) || DEFAULT_BODY_STATS.weightKg;
+    return {
+      heightCm,
+      weightKg,
+      bmi: this.computeBmi(heightCm, weightKg),
+      updatedAt: row?.updatedAt?.toISOString() ?? new Date(0).toISOString(),
+    };
+  }
+
+  async updateBodyStats(input: { heightCm: number; weightKg: number }): Promise<BodyStats> {
+    const heightCm = this.clampBodyStat(input.heightCm, 100, 250);
+    const weightKg = this.clampBodyStat(input.weightKg, 30, 300);
+    await this.contentRepo.save({
+      key: 'body_stats' as ContentKey,
+      data: { heightCm, weightKg },
+    });
+    return {
+      heightCm,
+      weightKg,
+      bmi: this.computeBmi(heightCm, weightKg),
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  private computeBmi(heightCm: number, weightKg: number): number {
+    const meters = heightCm / 100;
+    if (meters <= 0) return 0;
+    return Math.round((weightKg / (meters * meters)) * 10) / 10;
+  }
+
+  private clampBodyStat(value: number, min: number, max: number): number {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return min;
+    return Math.min(max, Math.max(min, Math.round(n)));
   }
 
   /**

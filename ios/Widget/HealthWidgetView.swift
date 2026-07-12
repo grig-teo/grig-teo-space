@@ -1,19 +1,31 @@
+import AppIntents
 import SwiftUI
 import WidgetKit
 
-/** Displays the health status (stress + sleep recovery) and the latest GLM
- *  tip. Two layouts: `.systemSmall` (compact) and `.systemMedium` (full). */
+/** Displays the health status (stress + sleep recovery), the latest GLM tip,
+ *  the last-updated time, and a refresh button (top-right).
+ *
+ *  Tapping anywhere on the widget (outside the refresh button) opens the host
+ *  app on the Tip history page via the `grigteo://tips` deep link.
+ *
+ *  Two layouts: `.systemSmall` (compact) and `.systemMedium` (full). */
 struct HealthWidgetView: View {
+    static let deepLink = URL(string: "grigteo://tips")!
+
     let payload: WidgetPayload?
+    let updatedAt: Date
     let family: WidgetFamily
 
     var body: some View {
-        switch family {
-        case .systemSmall:
-            SmallLayout(payload: payload)
-        default:
-            MediumLayout(payload: payload)
+        Group {
+            switch family {
+            case .systemSmall:
+                SmallLayout(payload: payload, updatedAt: updatedAt)
+            default:
+                MediumLayout(payload: payload, updatedAt: updatedAt)
+            }
         }
+        .widgetURL(Self.deepLink)
     }
 }
 
@@ -21,9 +33,17 @@ struct HealthWidgetView: View {
 
 private struct SmallLayout: View {
     let payload: WidgetPayload?
+    let updatedAt: Date
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top) {
+                Text("Updated \(updatedAt.formatted(.dateTime.hour().minute()))")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Spacer()
+                RefreshButton()
+            }
             if let payload {
                 StressBadge(value: payload.summary.latest("stress"), compact: true)
                 SleepLine(payload: payload)
@@ -42,9 +62,17 @@ private struct SmallLayout: View {
 
 private struct MediumLayout: View {
     let payload: WidgetPayload?
+    let updatedAt: Date
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
+                Text("Updated \(updatedAt.formatted(.dateTime.hour().minute()))")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Spacer()
+                RefreshButton()
+            }
             if let payload {
                 HStack(spacing: 12) {
                     StressBadge(value: payload.summary.latest("stress"), compact: false)
@@ -64,7 +92,20 @@ private struct MediumLayout: View {
     }
 }
 
-// MARK: - Components
+// MARK: - Shared components
+
+/** Refresh button wired to RefreshWidgetIntent via WidgetKit's AppIntent
+ *  support. Triggers a timeline reload that re-fetches from the backend. */
+private struct RefreshButton: View {
+    var body: some View {
+        Button(intent: RefreshWidgetIntent()) {
+            Image(systemName: "arrow.clockwise")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .buttonStyle(.plain)
+    }
+}
 
 private struct StressBadge: View {
     let value: Double?

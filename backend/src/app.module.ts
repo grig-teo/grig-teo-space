@@ -12,6 +12,7 @@ import { HealthDocument } from './entities/health-document.entity';
 import { HealthDocumentPage } from './entities/health-document-page.entity';
 import { HealthNote } from './entities/health-note.entity';
 import { HealthReading } from './entities/health-reading.entity';
+import { HealthTip } from './entities/health-tip.entity';
 import { MediaItem } from './entities/media-item.entity';
 import { SiteContent } from './entities/site-content.entity';
 import { DocumentsModule } from './documents/documents.module';
@@ -36,6 +37,7 @@ import { StorageModule } from './storage/storage.module';
         HealthDocument,
         HealthDocumentPage,
         HealthDocChatMessage,
+        HealthTip,
         MediaItem,
       ],
       synchronize: true,

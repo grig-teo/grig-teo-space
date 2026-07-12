@@ -55,6 +55,13 @@ targets:
               NSIncludesSubdomains: true
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
+        # Custom URL scheme so the home-screen widget can deep link into the
+        # app (grigteo://tips opens the Tip history page). Registered on the
+        # host app; the widget uses Link/widgetURL with this scheme.
+        CFBundleURLTypes:
+          - CFBundleURLName: space.grig-teo.colmi-ring
+            CFBundleURLSchemes:
+              - grigteo
         # Backend URL + device key baked in at build time from Shared.xcconfig
         # (gitignored; see Shared.xcconfig.example). Lets the widget extension
         # use the same values without an App Group. URL is reassembled from
@@ -88,12 +95,15 @@ targets:
   HealthWidget:
     type: app-extension
     platform: iOS
-    deploymentTarget: "16.0"
+    # iOS 17+ enables interactive widget buttons (Button(intent:) + AppIntent)
+    # for the in-widget refresh button. The host app stays at iOS 16.
+    deploymentTarget: "17.0"
     sources:
       - path: Widget
     dependencies:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
+      - sdk: AppIntents.framework
     info:
       path: Widget/Info.plist
       properties:
