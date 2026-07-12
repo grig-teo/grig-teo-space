@@ -21,19 +21,35 @@ final class ApiClient: ObservableObject {
     @Published private(set) var pendingCount: Int = 0
     @Published private(set) var lastError: String?
 
-    private let settings = AppSettings.shared
+    private let settings: AppSettings
     private var bag = Set<AnyCancellable>()
     /// Serializes flushes so two concurrent uploads can't read the same pending
     /// queue and double-insert the same readings.
     private var flushTask: Task<Void, Never>?
-    private let pendingURL: URL = {
-        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return dir.appendingPathComponent("pending_readings.json")
-    }()
+    /// Optional sender stub. When nil (production), `flush()` uses the real
+    /// `URLSession`. Tests inject a stub to assert on what would be uploaded
+    /// without hitting the network.
+    private let send: (@Sendable (URLRequest) async throws -> (Data, URLResponse))?
+    private let pendingURL: URL
 
     private init() {
+        self.settings = AppSettings.shared
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        self.pendingURL = appSupport.appendingPathComponent("pending_readings.json")
+        self.send = nil
         // Reflect the current queue depth on launch.
         pendingCount = loadPending().count
+    }
+
+    /// Test-only initializer: inject a sender stub and a fresh pending-queue
+    /// path so tests don't collide with the app's real persisted queue.
+    internal init(send: @escaping @Sendable (URLRequest) async throws -> (Data, URLResponse)) {
+        self.settings = AppSettings.shared
+        self.send = send
+        // Use an isolated queue file per instance so tests are hermetic.
+        let cache = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        self.pendingURL = cache.appendingPathComponent("pending_readings_test_\(UUID().uuidString).json")
+        self.pendingCount = 0
     }
 
     /// Picks the appropriate URLSession based on app state. Background uploads
@@ -70,6 +86,12 @@ final class ApiClient: ObservableObject {
     }
 
     // MARK: - Queue + persistence
+
+    /// Test hook: enqueue a reading and kick off a flush. Equivalent to what
+    /// `subscribe(to:)` does for each emitted reading, but callable from tests.
+    internal func enqueueForTest(_ reading: HealthReading) {
+        enqueue(reading)
+    }
 
     private func enqueue(_ reading: HealthReading) {
         var pending = loadPending()
@@ -132,7 +154,12 @@ final class ApiClient: ObservableObject {
         request.httpBody = body
 
         do {
-            let (_, response) = try await session.data(for: request)
+            let response: URLResponse
+            if let send {
+                response = try await send(request).1
+            } else {
+                response = try await session.data(for: request).1
+            }
             if let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) {
                 // Remove exactly the batch we sent, keeping any readings that
                 // arrived during the upload for the next flush.

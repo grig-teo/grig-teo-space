@@ -57,3 +57,19 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: space.grig-teo.colmi-ring
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  ColmiRingAppTests:
+    type: bundle.unit-test
+    platform: iOS
+    # Swift Testing requires the Swift 6.0 runtime tools (iOS 18+). The app
+    # target stays at iOS 16; only the test target needs the newer runtime,
+    # and tests run on the simulator.
+    deploymentTarget: "18.0"
+    sources:
+      - path: ColmiRingAppTests
+    dependencies:
+      - target: ColmiRingApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: space.grig-teo.colmi-ring.tests
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES

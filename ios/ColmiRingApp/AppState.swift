@@ -19,15 +19,21 @@ final class AppState: ObservableObject {
     let lifecycle: AppLifecycleManager
     let settings: AppSettings
 
-    /// Convenience passthroughs so views can bind directly.
-    var ble: RingBluetoothManager { lifecycle.ble }
-    var demo: DemoDataFeed { lifecycle.demo }
+    /// Convenience passthroughs so views can bind directly. The BLE/demo
+    /// sources are boxed once into stable `AnyRingDataSource` instances so
+    /// SwiftUI's `@ObservedObject` keeps a consistent observation identity
+    /// across re-renders (re-boxing every body pass would break observation).
+    let bleBox: AnyRingDataSource
+    let demoBox: AnyRingDataSource
     var api: ApiClient { lifecycle.api }
     var latestByMetric: [RingMetric: Double] { lifecycle.latestByMetric }
 
     init() {
         let settings = AppSettings.shared
         self.settings = settings
-        self.lifecycle = AppLifecycleManager()
+        let lifecycle = AppLifecycleManager()
+        self.lifecycle = lifecycle
+        self.bleBox = AnyRingDataSource(lifecycle.ble)
+        self.demoBox = AnyRingDataSource(lifecycle.demo)
     }
 }

@@ -16,8 +16,8 @@ struct RingView: View {
         ScrollView {
             VStack(spacing: 16) {
                 ConnectionCard(
-                    ble: lifecycle.ble,
-                    demo: lifecycle.demo,
+                    ble: appState.bleBox,
+                    demo: appState.demoBox,
                     demoMode: Binding(
                         get: { appState.settings.demoMode },
                         set: { appState.settings.demoMode = $0 },

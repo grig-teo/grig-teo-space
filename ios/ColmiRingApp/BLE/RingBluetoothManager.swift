@@ -14,10 +14,10 @@ import Combine
  exact byte layout must be confirmed by sniffing the real R11 (see
  ColmiProtocol.swift). Until then, use Demo mode to exercise the pipeline.
  */
-final class RingBluetoothManager: NSObject, ObservableObject {
-    enum ConnectionState: String {
-        case disconnected, scanning, connecting, connected, failed
-    }
+final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
+    /// Connection phases. Aliased to the shared `RingConnectionState` so this
+    /// manager can be used wherever `any RingDataSource` is expected.
+    typealias ConnectionState = RingConnectionState
 
     /// Stable identifier CoreBluetooth uses to relaunch this app in the
     /// background after it has been killed, so the BLE link can be restored.
@@ -91,29 +91,15 @@ final class RingBluetoothManager: NSObject, ObservableObject {
         peripheral.writeValue(packet, for: txCharacteristic, type: .withResponse)
     }
 
-    // MARK: - RX parsing (R11-specific — must be verified)
+    // MARK: - RX parsing (delegates to ColmiProtocol — R11-specific, must be verified)
 
     /**
-     Parse a notified RX payload into a reading. The exact byte offsets are
-     derived from the R02 family and MUST be confirmed for the R11 using
-     nRF Connect. Returns nil when the payload can't be interpreted.
+     Parse a notified RX payload into a reading. Delegates to the pure
+     `ColmiProtocol.parse` so the byte layout is tested in one place and the
+     real R11 retune is a single, reviewable change.
      */
     private func parseNotifyPayload(_ data: Data) -> HealthReading? {
-        guard data.count >= 2 else { return nil }
-        // Heuristic placeholder: byte 0 = command echo, byte 1 = value.
-        // Replace with the real R11 frame layout once sniffed.
-        let value = Double(data[1])
-        let commandByte = data[0]
-        let metric: RingMetric
-        switch commandByte {
-        case ColmiProtocol.Command.realtimeHeartRate.rawValue:
-            metric = .heartRate
-        case ColmiProtocol.Command.realtimeSpo2.rawValue:
-            metric = .spo2
-        default:
-            return nil
-        }
-        return HealthReading(metric: metric, value: value)
+        ColmiProtocol.parse(data)
     }
 }
 

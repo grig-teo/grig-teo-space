@@ -1,9 +1,14 @@
 import SwiftUI
 
-/** Shows Bluetooth connection status, RSSI, battery, and connect/disconnect controls. */
+/**
+ Shows Bluetooth connection status, RSSI, battery, and connect/disconnect
+ controls. Observes type-erased source boxes (`AnyRingDataSource`) so the
+ underlying source can be a real `RingBluetoothManager`, a `DemoDataFeed`, or
+ a `MockRingClient` (in previews) without changing the view.
+ */
 struct ConnectionCard: View {
-    @ObservedObject var ble: RingBluetoothManager
-    @ObservedObject var demo: DemoDataFeed
+    @ObservedObject var ble: AnyRingDataSource
+    @ObservedObject var demo: AnyRingDataSource
     @Binding var demoMode: Bool
 
     private var statusText: String { ble.state.rawValue.capitalized }
@@ -46,7 +51,7 @@ struct ConnectionCard: View {
             HStack(spacing: 12) {
                 if demoMode {
                     Button("Stop demo") {
-                        demo.stop(); demoMode = false
+                        demo.disconnect(); demoMode = false
                     }
                     .buttonStyle(.borderedProminent)
                 } else {

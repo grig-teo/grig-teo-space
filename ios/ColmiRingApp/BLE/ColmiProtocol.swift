@@ -69,4 +69,32 @@ enum ColmiProtocol {
         packet[packetLength - 1] = UInt8(checksum % 255)
         return Data(packet)
     }
+
+    /**
+     Parse a notified RX payload into a reading. Pure (no I/O, no state) so it
+     can be unit-tested directly with byte fixtures.
+
+     The exact byte offsets are derived from the R02 family and MUST be
+     confirmed for the R11 using nRF Connect. Heuristic: byte 0 = command echo,
+     byte 1 = value. Returns nil when the payload can't be interpreted.
+
+     Keep this as the single source of truth for parsing — `RingBluetoothManager`
+     delegates here so tests pin one implementation. When the real R11 frame
+     layout is sniffed, update *this* function and the matching tests together.
+     */
+    static func parse(_ data: Data) -> HealthReading? {
+        guard data.count >= 2 else { return nil }
+        let commandByte = data[0]
+        let value = Double(data[1])
+        let metric: RingMetric
+        switch commandByte {
+        case Command.realtimeHeartRate.rawValue:
+            metric = .heartRate
+        case Command.realtimeSpo2.rawValue:
+            metric = .spo2
+        default:
+            return nil
+        }
+        return HealthReading(metric: metric, value: value)
+    }
 }

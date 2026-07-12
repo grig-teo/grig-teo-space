@@ -25,8 +25,8 @@ final class AppLifecycleManager: ObservableObject {
     /// against battery on both phone and ring.
     let pollInterval: TimeInterval = 90.0
 
-    let ble = RingBluetoothManager()
-    let demo = DemoDataFeed()
+    let ble: any RingDataSource
+    let demo: any RingDataSource
     let api = ApiClient.shared
     let settings = AppSettings.shared
 
@@ -39,7 +39,10 @@ final class AppLifecycleManager: ObservableObject {
     private var pollStep = 0
     private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
 
+    /// Production wiring: real BLE manager + demo feed.
     init() {
+        self.ble = RingBluetoothManager()
+        self.demo = DemoDataFeed()
         wireUp()
         applyMode()
 
@@ -48,6 +51,14 @@ final class AppLifecycleManager: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.applyMode() }
             .store(in: &bag)
+    }
+
+    /// Test/preview wiring: inject both data sources (e.g. a `MockRingClient`).
+    /// Skips auto-`applyMode` so the test controls start/stop explicitly.
+    init(ble: any RingDataSource, demo: any RingDataSource) {
+        self.ble = ble
+        self.demo = demo
+        wireUp()
     }
 
     // MARK: - Wiring
@@ -76,11 +87,11 @@ final class AppLifecycleManager: ObservableObject {
     private func applyMode() {
         if settings.demoMode {
             ble.disconnect()
-            demo.start()
+            (demo as? DemoDataFeed)?.start() ?? demo.connect()
             startPolling() // keeps background task alive; demo emits on its own timer
             isCollecting = true
         } else {
-            demo.stop()
+            (demo as? DemoDataFeed)?.stop() ?? demo.disconnect()
             ble.connect()
             startPolling()
             isCollecting = true
@@ -115,7 +126,11 @@ final class AppLifecycleManager: ObservableObject {
     /// when woken by a BG task we emit a full cycle here to keep data flowing.
     private func tick() {
         if settings.demoMode {
-            demo.emitFullCycle()
+            // Demo feed's foreground timer pauses while backgrounded; emit a
+            // full metric cycle on each wakeup so data keeps flowing.
+            if let demoFeed = demo as? DemoDataFeed {
+                demoFeed.emitFullCycle()
+            }
             return
         }
         guard ble.state == .connected else {

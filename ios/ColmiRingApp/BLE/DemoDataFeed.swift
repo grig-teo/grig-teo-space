@@ -16,8 +16,18 @@ import UIKit
  `RingBluetoothManager`, which stays alive via the `bluetooth-central`
  background mode.
  */
-final class DemoDataFeed: ObservableObject {
+final class DemoDataFeed: ObservableObject, RingDataSource {
     @Published private(set) var lastReadingAt: Date?
+
+    // MARK: - RingDataSource (cosmetic in demo mode — ConnectionCard branches
+    // on demoMode and hides most of these. Provided so the demo feed satisfies
+    // the same protocol as the real BLE manager and can be swapped in tests.)
+    /// Demo feed is always logically "connected" to its synthetic source.
+    let state: RingConnectionState = .connected
+    let deviceName: String? = "COLMI R11 (demo)"
+    let rssi: Int? = nil
+    let batteryLevel: Int? = 100
+    @Published var lastError: String? = nil
 
     let readings = PassthroughSubject<HealthReading, Never>()
     private var timer: Timer?
@@ -38,6 +48,19 @@ final class DemoDataFeed: ObservableObject {
     func stop() {
         timer?.invalidate()
         timer = nil
+    }
+
+    // MARK: - RingDataSource aliases
+
+    /// `connect()`/`disconnect()` map onto start/stop so the demo feed can be
+    /// driven through the same protocol surface as the real manager.
+    func connect() { start() }
+    func disconnect() { stop() }
+
+    /// Emit one reading immediately (advances the round-robin). Useful in tests
+    /// and previews; mirrors requesting a real-time reading from the ring.
+    func requestRealtimeReading(command: ColmiProtocol.Command) {
+        emitNow()
     }
 
     private func beginBackgroundTask() {
