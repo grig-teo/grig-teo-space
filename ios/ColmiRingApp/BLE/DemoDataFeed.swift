@@ -53,17 +53,32 @@ final class DemoDataFeed: ObservableObject {
         backgroundTaskID = .invalid
     }
 
+    /// Emit one reading immediately, advancing the round-robin. Used by
+    /// background tasks to keep data flowing while the foreground timer is
+    /// suspended (iOS pauses `RunLoop.main` timers when the app backgrounds).
+    func emitNow() {
+        emit()
+    }
+
+    /// Emit one fresh reading for every metric in the cycle. Background task
+    /// handlers call this on each wakeup so a complete snapshot reaches the
+    /// backend even while the phone is locked.
+    func emitFullCycle() {
+        for _ in cycleMetrics { emit() }
+    }
+
+    private let cycleMetrics: [RingMetric] = [
+        .heartRate, .spo2, .steps, .hrv, .stress,
+        .calories, .distanceKm, .sleepDurationH, .sleepQuality,
+    ]
+
     private func emit() {
         // Ask iOS for a few seconds of background time so the reading isn't
         // dropped if the app is suspended mid-emit.
         beginBackgroundTask()
         defer { endBackgroundTask() }
 
-        let cycle: [RingMetric] = [
-            .heartRate, .spo2, .steps, .hrv, .stress,
-            .calories, .distanceKm, .sleepDurationH, .sleepQuality,
-        ]
-        let metric = cycle[step % cycle.count]
+        let metric = cycleMetrics[step % cycleMetrics.count]
         step += 1
 
         let value: Double

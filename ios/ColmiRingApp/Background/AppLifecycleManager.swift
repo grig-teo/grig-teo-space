@@ -110,9 +110,14 @@ final class AppLifecycleManager: ObservableObject {
     }
 
     /// One collection cycle. In real-ring mode it asks the ring for the next
-    /// metric in the round-robin; in demo mode the feed emits on its own.
+    /// metric in the round-robin; in demo mode the feed emits on its own
+    /// foreground timer, but that timer is suspended while backgrounded — so
+    /// when woken by a BG task we emit a full cycle here to keep data flowing.
     private func tick() {
-        guard settings.demoMode == false else { return }
+        if settings.demoMode {
+            demo.emitFullCycle()
+            return
+        }
         guard ble.state == .connected else {
             // Try to (re)connect if we're not.
             if ble.state == .disconnected || ble.state == .failed {

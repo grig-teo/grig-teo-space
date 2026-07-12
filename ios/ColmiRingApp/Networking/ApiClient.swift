@@ -14,12 +14,18 @@ import UIKit
 final class ApiClient: ObservableObject {
     static let shared = ApiClient()
 
+    /// Max readings sent in a single POST (matches the backend's per-request cap).
+    private let MAX_READINGS_PER_FLUSH = 2000
+
     @Published private(set) var lastSyncAt: Date?
     @Published private(set) var pendingCount: Int = 0
     @Published private(set) var lastError: String?
 
     private let settings = AppSettings.shared
     private var bag = Set<AnyCancellable>()
+    /// Serializes flushes so two concurrent uploads can't read the same pending
+    /// queue and double-insert the same readings.
+    private var flushTask: Task<Void, Never>?
     private let pendingURL: URL = {
         let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         return dir.appendingPathComponent("pending_readings.json")
@@ -71,20 +77,41 @@ final class ApiClient: ObservableObject {
         savePending(pending)
         pendingCount = pending.count
 
-        Task { await flush() }
+        // Coalesce: if a flush is already running, it will pick up this new
+        // reading; otherwise start one.
+        scheduleFlush()
+    }
+
+    /// Ensures only one flush runs at a time. Re-schedules itself after a flush
+    /// completes if more readings arrived meanwhile.
+    private func scheduleFlush() {
+        if flushTask != nil { return }
+        flushTask = Task { [weak self] in
+            await self?.flush()
+            await MainActor.run { self?.flushTask = nil }
+            if await (self?.loadPending().isEmpty == false) {
+                self?.scheduleFlush()
+            }
+        }
     }
 
     private func flush() async {
-        var pending = loadPending()
+        let pending = loadPending()
         guard !pending.isEmpty else { return }
+
+        // Only send as many as we will remove, so the queue stays in sync with
+        // what the backend actually received (prevents duplicate inserts).
+        let batchSize = min(pending.count, MAX_READINGS_PER_FLUSH)
 
         // The backend expects { "readings": [...] }. JSONSerialization cannot
         // encode Swift structs (it would throw an Obj-C NSInvalidArgumentException
         // that Swift can't catch, crashing the app), so encode with JSONEncoder
         // then wrap in the outer object.
+        let batch = Array(pending.prefix(batchSize))
+
         let readingsData: Data
         do {
-            readingsData = try JSONEncoder().encode(pending)
+            readingsData = try JSONEncoder().encode(batch)
         } catch {
             lastError = "Failed to encode readings: \(error.localizedDescription)"
             return
@@ -107,9 +134,12 @@ final class ApiClient: ObservableObject {
         do {
             let (_, response) = try await session.data(for: request)
             if let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) {
-                pending.removeFirst(min(pending.count, 200))
-                savePending(pending)
-                pendingCount = pending.count
+                // Remove exactly the batch we sent, keeping any readings that
+                // arrived during the upload for the next flush.
+                var remaining = loadPending()
+                remaining.removeFirst(min(remaining.count, batchSize))
+                savePending(remaining)
+                pendingCount = remaining.count
                 lastSyncAt = Date()
                 lastError = nil
             } else {
