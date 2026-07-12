@@ -40,6 +40,12 @@ final class AppLockManager: ObservableObject {
         isLocked = settings.appLockEnabled
     }
 
+    /// Lock immediately, regardless of the `appLockEnabled` setting. Used by
+    /// the Settings "Lock now" button to test the lock screen on demand.
+    func lockNow() {
+        isLocked = true
+    }
+
     /// Called by `ColmiRingApp` alongside the lifecycle manager's handler.
     /// Keep this independent of `AppLifecycleManager.scenePhaseDidChange` so
     /// the BLE/upload wiring is untouched.
