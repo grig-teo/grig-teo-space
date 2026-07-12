@@ -53,6 +53,23 @@ export class HealthController {
     return this.health.getSummary(Number.isFinite(parsed) ? parsed : 7);
   }
 
+  /**
+   * Hourly average series for one metric over the last `days` days (defaults
+   * to today). The iOS Profile page's stress graph reads `metric=stress&days=1`.
+   */
+  @Get('hourly')
+  @UseGuards(DeviceKeyGuard)
+  async hourly(
+    @Query('metric') metric?: string,
+    @Query('days') days?: string,
+  ) {
+    const parsedDays = Number(days ?? 1);
+    return this.health.getHourlySeries(
+      (metric as never) ?? 'stress',
+      Number.isFinite(parsedDays) ? parsedDays : 1,
+    );
+  }
+
   @Get('tip')
   @UseGuards(DeviceKeyGuard)
   async tip() {

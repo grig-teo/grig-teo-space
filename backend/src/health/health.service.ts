@@ -66,6 +66,22 @@ export type MetricSeriesPoint = {
   value: number;
 };
 
+/** One bucket in an hourly series: the local clock hour and its averaged value. */
+export type HourlyBucket = {
+  /** Hour of day 0–23 (local server time). */
+  hour: number;
+  /** Mean of all readings in the bucket, or null when the hour had none. */
+  value: number | null;
+  /** Number of readings averaged into the bucket. */
+  count: number;
+};
+
+export type HourlySeries = {
+  metric: HealthMetric;
+  unit: string | null;
+  buckets: HourlyBucket[];
+};
+
 export type MetricSummary = {
   metric: HealthMetric;
   count: number;
@@ -447,6 +463,50 @@ export class HealthService {
     const n = Number(value);
     if (!Number.isFinite(n)) return min;
     return Math.min(max, Math.max(min, Math.round(n)));
+  }
+
+  /**
+   * Builds an hourly average series for one metric over the last `days` days
+   * (defaults to today only). Used by the iOS Profile page's stress graph:
+   * 24 buckets (one per hour), each holding the mean of the readings recorded
+   * during that local clock hour. Empty hours come back as `value: null` so the
+   * chart can render gaps rather than a misleading zero baseline.
+   */
+  async getHourlySeries(
+    metric: HealthMetric,
+    days = 1,
+  ): Promise<HourlySeries> {
+    const safeMetric = HEALTH_METRICS.includes(metric) ? metric : 'stress';
+    const span = Math.max(1, Math.min(days, 365));
+    const { from } = this.window(span);
+
+    const readings = await this.readingRepo.find({
+      where: { recordedAt: MoreThan(from), metric: safeMetric },
+      order: { recordedAt: 'ASC' },
+    });
+
+    // Accumulate per-hour sums and counts over the window.
+    const sums = new Array(24).fill(0);
+    const counts = new Array(24).fill(0);
+    let unit: string | null = null;
+    for (const r of readings) {
+      if (unit === null) unit = r.unit ?? DEFAULT_UNITS[safeMetric];
+      const hour = r.recordedAt.getHours();
+      sums[hour] += r.value;
+      counts[hour] += 1;
+    }
+
+    const buckets: HourlyBucket[] = sums.map((sum, hour) => ({
+      hour,
+      value: counts[hour] > 0 ? Math.round((sum / counts[hour]) * 100) / 100 : null,
+      count: counts[hour],
+    }));
+
+    return {
+      metric: safeMetric,
+      unit: unit ?? DEFAULT_UNITS[safeMetric],
+      buckets,
+    };
   }
 
   /**
