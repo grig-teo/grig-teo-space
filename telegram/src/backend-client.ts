@@ -50,6 +50,12 @@ export type HealthSummary = {
   alerts: HealthAlert[];
 };
 
+export type HourlyTip = {
+  tip: string | null;
+  generatedAt: string;
+  skippedReason?: string;
+};
+
 export class BackendClient {
   private readonly baseUrl: string;
   private readonly deviceKey: string;
@@ -77,6 +83,10 @@ export class BackendClient {
     return this.request<HealthSummary>(`/api/health/summary?days=${days}`, {
       method: 'GET',
     });
+  }
+
+  async getHourlyTip(): Promise<HourlyTip> {
+    return this.request<HourlyTip>('/api/health/tip', { method: 'GET' });
   }
 
   private async request<T>(path: string, init: RequestInit): Promise<T> {

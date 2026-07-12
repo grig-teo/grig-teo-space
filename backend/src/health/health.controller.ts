@@ -52,6 +52,12 @@ export class HealthController {
     return this.health.getSummary(Number.isFinite(parsed) ? parsed : 7);
   }
 
+  @Get('tip')
+  @UseGuards(DeviceKeyGuard)
+  async tip() {
+    return this.health.getHourlyTip();
+  }
+
   @Get('public')
   async publicPayload() {
     return this.health.getPublicPayload();

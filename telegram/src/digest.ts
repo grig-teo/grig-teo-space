@@ -71,3 +71,16 @@ export function formatAlerts(alerts: NonNullable<HealthSummary['alerts']>): stri
   }
   return lines.join('\n').trimEnd();
 }
+
+/**
+ * Formats the hourly GLM tip. Plain text (no Markdown) because the tip comes
+ * straight from the model — sending it as plain text avoids parse errors from
+ * stray characters.
+ */
+export function formatTip(tip: string, generatedAt: string): string {
+  const time = new Date(generatedAt).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  return `💡 Health tip — ${time}\n\n${tip}`;
+}

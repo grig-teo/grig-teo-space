@@ -1,4 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadGatewayException,
+  Injectable,
+  InternalServerErrorException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThan, MoreThan, Not, Repository } from 'typeorm';
 import { ContentKey, SiteContent } from '../entities/site-content.entity';
@@ -172,6 +177,39 @@ const ANOMALY_RULES: Array<{
 const MAX_READINGS_PER_REQUEST = 2000;
 const MAX_SERIES_POINTS = 1000;
 
+// --- Hourly tip (GLM) -----------------------------------------------------
+
+/** How recent the latest reading must be to generate a tip at all. */
+const TIP_STALENESS_HOURS = 3;
+/** Window of readings fed to GLM as the "right now" context. */
+const TIP_WINDOW_HOURS = 1;
+const TIP_ENDPOINT = 'https://api.z.ai/api/coding/paas/v4/chat/completions';
+
+const TIP_SYSTEM_PROMPT =
+  'You are a friendly, practical health coach for the owner of a smart ring. ' +
+  'You receive their latest ring metrics (heart rate, SpO2, steps, calories, ' +
+  'distance, stress, HRV, sleep) from the past hour.\n\n' +
+  'Give exactly ONE short, actionable thing they can do right now to improve ' +
+  'their wellbeing based on these numbers — e.g. drink water, take a short ' +
+  'walk, do a few deep breaths, stretch, step away from the screen.\n\n' +
+  'Rules:\n' +
+  '- 2 to 3 sentences, under 60 words total.\n' +
+  '- Plain text only. No markdown, no emoji, no bullet points.\n' +
+  '- Be specific to the numbers given. Do not list them back.\n' +
+  '- Do not diagnose or give medical advice. If a value looks concerning, ' +
+  'briefly suggest they check with a doctor.';
+
+type HourlyTipResult = {
+  tip: string | null;
+  generatedAt: string;
+  skippedReason?: string;
+};
+
+type GlmMessage = {
+  role: 'system' | 'user';
+  content: string;
+};
+
 @Injectable()
 export class HealthService {
   constructor(
@@ -259,6 +297,32 @@ export class HealthService {
       notesCount,
       alerts,
     };
+  }
+
+  /**
+   * Generates a single actionable GLM health tip from the last hour of ring
+   * readings. Returns null (with skippedReason) when data is stale or absent
+   * so the Telegram bot can stay silent instead of advising on old numbers.
+   */
+  async getHourlyTip(): Promise<HourlyTipResult> {
+    const now = new Date();
+    const cutoff = new Date(now.getTime() - TIP_STALENESS_HOURS * 3_600_000);
+    const readings = await this.readingRepo.find({
+      where: { recordedAt: MoreThan(cutoff) },
+      order: { recordedAt: 'ASC' },
+    });
+
+    if (readings.length === 0) {
+      return { tip: null, generatedAt: now.toISOString(), skippedReason: 'no_data' };
+    }
+    const latest = readings[readings.length - 1];
+    if (latest.recordedAt.getTime() < cutoff.getTime()) {
+      return { tip: null, generatedAt: now.toISOString(), skippedReason: 'stale' };
+    }
+
+    const context = this.buildTipContext(readings, now);
+    const tip = await this.glmComplete(TIP_SYSTEM_PROMPT, context);
+    return { tip, generatedAt: now.toISOString() };
   }
 
   async getOverview(days: number): Promise<HealthOverview> {
@@ -452,6 +516,67 @@ export class HealthService {
         value: latest.value,
       },
     };
+  }
+
+  /**
+   * Builds the compact metrics block fed to GLM: the per-metric average over
+   * the last hour, falling back to the most recent value within the staleness
+   * window when the hour itself has no readings for that metric.
+   */
+  private buildTipContext(allRecent: HealthReading[], now: Date): string {
+    const windowStart = new Date(now.getTime() - TIP_WINDOW_HOURS * 3_600_000);
+    const grouped = this.groupByMetric(allRecent);
+    const lines: string[] = [
+      `Current time: ${now.toLocaleString()}`,
+      `Metrics (last ${TIP_WINDOW_HOURS}h average, with latest as fallback):`,
+    ];
+    for (const metric of HEALTH_METRICS) {
+      const rows = grouped[metric] ?? [];
+      const inWindow = rows.filter((r) => r.recordedAt >= windowStart);
+      const used = inWindow.length > 0 ? inWindow : rows.slice(-1);
+      if (used.length === 0) continue;
+      const values = used.map((r) => r.value);
+      const avg = Math.round((values.reduce((a, v) => a + v, 0) / values.length) * 100) / 100;
+      const unit = DEFAULT_UNITS[metric];
+      lines.push(`- ${METRIC_LABELS[metric]}: ${avg} ${unit} (latest ${values[values.length - 1]})`);
+    }
+    return lines.join('\n');
+  }
+
+  /**
+   * Calls GLM for the hourly tip. Mirrors the fetch in DocumentsService so the
+   * key/endpoint live in one place; extracted here to keep getHourlyTip short.
+   */
+  private async glmComplete(system: string, user: string): Promise<string> {
+    const apiKey = process.env.GLM_API_KEY?.trim();
+    if (!apiKey) {
+      throw new ServiceUnavailableException('Health tip AI is not configured');
+    }
+    const messages: GlmMessage[] = [
+      { role: 'system', content: system },
+      { role: 'user', content: user },
+    ];
+    const model = process.env.GLM_MODEL?.trim() || 'glm-5.2';
+    const response = await fetch(TIP_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ model, messages, temperature: 0.4, max_tokens: 256 }),
+    });
+    if (!response.ok) {
+      const raw = await response.text();
+      throw new BadGatewayException(`GLM API error: ${response.status} ${raw.slice(0, 300)}`);
+    }
+    const payload = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const text = payload.choices?.[0]?.message?.content?.trim();
+    if (!text) {
+      throw new InternalServerErrorException('Empty AI response');
+    }
+    return text;
   }
 
   private detectAlerts(readings: HealthReading[]): HealthAlert[] {
