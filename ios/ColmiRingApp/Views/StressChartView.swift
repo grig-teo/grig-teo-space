@@ -12,7 +12,7 @@ struct StressChartView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Today")
+            Text("Today's stress")
                 .font(.caption)
                 .foregroundColor(.secondary)
             content
