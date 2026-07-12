@@ -11,10 +11,15 @@ struct StressChartView: View {
     @ObservedObject var client: StressSeriesClient
 
     var body: some View {
-        content
-            .padding()
-            .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
-            .task { await client.load() }
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Today")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            content
+        }
+        .padding()
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
+        .task { await client.load() }
     }
 
     @ViewBuilder
@@ -45,24 +50,28 @@ struct StressChartView: View {
     private func chart(for series: StressSeriesClient.StressSeries) -> some View {
         let points = series.buckets.compactMap { bucket -> Bar? in
             guard let value = bucket.value else { return nil }
-            return Bar(time: timeLabel(for: bucket), value: value)
+            return Bar(hour: hourLabel(for: bucket), value: value)
         }
         return Chart(points) { bar in
             BarMark(
-                x: .value("Time", bar.time),
+                x: .value("Time", bar.hour),
                 y: .value("Stress", bar.value),
             )
             .foregroundStyle(stressColor(for: bar.value).gradient)
             .cornerRadius(3)
-        }
-        // One labeled tick per bar: each column shows its own collection time.
-        .chartXAxis {
-            AxisMarks(values: .automatic(desiredCount: points.count)) { _ in
-                AxisGridLine()
-                AxisValueLabel()
+            // Time on top of each column — hour only, attached to the bar
+            // (not the chart frame).
+            .annotation(
+                position: .top,
+                spacing: 4,
+            ) {
+                Text(bar.hour)
                     .font(.caption2)
+                    .foregroundColor(.secondary)
             }
         }
+        // No bottom axis labels — the time sits on top of each column.
+        .chartXAxis(.hidden)
         // Value scale on the right, formatted as a percentage.
         .chartYAxis {
             AxisMarks(position: .trailing) { value in
@@ -75,18 +84,19 @@ struct StressChartView: View {
                 .font(.caption2)
             }
         }
-        .frame(height: 180)
+        .frame(height: 200)
     }
 
-    /// "HH:mm" of the most recent reading in this hour (falls back to the
-    /// hour start if `latestAt` is missing).
-    private func timeLabel(for bucket: StressSeriesClient.StressSeries.Bucket) -> String {
+    /// Hour-of-day (e.g. "14") of the most recent reading in this hour, shown
+    /// on top of its column. Falls back to the bucket's hour if `latestAt` is
+    /// missing.
+    private func hourLabel(for bucket: StressSeriesClient.StressSeries.Bucket) -> String {
         let date = bucket.collectedAt
             ?? Calendar.current.date(
                 bySettingHour: bucket.hour, minute: 0, second: 0, of: Date(),
             )
             ?? Date()
-        return date.formatted(.dateTime.hour().minute())
+        return date.formatted(.dateTime.hour())
     }
 
     /// Maps a stress percentage to a color: green at 0% (calm) → yellow at
@@ -101,6 +111,6 @@ struct StressChartView: View {
 
 private struct Bar: Identifiable {
     let id = UUID()
-    let time: String
+    let hour: String
     let value: Double
 }
