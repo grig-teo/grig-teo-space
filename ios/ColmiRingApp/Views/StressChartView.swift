@@ -52,7 +52,7 @@ struct StressChartView: View {
                 x: .value("Time", bar.time),
                 y: .value("Stress", bar.value),
             )
-            .foregroundStyle(Color.orange.gradient)
+            .foregroundStyle(stressColor(for: bar.value).gradient)
             .cornerRadius(3)
         }
         // One labeled tick per bar: each column shows its own collection time.
@@ -87,6 +87,15 @@ struct StressChartView: View {
             )
             ?? Date()
         return date.formatted(.dateTime.hour().minute())
+    }
+
+    /// Maps a stress percentage to a color: green at 0% (calm) → yellow at
+    /// 50% → red at 100% (high stress), via a hue rotation.
+    private func stressColor(for value: Double) -> Color {
+        let clamped = min(max(value, 0), 100) / 100
+        // Hue: 0.33 (green) at low end → 0 (red) at high end.
+        let hue = 0.33 * (1 - clamped)
+        return Color(hue: hue, saturation: 0.8, brightness: 0.9)
     }
 }
 
