@@ -7,8 +7,6 @@ import SwiftUI
 struct RingView: View {
     @ObservedObject var appState: AppState
 
-    @State private var showingSettings = false
-
     private var lifecycle: AppLifecycleManager { appState.lifecycle }
     private var latestByMetric: [RingMetric: Double] { appState.latestByMetric }
 
@@ -24,6 +22,8 @@ struct RingView: View {
                     ),
                 )
                 SyncLogView(api: lifecycle.api)
+
+                demoModeCard
 
                 if !latestByMetric.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
@@ -42,17 +42,23 @@ struct RingView: View {
             .padding(.vertical)
         }
         .navigationTitle("Ring")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showingSettings = true
-                } label: {
-                    Image(systemName: "gearshape")
-                }
+    }
+
+    /// Demo data feed toggle, inline on the Ring page. Mirrors the card
+    /// styling used by `ConnectionCard` so it reads as part of the page.
+    private var demoModeCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: Binding(
+                get: { appState.settings.demoMode },
+                set: { appState.settings.demoMode = $0 },
+            )) {
+                Text("Demo data feed").font(.subheadline.weight(.semibold))
             }
+            Text("Emit simulated readings instead of reading the real ring. Useful to test the pipeline before the ring is paired.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
-        .sheet(isPresented: $showingSettings) {
-            SettingsSheet(settings: appState.settings)
-        }
+        .padding()
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemBackground)))
     }
 }
