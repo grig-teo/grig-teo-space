@@ -52,12 +52,12 @@ export default async function ProjectsPage({ params }: Props) {
       <section className="px-4 py-8 sm:px-6 sm:py-12 md:px-12">
         <Link
           href="/"
-          className="mb-6 inline-block text-sm text-accent hover:underline underline-offset-4 sm:mb-8"
+          className="mb-6 inline-block font-mono text-sm text-accent hover:underline underline-offset-4 sm:mb-8"
         >
           {t('back')}
         </Link>
-        <h1 className="mb-3 text-2xl font-bold sm:text-3xl">{t('heading')}</h1>
-        <p className="mb-8 max-w-2xl text-sm text-muted sm:mb-12">{t('description')}</p>
+        <h1 className="mb-3 font-mono text-2xl font-bold sm:text-3xl">{t('heading')}</h1>
+        <p className="mb-8 max-w-2xl font-sans text-sm text-muted sm:mb-12">{t('description')}</p>
         <div className="grid auto-rows-fr gap-6 sm:gap-8 lg:grid-cols-2">
           {projects.map((project) => (
             <div key={project.id} className="h-full">

@@ -48,7 +48,7 @@ const ALL_METRICS: HealthMetric[] = [
 ];
 
 const ACCENT_BTN =
-  'rounded bg-accent px-4 py-2 font-mono text-sm text-white transition-opacity hover:opacity-90 disabled:opacity-50';
+  'rounded bg-accent px-4 py-2 font-mono text-sm text-background transition-opacity hover:opacity-90 disabled:opacity-50';
 const GHOST_BTN =
   'rounded border border-border px-4 py-2 font-mono text-sm text-muted transition-colors hover:text-foreground';
 
@@ -111,7 +111,7 @@ export function PublicExposurePanel() {
   const enabledCount = ALL_METRICS.filter((m) => config.metrics[m]?.show).length;
 
   return (
-    <div className="rounded-lg border border-border bg-background/60 p-5">
+    <div className="rounded-lg border border-border bg-surface p-5">
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <h2 className="font-mono text-base text-foreground">Public health page</h2>
         <label className="ml-auto flex cursor-pointer items-center gap-2 font-mono text-sm">
@@ -220,7 +220,7 @@ export function PublicExposurePanel() {
         {savedAt && (
           <span className="font-mono text-xs text-muted">Saved at {savedAt.toLocaleTimeString()}</span>
         )}
-        {error && <span className="font-mono text-xs text-red-500">{error}</span>}
+        {error && <span className="font-mono text-xs text-red-400">{error}</span>}
       </div>
     </div>
   );

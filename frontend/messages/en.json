@@ -10,7 +10,18 @@
     "closeMenu": "Close menu"
   },
   "hero": {
-    "prompt": "grig-teo:~$"
+    "prompt": "grig-teo:~$",
+    "whoami": "$ whoami",
+    "tagline": "I ship whole products alone — from Bluetooth protocols to marketplaces.",
+    "domains": "marketplaces · real-time A/V · civic data · health tech",
+    "stats": {
+      "years": "{value}+ yrs",
+      "roles": "{value} roles",
+      "products": "{value} products",
+      "articles": "{value} articles"
+    },
+    "ctaProjects": "view projects",
+    "ctaContact": "get in touch →"
   },
   "sections": {
     "blog": "/blog",
@@ -18,7 +29,10 @@
     "experience": "/experience",
     "viewAll": "view all projects →",
     "viewAllArticles": "view all articles →",
-    "readMore": "read more →"
+    "readMore": "read more →",
+    "featured": "featured",
+    "eraFounder": "founder",
+    "eraIndustry": "industry"
   },
   "footer": {
     "downloadCv": "Download CV",

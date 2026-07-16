@@ -16,32 +16,32 @@ export function Background() {
       viewBox="0 0 1440 900"
     >
       <defs>
-        {/* Light theme palette — soft, low-saturation on white */}
+        {/* Light theme palette — teal/indigo/amber, softened for warm paper */}
         <radialGradient id="bg-mesh-a-light" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="rgb(59 130 246 / 0.55)" />
-          <stop offset="100%" stopColor="rgb(59 130 246 / 0)" />
+          <stop offset="0%" stopColor="rgb(45 212 191 / 0.30)" />
+          <stop offset="100%" stopColor="rgb(45 212 191 / 0)" />
         </radialGradient>
         <radialGradient id="bg-mesh-b-light" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="rgb(168 85 247 / 0.45)" />
-          <stop offset="100%" stopColor="rgb(168 85 247 / 0)" />
+          <stop offset="0%" stopColor="rgb(99 102 241 / 0.25)" />
+          <stop offset="100%" stopColor="rgb(99 102 241 / 0)" />
         </radialGradient>
         <radialGradient id="bg-mesh-c-light" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="rgb(20 184 166 / 0.40)" />
-          <stop offset="100%" stopColor="rgb(20 184 166 / 0)" />
+          <stop offset="0%" stopColor="rgb(251 191 36 / 0.15)" />
+          <stop offset="100%" stopColor="rgb(251 191 36 / 0)" />
         </radialGradient>
 
-        {/* Dark theme palette — deeper glows on black */}
+        {/* Dark theme palette — phosphor teal/indigo/amber on deep ink */}
         <radialGradient id="bg-mesh-a-dark" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="rgb(59 130 246 / 0.42)" />
-          <stop offset="100%" stopColor="rgb(59 130 246 / 0)" />
+          <stop offset="0%" stopColor="rgb(45 212 191 / 0.35)" />
+          <stop offset="100%" stopColor="rgb(45 212 191 / 0)" />
         </radialGradient>
         <radialGradient id="bg-mesh-b-dark" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="rgb(139 92 246 / 0.38)" />
-          <stop offset="100%" stopColor="rgb(139 92 246 / 0)" />
+          <stop offset="0%" stopColor="rgb(99 102 241 / 0.30)" />
+          <stop offset="100%" stopColor="rgb(99 102 241 / 0)" />
         </radialGradient>
         <radialGradient id="bg-mesh-c-dark" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="rgb(14 165 233 / 0.32)" />
-          <stop offset="100%" stopColor="rgb(14 165 233 / 0)" />
+          <stop offset="0%" stopColor="rgb(251 191 36 / 0.18)" />
+          <stop offset="100%" stopColor="rgb(251 191 36 / 0)" />
         </radialGradient>
       </defs>
 

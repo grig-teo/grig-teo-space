@@ -50,12 +50,12 @@ export function Header({ showBlog = true, showHealth = false }: { showBlog?: boo
   const closeMenu = () => setMenuOpen(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
+    <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
       <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-6 md:px-12">
         <Link
           href="/#about"
           onClick={closeMenu}
-          className="flex min-w-0 items-center gap-2 text-sm text-muted transition-colors hover:text-accent"
+          className="flex min-w-0 items-center gap-2 font-mono text-sm text-muted transition-colors hover:text-accent"
         >
           <span className="truncate">{tHero('prompt')}</span>
           <span className="inline-block h-4 w-2 shrink-0 bg-accent cursor-blink" />
@@ -67,7 +67,7 @@ export function Header({ showBlog = true, showHealth = false }: { showBlog?: boo
               <Link
                 key={link.key}
                 href={link.href}
-                className="text-sm text-accent hover:underline underline-offset-4"
+                className="font-mono text-sm text-muted transition-colors hover:text-accent"
               >
                 {t(link.key)}
               </Link>
@@ -77,7 +77,7 @@ export function Header({ showBlog = true, showHealth = false }: { showBlog?: boo
           <ThemeSwitcher />
           <button
             type="button"
-            className="inline-flex items-center justify-center p-1 text-accent md:hidden"
+            className="inline-flex items-center justify-center p-1 text-muted transition-colors hover:text-accent md:hidden"
             onClick={() => setMenuOpen((open) => !open)}
             aria-expanded={menuOpen}
             aria-label={menuOpen ? t('closeMenu') : t('openMenu')}
@@ -88,14 +88,14 @@ export function Header({ showBlog = true, showHealth = false }: { showBlog?: boo
       </div>
 
       {menuOpen && (
-        <nav className="border-t border-border px-4 py-4 sm:px-6 md:hidden">
+        <nav className="border-t border-border bg-surface px-4 py-4 sm:px-6 md:hidden">
           <div className="flex flex-col gap-4">
             {links.map((link) => (
               <Link
                 key={link.key}
                 href={link.href}
                 onClick={closeMenu}
-                className="text-sm text-accent hover:underline underline-offset-4"
+                className="font-mono text-sm text-muted transition-colors hover:text-accent"
               >
                 {t(link.key)}
               </Link>

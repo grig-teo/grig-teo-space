@@ -91,6 +91,7 @@ export default async function LocaleLayout({ children, params }: Props) {
       <body>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <Background />
+        <div className="bg-grid" aria-hidden />
         <NextIntlClientProvider messages={messages}>
           <Header showBlog={blogPosts.length > 0} showHealth={publicHealth !== null} />
           {children}

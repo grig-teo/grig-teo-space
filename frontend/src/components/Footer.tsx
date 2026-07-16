@@ -56,7 +56,7 @@ export function Footer({ profile }: { profile: Profile }) {
         <button
           type="button"
           onClick={() => setCvModalOpen(true)}
-          className="inline-flex items-center gap-2 border border-accent px-5 py-2.5 text-sm text-accent transition-colors hover:bg-accent hover:text-white"
+          className="inline-flex items-center gap-2 rounded border border-accent px-5 py-2.5 font-mono text-sm text-accent transition-colors hover:bg-accent hover:text-background"
         >
           <DownloadIcon />
           {t('downloadCv')}

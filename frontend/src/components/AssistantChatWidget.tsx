@@ -224,14 +224,14 @@ export function AssistantChatWidget({ locale }: Props) {
   return (
     <>
       {open ? (
-        <div className="fixed right-4 top-20 z-50 flex h-[min(26rem,calc(100dvh-6rem))] w-[min(92vw,22rem)] flex-col overflow-hidden border border-border bg-background shadow-xl">
-          <div className="flex items-center justify-between border-b border-border/60 px-3 py-2">
-            <p className="text-sm font-semibold">{text.title}</p>
+        <div className="fixed right-4 top-20 z-50 flex h-[min(26rem,calc(100dvh-6rem))] w-[min(92vw,22rem)] flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-xl">
+          <div className="flex items-center justify-between border-b border-border px-3 py-2">
+            <p className="font-mono text-sm font-semibold">{text.title}</p>
             <button
               type="button"
               aria-label={text.close}
               onClick={() => setOpen(false)}
-              className="px-2 py-1 text-xs text-muted hover:bg-white/5"
+              className="rounded px-2 py-1 text-xs text-muted transition-colors hover:text-accent"
             >
               ✕
             </button>
@@ -241,7 +241,7 @@ export function AssistantChatWidget({ locale }: Props) {
             ref={scrollRef}
             className="flex-1 space-y-3 overflow-y-auto px-3 py-3 text-sm"
           >
-            <div className="max-w-[90%] bg-white/5 px-3 py-2 text-muted">{text.welcome}</div>
+            <div className="max-w-[90%] bg-foreground/5 px-3 py-2 text-muted">{text.welcome}</div>
             {historyLoading ? <div className="text-xs text-muted">Loading history...</div> : null}
             {messages.map((item) => (
               <div
@@ -250,7 +250,7 @@ export function AssistantChatWidget({ locale }: Props) {
                 className={`max-w-[90%] scroll-mt-2 px-3 py-2 ${
                   item.role === 'user'
                     ? 'ml-auto bg-accent/20 text-foreground'
-                    : 'bg-white/5 text-foreground'
+                    : 'bg-foreground/5 text-foreground'
                 }`}
               >
                 {item.content}
@@ -259,7 +259,7 @@ export function AssistantChatWidget({ locale }: Props) {
             {loading ? <div className="text-xs text-muted">Thinking...</div> : null}
           </div>
 
-          <div className="border-t border-border/60 p-2">
+          <div className="border-t border-border p-2">
             {remaining !== null && remaining > 0 && !limitReached ? (
               <p className="mb-1 px-1 text-[10px] text-muted">
                 {text.questionsLeft(remaining)}
@@ -277,13 +277,13 @@ export function AssistantChatWidget({ locale }: Props) {
                 }}
                 placeholder={limitReached ? text.limitReached : text.input}
                 disabled={limitReached}
-                className="flex-1 border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted outline-none focus:border-accent/70 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex-1 rounded border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted outline-none focus:border-accent/70 disabled:cursor-not-allowed disabled:opacity-50"
               />
               <button
                 type="button"
                 onClick={() => void submitMessage()}
                 disabled={loading || !input.trim() || limitReached}
-                className="bg-accent px-3 py-2 text-xs font-semibold text-black disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded bg-accent px-3 py-2 font-mono text-xs font-semibold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {text.send}
               </button>
@@ -296,7 +296,7 @@ export function AssistantChatWidget({ locale }: Props) {
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-label={text.open}
-        className="fixed right-4 top-20 z-50 flex h-12 w-12 items-center justify-center bg-accent text-base font-semibold text-black shadow-lg hover:brightness-105"
+        className="fixed right-4 top-20 z-50 flex h-12 w-12 items-center justify-center bg-accent text-base font-semibold text-background shadow-lg hover:brightness-105"
       >
         AI
       </button>

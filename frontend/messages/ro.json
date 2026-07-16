@@ -10,7 +10,18 @@
     "closeMenu": "Închide meniul"
   },
   "hero": {
-    "prompt": "grig-teo:~$"
+    "prompt": "grig-teo:~$",
+    "whoami": "$ whoami",
+    "tagline": "Livrez produse întregi de unul singur — de la protocoale Bluetooth la marketplace-uri.",
+    "domains": "marketplace-uri · A/V în timp real · date civice · health-tech",
+    "stats": {
+      "years": "{value}+ ani",
+      "roles": "{value} roluri",
+      "products": "{value} produse",
+      "articles": "{value} articole"
+    },
+    "ctaProjects": "vezi proiectele",
+    "ctaContact": "contactează-mă →"
   },
   "sections": {
     "blog": "/blog",
@@ -18,7 +29,10 @@
     "experience": "/experience",
     "viewAll": "toate proiectele →",
     "viewAllArticles": "toate articolele →",
-    "readMore": "citește mai mult →"
+    "readMore": "citește mai mult →",
+    "featured": "recomandat",
+    "eraFounder": "fondator",
+    "eraIndustry": "industrie"
   },
   "footer": {
     "downloadCv": "Descarcă CV",

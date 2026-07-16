@@ -55,13 +55,13 @@ export function CvDownloadModal({ open, onClose }: Props) {
       role="presentation"
     >
       <div
-        className="w-full max-w-md border border-border/60 bg-background p-6"
+        className="w-full max-w-md rounded-lg border border-border bg-surface p-6"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="cv-modal-title"
       >
-        <h2 id="cv-modal-title" className="text-lg font-semibold">
+        <h2 id="cv-modal-title" className="font-mono text-lg font-semibold">
           {t('cvModalTitle')}
         </h2>
         <p className="mt-2 text-sm text-muted">{t('cvModalDescription')}</p>
@@ -71,10 +71,10 @@ export function CvDownloadModal({ open, onClose }: Props) {
           {locales.map(({ id, labelKey }) => (
             <label
               key={id}
-              className={`flex cursor-pointer items-center gap-3 border px-3 py-2 text-sm transition-colors ${
+              className={`flex cursor-pointer items-center gap-3 rounded border px-3 py-2 text-sm transition-colors ${
                 selected === id
                   ? 'border-accent text-accent'
-                  : 'border-border/60 text-muted hover:border-accent/40'
+                  : 'border-border text-muted hover:border-accent/40'
               }`}
             >
               <input
@@ -94,14 +94,14 @@ export function CvDownloadModal({ open, onClose }: Props) {
           <button
             type="button"
             onClick={handleDownload}
-            className="border border-accent/60 px-4 py-2 text-sm text-accent hover:bg-accent/10"
+            className="rounded bg-accent px-4 py-2 font-mono text-sm text-background transition-opacity hover:opacity-90"
           >
             {t('cvConfirm')}
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="border border-border/60 px-4 py-2 text-sm text-muted hover:text-foreground"
+            className="rounded border border-border px-4 py-2 font-mono text-sm text-muted transition-colors hover:border-accent hover:text-foreground"
           >
             {t('cvCancel')}
           </button>

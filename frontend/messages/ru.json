@@ -10,7 +10,18 @@
     "closeMenu": "Закрыть меню"
   },
   "hero": {
-    "prompt": "grig-teo:~$"
+    "prompt": "grig-teo:~$",
+    "whoami": "$ whoami",
+    "tagline": "Я один довожу продукты до релиза — от Bluetooth-протоколов до маркетплейсов.",
+    "domains": "маркетплейсы · real-time A/V · гражданские данные · health-tech",
+    "stats": {
+      "years": "{value}+ лет",
+      "roles": "{value} ролей",
+      "products": "{value} продукта",
+      "articles": "{value} статьи"
+    },
+    "ctaProjects": "смотреть проекты",
+    "ctaContact": "связаться →"
   },
   "sections": {
     "blog": "/blog",
@@ -18,7 +29,10 @@
     "experience": "/experience",
     "viewAll": "все проекты →",
     "viewAllArticles": "все статьи →",
-    "readMore": "подробнее →"
+    "readMore": "подробнее →",
+    "featured": "избранное",
+    "eraFounder": "основатель",
+    "eraIndustry": "компании"
   },
   "footer": {
     "downloadCv": "Скачать CV",

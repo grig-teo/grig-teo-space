@@ -23,7 +23,7 @@ export default function AdminDashboardPage() {
   if (!ready) {
     return (
       <main className="min-h-screen flex items-center justify-center">
-        <p className="text-muted">Checking access…</p>
+        <p className="font-mono text-sm text-muted">Checking access…</p>
       </main>
     );
   }

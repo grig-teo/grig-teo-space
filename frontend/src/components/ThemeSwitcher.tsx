@@ -76,12 +76,15 @@ export function ThemeSwitcher() {
   };
 
   const buttonClass = (mode: ThemePreference) =>
-    `inline-flex items-center justify-center p-1.5 transition-colors ${
+    `inline-flex items-center justify-center rounded-sm p-1 transition-colors ${
       preference === mode ? 'bg-accent/20 text-accent' : 'text-muted hover:text-accent'
     }`;
 
   return (
-    <div className="inline-flex items-center border border-border/60 bg-background/90" aria-label="Theme switcher">
+    <div
+      className="inline-flex items-center gap-0.5 rounded border border-border px-2 py-1 font-mono text-xs text-muted transition-colors hover:border-accent"
+      aria-label="Theme switcher"
+    >
       <button type="button" onClick={() => selectTheme('light')} className={buttonClass('light')} aria-label="Light theme">
         <SunIcon />
       </button>

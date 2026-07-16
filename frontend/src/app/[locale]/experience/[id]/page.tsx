@@ -57,14 +57,14 @@ export default async function ExperienceDetailPage({ params }: Props) {
       <section className="px-4 py-8 sm:px-6 sm:py-12 md:px-12">
         <Link
           href="/#experience"
-          className="mb-6 inline-block text-sm text-accent hover:underline underline-offset-4 sm:mb-8"
+          className="mb-6 inline-block font-mono text-sm text-accent hover:underline underline-offset-4 sm:mb-8"
         >
           {t('back')}
         </Link>
 
         <div className="max-w-3xl">
-          <time className="text-xs text-muted">{item.period}</time>
-          <h1 className="mt-2 text-2xl font-bold sm:text-3xl">
+          <time className="font-mono text-xs text-muted">{item.period}</time>
+          <h1 className="mt-2 font-mono text-2xl font-bold sm:text-3xl">
             <span className="text-accent">{item.role}</span>
             <span className="text-muted"> @ </span>
             {item.companyUrl ? (
@@ -82,17 +82,20 @@ export default async function ExperienceDetailPage({ params }: Props) {
           </h1>
 
           {item.summary && (
-            <p className="mt-6 text-sm leading-relaxed text-muted">{item.summary}</p>
+            <p className="mt-6 font-sans text-base leading-relaxed text-muted">{item.summary}</p>
           )}
 
           {item.highlights.length > 0 && (
             <div className="mt-8">
-              <h2 className="mb-4 text-xs uppercase tracking-wide text-accent">
+              <h2 className="mb-4 font-mono text-xs uppercase tracking-wide text-accent">
                 {t('highlights')}
               </h2>
               <ul className="space-y-3">
                 {item.highlights.map((highlight) => (
-                  <li key={highlight} className="text-sm leading-relaxed text-muted">
+                  <li
+                    key={highlight}
+                    className="font-sans text-sm leading-relaxed text-muted"
+                  >
                     <span className="text-accent">—</span> {highlight}
                   </li>
                 ))}
@@ -101,9 +104,9 @@ export default async function ExperienceDetailPage({ params }: Props) {
           )}
 
           {item.stack && (
-            <div className="mt-8 border border-border p-4">
-              <h2 className="mb-2 text-xs uppercase tracking-wide text-accent">{t('stack')}</h2>
-              <p className="text-sm leading-relaxed text-muted">{item.stack}</p>
+            <div className="mt-8 rounded-lg border border-border bg-surface p-4 font-mono text-xs">
+              <h2 className="mb-2 uppercase tracking-wide text-accent">{t('stack')}</h2>
+              <p className="leading-relaxed text-muted">{item.stack}</p>
             </div>
           )}
         </div>

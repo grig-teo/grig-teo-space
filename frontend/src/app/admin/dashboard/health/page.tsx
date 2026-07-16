@@ -21,8 +21,8 @@ const RANGES: Range[] = [
 function AlertStrip({ overview }: { overview: HealthOverview }) {
   if (overview.alerts.length === 0) return null;
   return (
-    <div className="rounded-lg border border-red-500/40 bg-red-500/5 p-4">
-      <h2 className="mb-2 font-mono text-sm text-red-500">
+    <div className="rounded-lg border border-red-400/40 bg-red-400/5 p-4">
+      <h2 className="mb-2 font-mono text-sm text-red-400">
         ⚠️ Alerts ({overview.alerts.length})
       </h2>
       <ul className="space-y-1 font-mono text-xs text-foreground">
@@ -40,7 +40,7 @@ function AlertStrip({ overview }: { overview: HealthOverview }) {
 function NotesTimeline({ overview }: { overview: HealthOverview }) {
   if (overview.notes.length === 0) return null;
   return (
-    <div className="rounded-lg border border-border bg-background/60 p-5">
+    <div className="rounded-lg border border-border bg-surface p-5">
       <h2 className="mb-3 font-mono text-base text-foreground">Notes</h2>
       <ul className="space-y-2">
         {overview.notes.map((note) => (
@@ -105,14 +105,14 @@ export default function AdminHealthPage() {
         <>
       <div className="mb-6 flex flex-wrap items-center gap-4">
         <h1 className="font-mono text-xl text-foreground">Health</h1>
-        <div className="flex gap-1 rounded border border-border p-0.5">
+        <div className="flex gap-1 rounded-lg border border-border p-0.5">
           {RANGES.map((r) => (
             <button
               key={r.days}
               onClick={() => setDays(r.days)}
-              className={`rounded px-3 py-1 font-mono text-xs transition-colors ${
+              className={`rounded-md px-3 py-1 font-mono text-xs transition-colors ${
                 days === r.days
-                  ? 'bg-accent text-white'
+                  ? 'bg-accent text-background'
                   : 'text-muted hover:text-foreground'
               }`}
             >
@@ -130,7 +130,7 @@ export default function AdminHealthPage() {
       </div>
 
       {error && (
-        <div className="mb-6 rounded-lg border border-red-500/40 bg-red-500/5 p-4 font-mono text-sm text-red-500">
+        <div className="mb-6 rounded-lg border border-red-400/40 bg-red-400/5 p-4 font-mono text-sm text-red-400">
           {error}
         </div>
       )}

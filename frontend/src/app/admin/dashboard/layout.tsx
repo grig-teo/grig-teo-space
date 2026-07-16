@@ -28,7 +28,7 @@ export default function DashboardLayout({
       <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">
         <nav className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
           <span className="font-mono text-sm text-muted">grig-teo:~$ admin</span>
-          <div className="flex gap-1">
+          <div className="flex gap-1 rounded-lg border border-border p-0.5">
             {links.map((link) => {
               const active =
                 link.href === '/admin/dashboard'
@@ -38,10 +38,8 @@ export default function DashboardLayout({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`rounded px-3 py-1.5 text-sm font-mono transition-colors ${
-                    active
-                      ? 'bg-accent text-white'
-                      : 'text-muted hover:text-foreground hover:bg-foreground/5'
+                  className={`rounded-md px-3 py-1.5 font-mono text-sm transition-colors ${
+                    active ? 'bg-accent text-background' : 'text-muted hover:text-foreground'
                   }`}
                 >
                   {link.label}

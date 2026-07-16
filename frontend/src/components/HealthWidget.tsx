@@ -42,7 +42,7 @@ function MetricCard({ metric }: { metric: PublicHealthMetric }) {
   const digits = metric.metric === 'sleep_duration_h' || metric.metric === 'distance_km' ? 1 : 0;
 
   return (
-    <div className="rounded-lg border border-border bg-background/60 p-4">
+    <div className="rounded-lg border border-border bg-surface p-4">
       <h3 className="font-mono text-xs uppercase tracking-wide text-muted">{metric.label}</h3>
       <div className="mt-1 flex items-baseline gap-2">
         <span className="font-mono text-2xl text-foreground">

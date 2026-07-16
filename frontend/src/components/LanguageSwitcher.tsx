@@ -22,14 +22,16 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
   };
 
   return (
-    <div className={`flex shrink-0 gap-1 border border-border px-1 py-0.5 text-xs ${className}`}>
+    <div
+      className={`flex shrink-0 gap-1 rounded border border-border px-2 py-1 font-mono text-xs text-muted transition-colors hover:border-accent ${className}`}
+    >
       {locales.map(({ code, label }) => (
         <button
           key={code}
           type="button"
           onClick={() => switchLocale(code)}
-          className={`px-2 py-0.5 transition-colors ${
-            locale === code ? 'bg-accent text-white' : 'text-muted hover:text-foreground'
+          className={`rounded-sm px-2 py-0.5 transition-colors ${
+            locale === code ? 'bg-accent text-background' : 'text-muted hover:text-accent'
           }`}
         >
           {label}

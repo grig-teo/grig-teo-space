@@ -47,7 +47,7 @@ const LINE_METRICS: HealthMetric[] = [
 ];
 const BAR_METRICS: HealthMetric[] = ['steps', 'calories', 'distance_km', 'sleep_duration_h'];
 
-const ACCENT = '#3b82f6'; // matches --color-accent
+const ACCENT = 'rgb(var(--color-accent))'; // matches --color-accent
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -98,7 +98,7 @@ function MetricCard({
 
   if (series.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-background/60 p-4">
+      <div className="rounded-lg border border-border bg-surface p-4">
         <h3 className="font-mono text-sm text-foreground">{METRIC_LABELS[metric]}</h3>
         <p className="mt-8 mb-8 text-center font-mono text-xs text-muted">No data</p>
       </div>
@@ -106,7 +106,7 @@ function MetricCard({
   }
 
   return (
-    <div className="rounded-lg border border-border bg-background/60 p-4">
+    <div className="rounded-lg border border-border bg-surface p-4">
       <div className="mb-3 flex items-baseline justify-between">
         <h3 className="font-mono text-sm text-foreground">{METRIC_LABELS[metric]}</h3>
         <span className="font-mono text-xs text-muted">

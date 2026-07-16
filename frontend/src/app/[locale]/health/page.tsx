@@ -44,6 +44,8 @@ export async function generateMetadata({ params }: Props) {
 export default async function HealthPage({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'health' });
+  // health.* has no back-link key; reuse the identical projectsPage.back label.
+  const tProjects = await getTranslations({ locale, namespace: 'projectsPage' });
 
   const health = await getPublicHealth();
 
@@ -52,9 +54,9 @@ export default async function HealthPage({ params }: Props) {
       <section className="px-4 py-8 sm:px-6 sm:py-12 md:px-12">
         <Link
           href="/"
-          className="mb-6 inline-block text-sm text-accent hover:underline underline-offset-4 sm:mb-8"
+          className="mb-6 inline-block font-mono text-sm text-accent hover:underline underline-offset-4 sm:mb-8"
         >
-          ← back home
+          {tProjects('back')}
         </Link>
         {!health ? (
           <p className="max-w-2xl font-mono text-sm text-muted">{t('notAvailable')}</p>

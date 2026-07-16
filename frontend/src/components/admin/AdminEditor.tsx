@@ -173,9 +173,9 @@ function Field({
   rows?: number;
 }) {
   const className =
-    'mt-1 w-full border border-border/60 bg-transparent px-3 py-2 text-sm outline-none focus:border-accent';
+    'mt-1 w-full rounded border border-border bg-background px-3 py-2 font-sans text-sm normal-case tracking-normal text-foreground outline-none focus:border-accent';
   return (
-    <label className="block text-sm">
+    <label className="block font-mono text-xs uppercase tracking-wider text-muted">
       {label}
       {multiline ? (
         <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows} className={className} />
@@ -448,8 +448,8 @@ export function AdminEditor() {
   if (error) {
     return (
       <main className="min-h-screen p-6 max-w-5xl mx-auto">
-        <p className="text-red-400 mb-4">{error}</p>
-        <button type="button" onClick={() => router.push('/admin')} className="text-sm text-accent underline">
+        <p className="mb-4 font-mono text-sm text-red-400">{error}</p>
+        <button type="button" onClick={() => router.push('/admin')} className="font-mono text-sm text-accent underline">
           Back to login
         </button>
       </main>
@@ -459,7 +459,7 @@ export function AdminEditor() {
   if (!content) {
     return (
       <main className="min-h-screen flex items-center justify-center">
-        <p className="text-muted">Loading…</p>
+        <p className="font-mono text-sm text-muted">Loading…</p>
       </main>
     );
   }
@@ -472,39 +472,40 @@ export function AdminEditor() {
     <main className="min-h-screen p-4 md:p-8 max-w-6xl mx-auto">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-xl font-semibold">Content admin</h1>
+          <h1 className="font-mono text-xl font-semibold">Content admin</h1>
           <p className="text-sm text-muted">Changes save automatically after you stop typing.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <span
-            className={`text-xs ${
-              autosaveStatus === 'error'
-                ? 'text-red-400'
-                : autosaveStatus === 'pending'
-                  ? 'text-muted'
-                  : 'text-accent'
-            }`}
-          >
-            {autosaveLabel()}
-          </span>
-          <button
-            type="button"
-            onClick={logout}
-            className="border border-border/60 px-3 py-1.5 text-sm hover:border-accent/60"
-          >
-            Log out
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={logout}
+          className="rounded border border-border px-3 py-1.5 font-mono text-sm text-muted transition-colors hover:border-accent hover:text-foreground"
+        >
+          Log out
+        </button>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="sticky top-[57px] z-10 mb-6 border-b border-border bg-background/80 py-2 backdrop-blur">
+        <span
+          className={`font-mono text-xs ${
+            autosaveStatus === 'error'
+              ? 'text-red-400'
+              : autosaveStatus === 'pending'
+                ? 'text-muted'
+                : 'text-accent'
+          }`}
+        >
+          {autosaveLabel()}
+        </span>
+      </div>
+
+      <div className="mb-4 inline-flex flex-wrap gap-1 rounded-lg border border-border p-0.5">
         {(['profile', 'blog', 'projects', 'experience'] as Tab[]).map((item) => (
           <button
             key={item}
             type="button"
             onClick={() => setTab(item)}
-            className={`px-3 py-1.5 text-sm border ${
-              tab === item ? 'border-accent text-accent' : 'border-border/60 text-muted hover:text-foreground'
+            className={`rounded-md px-3 py-1.5 font-mono text-sm transition-colors ${
+              tab === item ? 'bg-accent text-background' : 'text-muted hover:text-foreground'
             }`}
           >
             {item.charAt(0).toUpperCase() + item.slice(1)}
@@ -512,14 +513,14 @@ export function AdminEditor() {
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="mb-6 inline-flex flex-wrap gap-1 rounded-lg border border-border p-0.5">
         {locales.map((loc) => (
           <button
             key={loc}
             type="button"
             onClick={() => setLocale(loc)}
-            className={`px-3 py-1 text-xs border ${
-              locale === loc ? 'border-accent text-accent' : 'border-border/60 text-muted'
+            className={`rounded-md px-3 py-1 font-mono text-xs transition-colors ${
+              locale === loc ? 'bg-accent text-background' : 'text-muted hover:text-foreground'
             }`}
           >
             {localeLabels[loc]}
@@ -528,7 +529,7 @@ export function AdminEditor() {
       </div>
 
       {tab === 'profile' ? (
-        <section className="space-y-4 border border-border/60 p-4 md:p-6">
+        <section className="space-y-4 rounded-lg border border-border bg-surface p-6">
           <Field
             label={`Name (${locale})`}
             value={content.profile.name[locale]}
@@ -621,15 +622,15 @@ export function AdminEditor() {
       ) : null}
 
       {tab === 'blog' ? (
-        <section className="space-y-4 border border-border/60 p-4 md:p-6">
+        <section className="space-y-4 rounded-lg border border-border bg-surface p-6">
           <div className="flex flex-wrap items-center gap-2">
             {content.blog.map((item, index) => (
               <button
                 key={`${item.id}-${index}`}
                 type="button"
                 onClick={() => setSelectedBlog(index)}
-                className={`px-3 py-1 text-xs border ${
-                  selectedBlog === index ? 'border-accent text-accent' : 'border-border/60 text-muted'
+                className={`rounded border px-3 py-1 font-mono text-xs transition-colors ${
+                  selectedBlog === index ? 'border-accent text-accent' : 'border-border text-muted hover:text-foreground'
                 }`}
               >
                 {item.title.en || item.id}
@@ -638,7 +639,7 @@ export function AdminEditor() {
             <button
               type="button"
               onClick={addBlogPost}
-              className="px-3 py-1 text-xs border border-accent/60 text-accent"
+              className="rounded border border-accent/60 px-3 py-1 font-mono text-xs text-accent transition-colors hover:bg-accent/10"
             >
               + Add article
             </button>
@@ -684,7 +685,7 @@ export function AdminEditor() {
                 }
                 multiline
               />
-              <label className="block text-sm">
+              <label className="block font-mono text-xs uppercase tracking-wider text-muted">
                 Body ({locale})
                 <BlogBodyEditor
                   key={`${blogPost.id}-${locale}`}
@@ -701,7 +702,7 @@ export function AdminEditor() {
                 <button
                   type="button"
                   onClick={() => removeBlogPost(selectedBlog)}
-                  className="border border-red-500/60 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10"
+                  className="rounded border border-red-400/40 px-4 py-2 font-mono text-sm text-red-400 transition-colors hover:bg-red-400/10"
                 >
                   Remove article
                 </button>
@@ -714,15 +715,15 @@ export function AdminEditor() {
       ) : null}
 
       {tab === 'projects' && project ? (
-        <section className="space-y-4 border border-border/60 p-4 md:p-6">
+        <section className="space-y-4 rounded-lg border border-border bg-surface p-6">
           <div className="flex flex-wrap items-center gap-2">
             {content.projects.map((item, index) => (
               <button
                 key={`${item.id}-${index}`}
                 type="button"
                 onClick={() => setSelectedProject(index)}
-                className={`px-3 py-1 text-xs border ${
-                  selectedProject === index ? 'border-accent text-accent' : 'border-border/60 text-muted'
+                className={`rounded border px-3 py-1 font-mono text-xs transition-colors ${
+                  selectedProject === index ? 'border-accent text-accent' : 'border-border text-muted hover:text-foreground'
                 }`}
               >
                 {item.id}
@@ -731,7 +732,7 @@ export function AdminEditor() {
             <button
               type="button"
               onClick={addProject}
-              className="px-3 py-1 text-xs border border-accent/60 text-accent"
+              className="rounded border border-accent/60 px-3 py-1 font-mono text-xs text-accent transition-colors hover:bg-accent/10"
             >
               + Add project
             </button>
@@ -812,9 +813,10 @@ export function AdminEditor() {
               }))
             }
           />
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-muted">
             <input
               type="checkbox"
+              className="h-4 w-4 accent-[rgb(var(--color-accent))]"
               checked={project.inDevelopment ?? false}
               onChange={(e) =>
                 updateProject(selectedProject, (item) => ({
@@ -830,7 +832,7 @@ export function AdminEditor() {
               <button
                 type="button"
                 onClick={() => removeProject(selectedProject)}
-                className="border border-red-500/60 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10"
+                className="rounded border border-red-400/40 px-4 py-2 font-mono text-sm text-red-400 transition-colors hover:bg-red-400/10"
               >
                 Remove project
               </button>
@@ -840,15 +842,15 @@ export function AdminEditor() {
       ) : null}
 
       {tab === 'experience' && experienceItem ? (
-        <section className="space-y-4 border border-border/60 p-4 md:p-6">
+        <section className="space-y-4 rounded-lg border border-border bg-surface p-6">
           <div className="flex flex-wrap items-center gap-2">
             {content.experience.map((item, index) => (
               <button
                 key={`${item.id}-${index}`}
                 type="button"
                 onClick={() => setSelectedExperience(index)}
-                className={`px-3 py-1 text-xs border ${
-                  selectedExperience === index ? 'border-accent text-accent' : 'border-border/60 text-muted'
+                className={`rounded border px-3 py-1 font-mono text-xs transition-colors ${
+                  selectedExperience === index ? 'border-accent text-accent' : 'border-border text-muted hover:text-foreground'
                 }`}
               >
                 {item.company.en || item.id}
@@ -857,7 +859,7 @@ export function AdminEditor() {
             <button
               type="button"
               onClick={addExperienceItem}
-              className="px-3 py-1 text-xs border border-accent/60 text-accent"
+              className="rounded border border-accent/60 px-3 py-1 font-mono text-xs text-accent transition-colors hover:bg-accent/10"
             >
               + Add experience
             </button>
@@ -960,7 +962,7 @@ export function AdminEditor() {
               <button
                 type="button"
                 onClick={() => removeExperienceItem(selectedExperience)}
-                className="border border-red-500/60 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10"
+                className="rounded border border-red-400/40 px-4 py-2 font-mono text-sm text-red-400 transition-colors hover:bg-red-400/10"
               >
                 Remove experience
               </button>

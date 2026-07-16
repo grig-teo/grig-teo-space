@@ -28,7 +28,7 @@ export function BlogBodyEditor({ value, onChange }: Props) {
   }, [editor, onChange]);
 
   return (
-    <div className="mt-1 min-h-[32rem] border border-border/60 bg-black admin-blocknote">
+    <div className="admin-blocknote mt-1 min-h-[32rem] rounded border border-border bg-surface font-sans normal-case tracking-normal">
       <BlockNoteView editor={editor} theme="dark" />
     </div>
   );
