@@ -95,7 +95,7 @@ export default async function LocaleLayout({ children, params }: Props) {
         <NextIntlClientProvider messages={messages}>
           <Header showBlog={blogPosts.length > 0} showHealth={publicHealth !== null} />
           {children}
-          <Footer profile={profile} />
+          <Footer contact={profile.contact} />
           <AssistantChatWidget locale={validLocale} />
         </NextIntlClientProvider>
       </body>

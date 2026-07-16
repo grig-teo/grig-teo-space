@@ -4,6 +4,7 @@ import { BlogPreview } from '@/components/Blog';
 import { ProjectsPreview } from '@/components/Projects';
 import { Experience } from '@/components/Experience';
 import { JsonLd } from '@/components/JsonLd';
+import { Reveal } from '@/components/Reveal';
 import { getBlogPosts, getExperience, getProfile, getProjects } from '@/lib/api';
 import type { BlogPost, ExperienceItem, Locale, Project } from '@/lib/api';
 
@@ -50,10 +51,19 @@ export default async function HomePage({ params }: Props) {
   return (
     <main className="min-h-screen">
       <JsonLd profile={profile} locale={locale} />
-      <Hero profile={profile} stats={stats} />
-      <ProjectsPreview projects={projects} />
-      <BlogPreview posts={blogPosts} locale={locale} />
-      <Experience items={experience} />
+      <Hero
+        profile={{ name: profile.name, title: profile.title, location: profile.location }}
+        stats={stats}
+      />
+      <Reveal>
+        <ProjectsPreview projects={projects} />
+      </Reveal>
+      <Reveal>
+        <BlogPreview posts={blogPosts} locale={locale} />
+      </Reveal>
+      <Reveal>
+        <Experience items={experience} />
+      </Reveal>
     </main>
   );
 }

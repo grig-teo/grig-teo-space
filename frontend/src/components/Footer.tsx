@@ -46,7 +46,7 @@ function DownloadIcon() {
   );
 }
 
-export function Footer({ profile }: { profile: Profile }) {
+export function Footer({ contact }: { contact: Profile['contact'] }) {
   const t = useTranslations('footer');
   const [cvModalOpen, setCvModalOpen] = useState(false);
 
@@ -63,7 +63,7 @@ export function Footer({ profile }: { profile: Profile }) {
         </button>
         <div className="flex items-center gap-6 text-muted">
           <a
-            href={profile.contact.github}
+            href={contact.github}
             target="_blank"
             rel="noopener noreferrer"
             className="transition-colors hover:text-accent"
@@ -72,7 +72,7 @@ export function Footer({ profile }: { profile: Profile }) {
             <GitHubIcon />
           </a>
           <a
-            href={profile.contact.linkedin}
+            href={contact.linkedin}
             target="_blank"
             rel="noopener noreferrer"
             className="transition-colors hover:text-accent"
@@ -81,18 +81,18 @@ export function Footer({ profile }: { profile: Profile }) {
             <LinkedInIcon />
           </a>
           <a
-            href={`mailto:${profile.contact.email}`}
+            href={`mailto:${contact.email}`}
             className="transition-colors hover:text-accent"
             aria-label="Email"
           >
             <MailIcon />
           </a>
-          {profile.contact.phone && (
+          {contact.phone && (
             <a
-              href={`tel:${profile.contact.phone}`}
+              href={`tel:${contact.phone}`}
               className="transition-colors hover:text-accent"
               aria-label={t('phone')}
-              title={profile.contact.phone}
+              title={contact.phone}
             >
               <PhoneIcon />
             </a>

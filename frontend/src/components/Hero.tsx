@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
+import { HeroScene } from '@/components/HeroScene';
 import type { Profile } from '@/lib/api';
 
 export type HeroStats = {
@@ -11,7 +12,11 @@ export type HeroStats = {
   articles: number;
 };
 
-function TerminalCard({ profile }: { profile: Profile }) {
+/** Only the identity fields the hero renders — never pass the full profile
+ *  (its `about` bio must stay out of the landing page's serialized props). */
+export type HeroProfile = Pick<Profile, 'name' | 'title' | 'location'>;
+
+function TerminalCard({ profile }: { profile: HeroProfile }) {
   const t = useTranslations('hero');
 
   return (
@@ -96,19 +101,26 @@ function HeroCtas() {
   );
 }
 
-export function Hero({ profile, stats }: { profile: Profile; stats: HeroStats }) {
+export function Hero({ profile, stats }: { profile: HeroProfile; stats: HeroStats }) {
   return (
     <section id="about" className="px-4 py-20 sm:px-6 md:px-12 md:py-28">
-      <div className="max-w-5xl">
-        <TerminalCard profile={profile} />
-        <div className="mt-8">
-          <StatsStrip stats={stats} />
+      <div className="max-w-6xl lg:grid lg:grid-cols-[1fr_auto] lg:items-center lg:gap-12">
+        <div>
+          <TerminalCard profile={profile} />
+          <div className="mt-8">
+            <StatsStrip stats={stats} />
+          </div>
+          <div className="mt-6">
+            <DomainChips />
+          </div>
+          <div className="mt-8">
+            <HeroCtas />
+          </div>
         </div>
-        <div className="mt-6">
-          <DomainChips />
-        </div>
-        <div className="mt-8">
-          <HeroCtas />
+        <div className="mt-10 flex justify-center lg:mt-0">
+          <div className="scale-75 lg:scale-100">
+            <HeroScene />
+          </div>
         </div>
       </div>
     </section>

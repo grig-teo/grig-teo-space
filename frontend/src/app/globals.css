@@ -105,6 +105,19 @@ html[data-theme='light'] .bg-mesh-dark {
   .bg-mesh-blob {
     animation: none;
   }
+
+  /* Hero orbit scene goes fully static; chips keep their static positions. */
+  .orbit-spin-inner,
+  .orbit-spin-outer,
+  .orbit-counter-inner,
+  .orbit-counter-outer,
+  .orbit-core,
+  .orbit-float-1,
+  .orbit-float-2,
+  .orbit-float-3,
+  .orbit-float-4 {
+    animation: none;
+  }
 }
 
 /* Faint engineering grid layered over the mesh background. */
@@ -235,4 +248,134 @@ body {
 
 .admin-blocknote .bn-inline-content {
   color: rgb(var(--color-foreground));
+}
+
+/* ---------------------------------------------------------------------------
+ * Hero orbit scene (HeroScene.tsx) — pure CSS 3D: keyframes + semantic wiring.
+ * ------------------------------------------------------------------------- */
+
+@keyframes orbit-spin {
+  to {
+    transform: rotateZ(360deg);
+  }
+}
+
+@keyframes orbit-spin-rev {
+  to {
+    transform: rotateZ(-360deg);
+  }
+}
+
+@keyframes core-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 12px rgb(var(--color-accent) / 0.15);
+  }
+  50% {
+    box-shadow: 0 0 28px rgb(var(--color-accent) / 0.35);
+  }
+}
+
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(-10px);
+  }
+  50% {
+    transform: translateY(10px);
+  }
+}
+
+/* 3D stage: fills the perspective wrapper; inline parallax tilt eases via transition. */
+.orbit-scene {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.2s ease-out;
+}
+
+/* Isometric ring plane; the spin lives on a child so the tilt survives the animation. */
+.orbit-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotateX(66deg);
+  transform-style: preserve-3d;
+}
+
+.orbit-ring-inner {
+  width: 220px;
+  height: 220px;
+}
+
+.orbit-ring-outer {
+  width: 340px;
+  height: 340px;
+}
+
+.orbit-spin-inner {
+  animation: orbit-spin 18s linear infinite;
+  transform-style: preserve-3d;
+}
+
+.orbit-spin-outer {
+  animation: orbit-spin-rev 30s linear infinite;
+  transform-style: preserve-3d;
+}
+
+/* Billboard trick: chips counter-spin at the ring's duration, reversed. */
+.orbit-counter-inner {
+  animation: orbit-spin-rev 18s linear infinite;
+  transform-style: preserve-3d;
+}
+
+.orbit-counter-outer {
+  animation: orbit-spin 30s linear infinite;
+  transform-style: preserve-3d;
+}
+
+.orbit-billboard {
+  transform: rotateX(-66deg);
+  transform-style: preserve-3d;
+}
+
+.orbit-core {
+  animation: core-pulse 3s ease-in-out infinite;
+}
+
+.orbit-float-1 {
+  animation: float-y 5s ease-in-out infinite;
+}
+
+.orbit-float-2 {
+  animation: float-y 6s ease-in-out -1.2s infinite;
+}
+
+.orbit-float-3 {
+  animation: float-y 7s ease-in-out -2.4s infinite;
+}
+
+.orbit-float-4 {
+  animation: float-y 8s ease-in-out -3.6s infinite;
+}
+
+/* Scroll-reveal utility — `reveal-visible` is toggled by components/Reveal.tsx. */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Kept last so it beats the base .reveal rule above (equal specificity, source order). */
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
