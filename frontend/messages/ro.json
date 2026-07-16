@@ -12,7 +12,6 @@
   "hero": {
     "prompt": "grig-teo:~$",
     "whoami": "$ whoami",
-    "tagline": "Livrez produse întregi de unul singur — de la protocoale Bluetooth la marketplace-uri.",
     "domains": "marketplace-uri · A/V în timp real · date civice · health-tech",
     "stats": {
       "years": "{value}+ ani",

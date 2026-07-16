@@ -12,7 +12,6 @@
   "hero": {
     "prompt": "grig-teo:~$",
     "whoami": "$ whoami",
-    "tagline": "I ship whole products alone — from Bluetooth protocols to marketplaces.",
     "domains": "marketplaces · real-time A/V · civic data · health tech",
     "stats": {
       "years": "{value}+ yrs",

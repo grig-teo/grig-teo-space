@@ -12,7 +12,6 @@
   "hero": {
     "prompt": "grig-teo:~$",
     "whoami": "$ whoami",
-    "tagline": "Я один довожу продукты до релиза — от Bluetooth-протоколов до маркетплейсов.",
     "domains": "маркетплейсы · real-time A/V · гражданские данные · health-tech",
     "stats": {
       "years": "{value}+ лет",

@@ -97,16 +97,10 @@ function HeroCtas() {
 }
 
 export function Hero({ profile, stats }: { profile: Profile; stats: HeroStats }) {
-  const t = useTranslations('hero');
-
   return (
     <section id="about" className="px-4 py-20 sm:px-6 md:px-12 md:py-28">
       <div className="max-w-5xl">
         <TerminalCard profile={profile} />
-        <p className="mt-8 max-w-2xl font-sans text-lg text-muted">{t('tagline')}</p>
-        <p className="mt-4 max-w-2xl font-sans text-sm leading-relaxed text-muted">
-          {profile.about}
-        </p>
         <div className="mt-8">
           <StatsStrip stats={stats} />
         </div>

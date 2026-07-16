@@ -112,11 +112,6 @@ experiencePage.*, blogPage.*, meta.*, health.*). ADD:
 "hero": {
   "prompt": "grig-teo:~$",                       // exists already
   "whoami": "$ whoami",
-  "tagline": {
-    "en": "I ship whole products alone — from Bluetooth protocols to marketplaces.",
-    "ru": "Я один довожу продукты до релиза — от Bluetooth-протоколов до маркетплейсов.",
-    "ro": "Livrez produse întregi de unul singur — de la protocoale Bluetooth la marketplace-uri."
-  },
   "domains": {
     "en": "marketplaces · real-time A/V · civic data · health tech",
     "ru": "маркетплейсы · real-time A/V · гражданские данные · health-tech",
@@ -161,19 +156,20 @@ Layout (max-w-5xl, left-aligned, py-20+):
    header bar with 3 traffic dots + `grig-teo:~$`; body: line `$ whoami`
    (text-muted) → **name** in `text-4xl md:text-6xl font-bold font-mono`
    (text-foreground) → title `text-accent` → location `text-muted`.
-2. **Tagline** — `t('hero.tagline')`, font-sans text-lg text-muted, max-w-2xl.
-3. **About** — `profile.about`, font-sans text-sm leading-relaxed text-muted,
-   max-w-2xl. The Transnistria story is identity — show it, don't hide it.
-4. **Stats strip** — 4 cells in a `divide-x divide-border border border-border
+2. **Stats strip** — 4 cells in a `divide-x divide-border border border-border
    rounded-lg bg-surface` row (wrap on mobile): each cell mono, first line
    the formatted stat via `t('hero.stats.*', { value })` in
    `text-lg text-accent`, nothing else. No labels — the string carries it.
-5. **Domain chips** — `t('hero.domains')` split on `·` into pill badges:
+3. **Domain chips** — `t('hero.domains')` split on `·` into pill badges:
    `border border-border rounded-full px-3 py-1 text-xs font-mono text-muted`.
-6. **CTAs** — primary `bg-accent text-background rounded px-5 py-2.5 font-mono
+4. **CTAs** — primary `bg-accent text-background rounded px-5 py-2.5 font-mono
    text-sm hover:opacity-90` linking to `#projects` (`t('hero.ctaProjects')`),
    ghost `border border-border ... hover:border-accent` linking to `#contact`
    (`t('hero.ctaContact')`).
+
+NOTE (owner decision, 2026-07-16): the hero intentionally does NOT render a
+tagline or the `profile.about` biography — the landing stays work-focused;
+the bio lives only in the admin-editable profile data, not on the page.
 
 ### 5.2 Landing composition (`[locale]/page.tsx`)
 
