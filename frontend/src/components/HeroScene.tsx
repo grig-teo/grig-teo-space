@@ -16,7 +16,7 @@ type RingVariant = 'inner' | 'outer';
 
 function OrbitChip({ label }: { label: string }) {
   return (
-    <span className="inline-block rounded-full border border-border bg-surface px-2.5 py-1 font-mono text-[11px] text-muted transition-colors hover:text-accent">
+    <span className="inline-block font-mono text-xs tracking-wide text-accent transition-colors [text-shadow:0_0_10px_rgb(var(--color-background))]">
       {label}
     </span>
   );
