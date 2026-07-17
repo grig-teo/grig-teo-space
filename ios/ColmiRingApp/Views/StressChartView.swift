@@ -3,9 +3,10 @@ import Charts
 
 /**
  Today's stress by hour: a bare bar chart fed by `StressSeriesClient`. One bar
- per clock hour that has readings, each labeled underneath with the exact time
- that hour's data was collected (HH:mm). The value axis runs down the right
- side as a percentage. No header, callout, or interaction — just the graph.
+ per clock hour that has readings, each labeled on top with that hour's
+ clock time ("9h", "14h", …) so it's clear the numbers are hours. The value
+ axis runs down the right side as a percentage. No header, callout, or
+ interaction — just the graph.
  */
 struct StressChartView: View {
     @ObservedObject var client: StressSeriesClient
@@ -87,16 +88,17 @@ struct StressChartView: View {
         .frame(height: 200)
     }
 
-    /// Hour-of-day (e.g. "14") of the most recent reading in this hour, shown
-    /// on top of its column. Falls back to the bucket's hour if `latestAt` is
-    /// missing.
+    /// Hour-of-day label (e.g. "14h") of the most recent reading in this hour,
+    /// shown on top of its column. The "h" suffix makes it clear the numbers
+    /// on the columns are clock hours. Falls back to the bucket's hour if
+    /// `latestAt` is missing.
     private func hourLabel(for bucket: StressSeriesClient.StressSeries.Bucket) -> String {
         let date = bucket.collectedAt
             ?? Calendar.current.date(
                 bySettingHour: bucket.hour, minute: 0, second: 0, of: Date(),
             )
             ?? Date()
-        return date.formatted(.dateTime.hour())
+        return "\(Calendar.current.component(.hour, from: date))h"
     }
 
     /// Maps a stress percentage to a color: green at 0% (calm) → yellow at
