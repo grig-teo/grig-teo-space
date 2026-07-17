@@ -1,18 +1,16 @@
 import SwiftUI
 
 /**
- Shows persisted GLM health tips as one scrollable list where the latest tip
- is in focus: it renders at the top as an elevated card with the full text,
- while every other tip is a normal compact row underneath (tap a row to
- expand its text). The icon at the focused card's top-right sends it to the
- back of the list — it becomes a normal row like the others, and the next
- tip takes the focus. Paginated via TipClient.loadNext().
+ Shows persisted GLM health tips as one scrollable list where a single tip is
+ in focus: it renders at the top as an elevated card with the full text,
+ while every other tip is a normal compact row underneath (two-line preview).
+ The latest tip starts in focus; tapping any row moves that tip to the top
+ and focuses it the same way. Paginated via TipClient.loadNext().
  */
 struct TipHistoryView: View {
     @StateObject private var client = TipClient.shared
-    /// Working copy of the loaded tips, reordered as the focus cycles.
+    /// Working copy of the loaded tips, reordered as the focus changes.
     @State private var deck: [TipClient.Tip] = []
-    @State private var expandedId: String?
 
     var body: some View {
         Group {
@@ -55,8 +53,8 @@ struct TipHistoryView: View {
         }
     }
 
-    /// The tip in focus (the latest): full text, elevated card, and the
-    /// send-to-back icon at the top-right.
+    /// The tip in focus: full text on an elevated card. The "Latest" badge
+    /// shows only while the focused tip is actually the newest one.
     private func focusedCard(_ tip: TipClient.Tip) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center) {
@@ -65,21 +63,15 @@ struct TipHistoryView: View {
                 Text(formattedDate(tip.generatedAt))
                     .font(.caption.bold())
                     .foregroundColor(.secondary)
-                Text("Latest")
-                    .font(.caption2.bold())
-                    .foregroundColor(.accentColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(Color.accentColor.opacity(0.12)))
-                Spacer()
-                if deck.count > 1 {
-                    Button(action: sendToBack) {
-                        Image(systemName: "square.3.layers.3d.down.right")
-                            .font(.title3)
-                            .foregroundColor(.accentColor)
-                    }
-                    .accessibilityLabel("Send tip to back")
+                if tip.id == client.tips.first?.id {
+                    Text("Latest")
+                        .font(.caption2.bold())
+                        .foregroundColor(.accentColor)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Color.accentColor.opacity(0.12)))
                 }
+                Spacer()
             }
             Text(tip.content)
                 .font(.body)
@@ -95,10 +87,10 @@ struct TipHistoryView: View {
         .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
     }
 
-    /// A normal, non-focused tip: compact row, two lines, tap to expand.
+    /// A normal, non-focused tip: compact two-line row. Tap moves it to the
+    /// top and focuses it like the latest.
     private func tipRow(_ tip: TipClient.Tip) -> some View {
-        let isExpanded = expandedId == tip.id
-        return VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Image(systemName: "lightbulb.fill")
                     .foregroundColor(.yellow)
@@ -110,17 +102,13 @@ struct TipHistoryView: View {
             }
             Text(tip.content)
                 .font(.subheadline)
-                .lineLimit(isExpanded ? nil : 2)
+                .lineLimit(2)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(RoundedRectangle(cornerRadius: 14).fill(Color(.secondarySystemBackground)))
         .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                expandedId = (expandedId == tip.id) ? nil : tip.id
-            }
-        }
+        .onTapGesture { focus(tip) }
     }
 
     private var loadMoreRow: some View {
@@ -138,12 +126,11 @@ struct TipHistoryView: View {
 
     // MARK: - Actions
 
-    /// Sends the focused tip to the back of the list, where it becomes a
-    /// normal row like the others; the next tip takes the focus.
-    private func sendToBack() {
-        guard deck.count > 1 else { return }
+    /// Moves a tapped tip to the top of the list, giving it the focus.
+    private func focus(_ tip: TipClient.Tip) {
+        guard let index = deck.firstIndex(where: { $0.id == tip.id }), index > 0 else { return }
         withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
-            deck.append(deck.removeFirst())
+            deck.insert(deck.remove(at: index), at: 0)
         }
     }
 
