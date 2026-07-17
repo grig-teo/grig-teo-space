@@ -187,6 +187,29 @@ final class MediaLibraryWrapper: ObservableObject {
         return (dest, writtenSize)
     }
 
+    // MARK: - Delete
+
+    /**
+     Deletes the asset from the device photo library (moves it to Recently
+     Deleted). iOS always shows its own system confirmation for this, and the
+     user can cancel there — so this returns true only when the deletion
+     actually happened. Returns true immediately if the asset is already gone.
+     */
+    @discardableResult
+    func deleteAsset(localId: String) async -> Bool {
+        let fetch = PHAsset.fetchAssets(withLocalIdentifiers: [localId], options: nil)
+        guard fetch.count > 0 else { return true }
+        do {
+            try await PHPhotoLibrary.shared().performChanges {
+                PHAssetChangeRequest.deleteAssets(fetch)
+            }
+            return true
+        } catch {
+            // Most commonly: the user cancelled the system confirmation.
+            return false
+        }
+    }
+
     // MARK: - Helpers
 
     private func fetchAsset(_ localIdentifier: String) -> PHAsset? {

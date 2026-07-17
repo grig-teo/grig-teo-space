@@ -23,7 +23,7 @@ struct MediaView: View {
     @State private var snapshots: [MediaLibraryWrapper.AssetSnapshot] = []
     /// Drives the FAB's spinning icon while a sync is in progress.
     @State private var fabRotation: Double = 0
-    /// Item awaiting delete confirmation (long-press → Delete backup).
+    /// Item awaiting delete confirmation (long-press → Delete).
     @State private var pendingDelete: MediaLibraryWrapper.AssetSnapshot?
     @State private var isDeleting = false
 
@@ -33,25 +33,37 @@ struct MediaView: View {
                 .navigationTitle("Media")
                 .overlay(alignment: .bottomTrailing) { fab }
                 .confirmationDialog(
-                    "Delete backup?",
+                    "Delete?",
                     isPresented: Binding(
                         get: { pendingDelete != nil },
                         set: { if !$0 { pendingDelete = nil } }
                     ),
                     titleVisibility: .visible
                 ) {
-                    Button("Delete backup", role: .destructive) {
+                    Button("Delete", role: .destructive) {
                         guard let item = pendingDelete else { return }
                         Task {
                             isDeleting = true
-                            await syncer.delete(localId: item.id)
+                            // Local deletion first: iOS shows its own system
+                            // confirmation, and if the user cancels there we
+                            // abort — the server backup stays in place.
+                            if await library.deleteAsset(localId: item.id) {
+                                if syncer.isUploaded(item.id) {
+                                    await syncer.delete(localId: item.id)
+                                }
+                                snapshots.removeAll { $0.id == item.id }
+                            }
                             isDeleting = false
                             pendingDelete = nil
                         }
                     }
                     Button("Cancel", role: .cancel) { pendingDelete = nil }
                 } message: {
-                    Text("Removes the backed-up copy from your server. The photo or video stays in your photo library.")
+                    if let item = pendingDelete, syncer.isUploaded(item.id) {
+                        Text("Removes the backup from your server and deletes the photo or video from this device (it moves to Recently Deleted).")
+                    } else {
+                        Text("Deletes the photo or video from this device (it moves to Recently Deleted).")
+                    }
                 }
                 .task { await refresh() }
                 .onChange(of: library.access) { _ in
@@ -83,12 +95,10 @@ struct MediaView: View {
                             }
                             .buttonStyle(.plain)
                             .contextMenu {
-                                if syncer.isUploaded(snapshot.id) {
-                                    Button(role: .destructive) {
-                                        pendingDelete = snapshot
-                                    } label: {
-                                        Label("Delete backup", systemImage: "trash")
-                                    }
+                                Button(role: .destructive) {
+                                    pendingDelete = snapshot
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
                                 }
                             }
                         }
