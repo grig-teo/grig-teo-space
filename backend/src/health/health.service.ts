@@ -469,11 +469,12 @@ export class HealthService {
   }
 
   /**
-   * Builds an hourly average series for one metric over the last `days` days
-   * (defaults to today only). Used by the iOS Profile page's stress graph:
-   * 24 buckets (one per hour), each holding the mean of the readings recorded
-   * during that local clock hour. Empty hours come back as `value: null` so the
-   * chart can render gaps rather than a misleading zero baseline.
+   * Builds an hourly average series for one metric over the current calendar
+   * day (plus `days - 1` extra days back, so `days=1` is today only). Used by
+   * the iOS Profile page's stress graph: 24 buckets (one per hour), each
+   * holding the mean of the readings recorded during that local clock hour.
+   * Empty hours come back as `value: null` so the chart can render gaps
+   * rather than a misleading zero baseline.
    */
   async getHourlySeries(
     metric: HealthMetric,
@@ -481,7 +482,12 @@ export class HealthService {
   ): Promise<HourlySeries> {
     const safeMetric = HEALTH_METRICS.includes(metric) ? metric : 'stress';
     const span = Math.max(1, Math.min(days, 365));
-    const { from } = this.window(span);
+    // Start at local midnight of the current day, not a rolling 24h window —
+    // a rolling window would average yesterday's readings into today's hour
+    // buckets, so the "today" graph would show data from yesterday.
+    const from = new Date();
+    from.setHours(0, 0, 0, 0);
+    from.setDate(from.getDate() - (span - 1));
 
     const readings = await this.readingRepo.find({
       where: { recordedAt: MoreThan(from), metric: safeMetric },
