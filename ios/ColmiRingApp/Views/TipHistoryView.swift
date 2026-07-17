@@ -2,21 +2,31 @@ import SwiftUI
 
 /**
  Shows persisted GLM health tips as one scrollable list where a single tip is
- in focus: it renders at the top as an elevated card with the full text,
- while every other tip is a normal compact row underneath (two-line preview).
- The latest tip starts in focus; tapping any row moves that tip to the top
- and focuses it the same way. Paginated via TipClient.loadNext().
+ in focus: it renders as an elevated card with the full text, while every
+ other tip is a normal compact row (two-line preview). The latest tip starts
+ in focus; tapping any row focuses that tip in place — the list order never
+ changes. Paginated via TipClient.loadNext().
  */
 struct TipHistoryView: View {
     @StateObject private var client = TipClient.shared
-    /// Working copy of the loaded tips, reordered as the focus changes.
-    @State private var deck: [TipClient.Tip] = []
+    /// The tapped tip in focus; nil means "the latest one".
+    @State private var focusedId: String?
+
+    /// The tip currently in focus: the tapped one, or the latest by default.
+    /// Falls back to the latest when the focused id is no longer in the list
+    /// (e.g. after a reload).
+    private var focusedTipId: String? {
+        if let focusedId, client.tips.contains(where: { $0.id == focusedId }) {
+            return focusedId
+        }
+        return client.tips.first?.id
+    }
 
     var body: some View {
         Group {
-            if deck.isEmpty && client.isLoading {
+            if client.tips.isEmpty && client.isLoading {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if deck.isEmpty {
+            } else if client.tips.isEmpty {
                 emptyState
             } else {
                 tipList
@@ -24,11 +34,7 @@ struct TipHistoryView: View {
         }
         .navigationTitle("Health Tips")
         .navigationBarTitleDisplayMode(.inline)
-        .task {
-            if client.tips.isEmpty { await client.reload() }
-            syncDeck()
-        }
-        .onChange(of: client.tips.count) { _ in syncDeck() }
+        .task { if client.tips.isEmpty { await client.reload() } }
     }
 
     // MARK: - List
@@ -36,8 +42,8 @@ struct TipHistoryView: View {
     private var tipList: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
-                ForEach(Array(deck.enumerated()), id: \.element.id) { position, tip in
-                    if position == 0 {
+                ForEach(client.tips) { tip in
+                    if tip.id == focusedTipId {
                         focusedCard(tip)
                     } else {
                         tipRow(tip)
@@ -53,8 +59,9 @@ struct TipHistoryView: View {
         }
     }
 
-    /// The tip in focus: full text on an elevated card. The "Latest" badge
-    /// shows only while the focused tip is actually the newest one.
+    /// The tip in focus: full text on an elevated card, in its own position
+    /// in the list. The "Latest" badge shows only when the focused tip is
+    /// actually the newest one.
     private func focusedCard(_ tip: TipClient.Tip) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center) {
@@ -87,8 +94,8 @@ struct TipHistoryView: View {
         .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
     }
 
-    /// A normal, non-focused tip: compact two-line row. Tap moves it to the
-    /// top and focuses it like the latest.
+    /// A normal, non-focused tip: compact two-line row. Tap focuses it in
+    /// place — it stays exactly where it is in the list.
     private func tipRow(_ tip: TipClient.Tip) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
@@ -108,7 +115,11 @@ struct TipHistoryView: View {
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(RoundedRectangle(cornerRadius: 14).fill(Color(.secondarySystemBackground)))
         .contentShape(Rectangle())
-        .onTapGesture { focus(tip) }
+        .onTapGesture {
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+                focusedId = tip.id
+            }
+        }
     }
 
     private var loadMoreRow: some View {
@@ -122,28 +133,6 @@ struct TipHistoryView: View {
             Spacer()
         }
         .padding(.vertical, 8)
-    }
-
-    // MARK: - Actions
-
-    /// Moves a tapped tip to the top of the list, giving it the focus.
-    private func focus(_ tip: TipClient.Tip) {
-        guard let index = deck.firstIndex(where: { $0.id == tip.id }), index > 0 else { return }
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
-            deck.insert(deck.remove(at: index), at: 0)
-        }
-    }
-
-    /// Keeps the list in sync with the client's tips: a reload (the list
-    /// shrank) resets the order so the latest tip returns to the focus; a
-    /// new page appends at the end without disturbing the current order.
-    private func syncDeck() {
-        let tips = client.tips
-        if tips.count < deck.count {
-            deck = tips
-        } else if tips.count > deck.count {
-            deck.append(contentsOf: tips.suffix(tips.count - deck.count))
-        }
     }
 
     // MARK: - Empty state
