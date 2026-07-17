@@ -450,13 +450,15 @@ export function AdminEditor() {
     }));
   }
 
-  /** Uploads a file to media storage, then attaches the returned URL. */
-  async function uploadExperienceAttachment(file: File) {
+  /** Uploads files to media storage, then attaches the returned URLs. */
+  async function uploadExperienceAttachments(files: File[]) {
     setAttachmentUploading(true);
     setError('');
     try {
-      const url = await adminUploadMedia(file);
-      addExperienceAttachment(url);
+      for (const file of files) {
+        const url = await adminUploadMedia(file);
+        addExperienceAttachment(url);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Upload failed');
     } finally {
@@ -1035,15 +1037,16 @@ export function AdminEditor() {
                     : 'cursor-pointer border-accent/60 text-accent hover:bg-accent/10'
                 }`}
               >
-                {attachmentUploading ? 'Uploading…' : 'Upload file'}
+                {attachmentUploading ? 'Uploading…' : 'Upload file(s)'}
                 <input
                   type="file"
                   className="hidden"
+                  multiple
                   disabled={attachmentUploading}
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
+                    const files = Array.from(e.target.files ?? []);
                     e.target.value = '';
-                    if (file) void uploadExperienceAttachment(file);
+                    if (files.length > 0) void uploadExperienceAttachments(files);
                   }}
                 />
               </label>

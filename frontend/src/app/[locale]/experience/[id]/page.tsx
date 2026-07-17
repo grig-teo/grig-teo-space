@@ -17,11 +17,11 @@ function AttachmentView({ attachment }: { attachment: ExperienceAttachment }) {
   const kind = attachmentType(attachment);
 
   if (kind === 'video') {
+    // GIF-like: autoplays muted on repeat, no controls or buttons.
     return (
       <video
         src={attachment.url}
         className="max-h-[70vh] w-auto max-w-full rounded-lg border border-border bg-surface"
-        controls
         autoPlay
         muted
         loop
