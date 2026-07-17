@@ -15,6 +15,15 @@ export interface Project {
   sortOrder?: number;
 }
 
+export type ExperienceAttachmentType = 'video' | 'image' | 'doc';
+
+export interface ExperienceAttachment {
+  /** Inferred from the URL extension when omitted. */
+  type?: ExperienceAttachmentType;
+  url: string;
+  title?: string;
+}
+
 export interface ExperienceItem {
   id: string;
   period: LocalizedString;
@@ -25,6 +34,8 @@ export interface ExperienceItem {
   summary?: LocalizedString;
   highlights: LocalizedList;
   stack?: LocalizedString;
+  /** Files attached to this entry (demo videos, screenshots, PDFs…). */
+  attachments?: ExperienceAttachment[];
 }
 
 export interface ContactInfo {

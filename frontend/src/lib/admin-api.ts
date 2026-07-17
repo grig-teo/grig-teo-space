@@ -25,6 +25,15 @@ export interface ExperienceItem {
   summary?: LocalizedString;
   highlights: LocalizedList;
   stack?: LocalizedString;
+  attachments?: ExperienceAttachment[];
+}
+
+export type ExperienceAttachmentType = 'video' | 'image' | 'doc';
+
+export interface ExperienceAttachment {
+  type?: ExperienceAttachmentType;
+  url: string;
+  title?: string;
 }
 
 export interface ContactInfo {

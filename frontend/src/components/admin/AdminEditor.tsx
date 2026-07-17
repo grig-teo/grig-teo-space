@@ -6,6 +6,7 @@ import {
   adminSaveExperience,
   adminSaveProfile,
   adminSaveProjects,
+  adminUploadMedia,
   clearAdminToken,
   type BlogPost,
   type ExperienceItem,
@@ -16,6 +17,7 @@ import {
   type Project,
   type SiteContent,
 } from '@/lib/admin-api';
+import { attachmentType } from '@/lib/attachments';
 import { BlogBodyEditor } from '@/components/admin/BlogBodyEditor';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -197,6 +199,8 @@ export function AdminEditor() {
   const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>('idle');
   const [error, setError] = useState('');
   const [ready, setReady] = useState(false);
+  const [attachmentUrl, setAttachmentUrl] = useState('');
+  const [attachmentUploading, setAttachmentUploading] = useState(false);
 
   const contentRef = useRef<SiteContent | null>(null);
   const savedSnapshotsRef = useRef<Record<Tab, string>>(emptySnapshots());
@@ -434,6 +438,30 @@ export function AdminEditor() {
       experience[index] = updater(experience[index]);
       return { ...prev, experience };
     });
+  }
+
+  /** Appends an attachment (video/image/doc) to the selected experience item. */
+  function addExperienceAttachment(url: string) {
+    const clean = url.trim();
+    if (!clean) return;
+    updateExperienceItem(selectedExperience, (item) => ({
+      ...item,
+      attachments: [...(item.attachments ?? []), { url: clean }],
+    }));
+  }
+
+  /** Uploads a file to media storage, then attaches the returned URL. */
+  async function uploadExperienceAttachment(file: File) {
+    setAttachmentUploading(true);
+    setError('');
+    try {
+      const url = await adminUploadMedia(file);
+      addExperienceAttachment(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Upload failed');
+    } finally {
+      setAttachmentUploading(false);
+    }
   }
 
   function updateBlogPost(index: number, updater: (post: BlogPost) => BlogPost) {
@@ -957,6 +985,70 @@ export function AdminEditor() {
               }))
             }
           />
+          <div className="space-y-2 rounded border border-border p-3">
+            <span className="block font-mono text-xs uppercase tracking-wider text-muted">
+              Attachments (video, images, docs)
+            </span>
+            {(experienceItem.attachments ?? []).map((attachment, index) => (
+              <div key={`${attachment.url}-${index}`} className="flex items-center gap-2">
+                <span className="rounded border border-border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-accent">
+                  {attachmentType(attachment)}
+                </span>
+                <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted" title={attachment.url}>
+                  {attachment.title ?? attachment.url.split('/').pop()}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateExperienceItem(selectedExperience, (item) => ({
+                      ...item,
+                      attachments: (item.attachments ?? []).filter((_, i) => i !== index),
+                    }))
+                  }
+                  className="rounded border border-red-400/40 px-2 py-0.5 font-mono text-[10px] text-red-400 transition-colors hover:bg-red-400/10"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                value={attachmentUrl}
+                onChange={(e) => setAttachmentUrl(e.target.value)}
+                placeholder="https://…/file.mp4"
+                className="min-w-0 flex-1 rounded border border-border bg-background px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted/60"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  addExperienceAttachment(attachmentUrl);
+                  setAttachmentUrl('');
+                }}
+                className="rounded border border-accent/60 px-3 py-2 font-mono text-xs text-accent transition-colors hover:bg-accent/10"
+              >
+                Add URL
+              </button>
+              <label
+                className={`rounded border px-3 py-2 font-mono text-xs transition-colors ${
+                  attachmentUploading
+                    ? 'border-border text-muted'
+                    : 'cursor-pointer border-accent/60 text-accent hover:bg-accent/10'
+                }`}
+              >
+                {attachmentUploading ? 'Uploading…' : 'Upload file'}
+                <input
+                  type="file"
+                  className="hidden"
+                  disabled={attachmentUploading}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
+                    if (file) void uploadExperienceAttachment(file);
+                  }}
+                />
+              </label>
+            </div>
+          </div>
           <div className="flex flex-wrap gap-2">
             {content.experience.length > 1 ? (
               <button

@@ -127,6 +127,7 @@ export class PortfolioController {
       summary: item.summary ? this.portfolio.pick(item.summary, loc) : undefined,
       highlights: item.highlights[loc] ?? item.highlights.en,
       stack: item.stack ? this.portfolio.pick(item.stack, loc) : undefined,
+      attachments: item.attachments?.length ? item.attachments : undefined,
     };
   }
 

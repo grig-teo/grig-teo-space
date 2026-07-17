@@ -33,10 +33,19 @@ export interface ExperienceItem {
   description: string;
 }
 
+export type ExperienceAttachmentType = 'video' | 'image' | 'doc';
+
+export interface ExperienceAttachment {
+  type?: ExperienceAttachmentType;
+  url: string;
+  title?: string;
+}
+
 export interface ExperienceDetail extends ExperienceItem {
   summary?: string;
   highlights: string[];
   stack?: string;
+  attachments?: ExperienceAttachment[];
 }
 
 export interface BlogPost {
