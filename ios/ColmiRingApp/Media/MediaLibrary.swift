@@ -210,6 +210,27 @@ final class MediaLibraryWrapper: ObservableObject {
         }
     }
 
+    /**
+     Deletes multiple assets in one PhotoKit transaction, so iOS shows a
+     single system confirmation for the whole batch. Returns true only when
+     the deletion actually happened (false = user cancelled / error).
+     Assets already gone from the library are ignored.
+     */
+    @discardableResult
+    func deleteAssets(localIds: [String]) async -> Bool {
+        let fetch = PHAsset.fetchAssets(withLocalIdentifiers: localIds, options: nil)
+        guard fetch.count > 0 else { return true }
+        do {
+            try await PHPhotoLibrary.shared().performChanges {
+                PHAssetChangeRequest.deleteAssets(fetch)
+            }
+            return true
+        } catch {
+            // Most commonly: the user cancelled the system confirmation.
+            return false
+        }
+    }
+
     // MARK: - Helpers
 
     private func fetchAsset(_ localIdentifier: String) -> PHAsset? {

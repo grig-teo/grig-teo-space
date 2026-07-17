@@ -10,6 +10,9 @@ import Photos
    - The bottom-right FAB starts/stops a backup run. While syncing, the top bar
      shows progress (uploaded/total).
    - Tap a cell → MediaViewerView (full-screen local playback, no network).
+   - Select (nav bar, trailing) enters selection mode: tap cells to
+     multi-select, then use the bottom bar — share (left) or batch delete
+     (right, trash). The batch delete asks iOS once for the whole selection.
 
  The syncer is shared (`MediaSyncer.shared`); a run is also kicked off on view
  appear via `.task` (the periodic BG task and the FAB are the other triggers).
@@ -23,12 +26,27 @@ struct MediaView: View {
     @State private var snapshots: [MediaLibraryWrapper.AssetSnapshot] = []
     /// Drives the FAB's spinning icon while a sync is in progress.
     @State private var fabRotation: Double = 0
+    /// Selection mode: tapping a cell toggles membership instead of navigating.
+    @State private var isSelecting = false
+    @State private var selected: Set<String> = []
+    /// Exported temp files to share (non-nil → the share sheet is presented).
+    @State private var shareItems: [URL]?
+    @State private var isPreparingShare = false
+    @State private var isDeleting = false
 
     var body: some View {
         NavigationStack {
             content
                 .navigationTitle("Media")
-                .overlay(alignment: .bottomTrailing) { fab }
+                .toolbar { selectButton }
+                .overlay(alignment: .bottomTrailing) { if !isSelecting { fab } }
+                .overlay(alignment: .bottom) { selectionBar }
+                .sheet(item: Binding(
+                    get: { shareItems.map { ShareItems(items: $0) } },
+                    set: { _ in shareItems = nil }
+                )) { wrapper in
+                    ShareSheet(items: wrapper.items)
+                }
                 .task { await refresh() }
                 .onChange(of: library.access) { _ in
                     Task { await refresh() }
@@ -42,6 +60,28 @@ struct MediaView: View {
         }
     }
 
+    /// Nav-bar Select/Cancel toggle, on the same line as the "Media" title.
+    @ToolbarContentBuilder
+    private var selectButton: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            if !snapshots.isEmpty {
+                Button {
+                    withAnimation { isSelecting.toggle() }
+                    if !isSelecting { selected.removeAll() }
+                } label: {
+                    Label(isSelecting ? "Cancel" : "Select",
+                          systemImage: isSelecting ? "xmark.circle" : "checkmark.circle")
+                }
+            }
+        }
+    }
+
+    /// Identifiable box so `.sheet(item:)` re-presents for each share action.
+    private struct ShareItems: Identifiable {
+        let id = UUID()
+        let items: [Any]
+    }
+
     @ViewBuilder
     private var content: some View {
         switch library.access {
@@ -52,22 +92,28 @@ struct MediaView: View {
                     ScrollView {
                     LazyVGrid(columns: columns, spacing: 3) {
                         ForEach(snapshots) { snapshot in
-                            NavigationLink {
-                                MediaViewerView(snapshot: snapshot)
-                            } label: {
+                            if isSelecting {
                                 MediaThumbnailCell(snapshot: snapshot, uploaded: syncer.isUploaded(snapshot.id))
-                            }
-                            .buttonStyle(.plain)
-                            .contextMenu {
-                                Button(role: .destructive) {
-                                    Task { await delete(snapshot) }
+                                    .overlay(alignment: .topTrailing) { selectionBadge(for: snapshot.id) }
+                                    .onTapGesture { toggleSelection(snapshot.id) }
+                            } else {
+                                NavigationLink {
+                                    MediaViewerView(snapshot: snapshot)
                                 } label: {
-                                    Label("Delete", systemImage: "trash")
+                                    MediaThumbnailCell(snapshot: snapshot, uploaded: syncer.isUploaded(snapshot.id))
+                                }
+                                .buttonStyle(.plain)
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        Task { await delete(snapshot) }
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
                             }
                         }
                     }
-                    .padding(.bottom, 96) // clearance for the FAB
+                    .padding(.bottom, 96) // clearance for the FAB / selection bar
                 }
             }
         case .denied:
@@ -198,6 +244,105 @@ struct MediaView: View {
             await syncer.delete(localId: item.id)
         }
         snapshots.removeAll { $0.id == item.id }
+    }
+
+    // MARK: - Selection mode
+
+    /// Badge on every cell in selection mode: filled blue check when the item
+    /// is selected, hollow circle otherwise.
+    private func selectionBadge(for id: String) -> some View {
+        let isOn = selected.contains(id)
+        return Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
+            .font(.system(size: 22, weight: .semibold))
+            .foregroundColor(isOn ? .blue : .white)
+            .background(Circle().fill(isOn ? Color.white : Color.black.opacity(0.15)))
+            .shadow(radius: 1, y: 0.5)
+            .padding(6)
+    }
+
+    private func toggleSelection(_ id: String) {
+        if selected.contains(id) {
+            selected.remove(id)
+        } else {
+            selected.insert(id)
+        }
+    }
+
+    /// Bottom bar in selection mode: share on the left, batch delete (trash)
+    /// on the right, selected count in the middle. Appears once ≥1 item is
+    /// selected; the sync FAB is hidden while selecting so they never overlap.
+    @ViewBuilder
+    private var selectionBar: some View {
+        if isSelecting && !selected.isEmpty {
+            HStack {
+                Button { Task { await shareSelected() } } label: {
+                    ZStack {
+                        if isPreparingShare {
+                            ProgressView().tint(.white)
+                        } else {
+                            Image(systemName: "square.and.arrow.up")
+                        }
+                    }
+                    .font(.system(size: 24, weight: .semibold))
+                    .frame(width: 56, height: 56)
+                    .foregroundColor(.white)
+                    .background(Circle().fill(Color.blue))
+                    .shadow(radius: 4, y: 2)
+                }
+                .disabled(isPreparingShare || isDeleting)
+                Spacer()
+                Text("\(selected.count) selected")
+                    .font(.footnote.bold())
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(Color(.systemBackground)).shadow(radius: 3, y: 1))
+                Spacer()
+                Button { Task { await deleteSelected() } } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 24, weight: .semibold))
+                        .frame(width: 56, height: 56)
+                        .foregroundColor(.white)
+                        .background(Circle().fill(Color.red))
+                        .shadow(radius: 4, y: 2)
+                }
+                .disabled(isPreparingShare || isDeleting)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+    }
+
+    /// Trash with ≥1 selected: PhotoKit deletes the batch in one transaction,
+    /// so iOS shows a single system confirmation. Server backups are removed
+    /// per item only after the local delete succeeds (a cancel keeps them).
+    private func deleteSelected() async {
+        let ids = snapshots.filter { selected.contains($0.id) }.map(\.id)
+        guard !ids.isEmpty else { return }
+        isDeleting = true
+        defer { isDeleting = false }
+        guard await library.deleteAssets(localIds: ids) else { return }
+        for id in ids where syncer.isUploaded(id) {
+            await syncer.delete(localId: id)
+        }
+        snapshots.removeAll { selected.contains($0.id) }
+        selected.removeAll()
+        isSelecting = false
+    }
+
+    /// Exports each selected asset to a temp file (original bytes, same path
+    /// the uploader uses — handles iCloud) and opens the share sheet.
+    private func shareSelected() async {
+        isPreparingShare = true
+        defer { isPreparingShare = false }
+        var urls: [URL] = []
+        for snapshot in snapshots where selected.contains(snapshot.id) {
+            if let exported = try? await library.exportFile(for: snapshot.id) {
+                urls.append(exported.url)
+            }
+        }
+        guard !urls.isEmpty else { return }
+        shareItems = urls
     }
 }
 
