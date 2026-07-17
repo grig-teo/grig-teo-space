@@ -23,48 +23,12 @@ struct MediaView: View {
     @State private var snapshots: [MediaLibraryWrapper.AssetSnapshot] = []
     /// Drives the FAB's spinning icon while a sync is in progress.
     @State private var fabRotation: Double = 0
-    /// Item awaiting delete confirmation (long-press → Delete).
-    @State private var pendingDelete: MediaLibraryWrapper.AssetSnapshot?
-    @State private var isDeleting = false
 
     var body: some View {
         NavigationStack {
             content
                 .navigationTitle("Media")
                 .overlay(alignment: .bottomTrailing) { fab }
-                .confirmationDialog(
-                    "Delete?",
-                    isPresented: Binding(
-                        get: { pendingDelete != nil },
-                        set: { if !$0 { pendingDelete = nil } }
-                    ),
-                    titleVisibility: .visible
-                ) {
-                    Button("Delete", role: .destructive) {
-                        guard let item = pendingDelete else { return }
-                        Task {
-                            isDeleting = true
-                            // Local deletion first: iOS shows its own system
-                            // confirmation, and if the user cancels there we
-                            // abort — the server backup stays in place.
-                            if await library.deleteAsset(localId: item.id) {
-                                if syncer.isUploaded(item.id) {
-                                    await syncer.delete(localId: item.id)
-                                }
-                                snapshots.removeAll { $0.id == item.id }
-                            }
-                            isDeleting = false
-                            pendingDelete = nil
-                        }
-                    }
-                    Button("Cancel", role: .cancel) { pendingDelete = nil }
-                } message: {
-                    if let item = pendingDelete, syncer.isUploaded(item.id) {
-                        Text("Removes the backup from your server and deletes the photo or video from this device (it moves to Recently Deleted).")
-                    } else {
-                        Text("Deletes the photo or video from this device (it moves to Recently Deleted).")
-                    }
-                }
                 .task { await refresh() }
                 .onChange(of: library.access) { _ in
                     Task { await refresh() }
@@ -96,7 +60,7 @@ struct MediaView: View {
                             .buttonStyle(.plain)
                             .contextMenu {
                                 Button(role: .destructive) {
-                                    pendingDelete = snapshot
+                                    Task { await delete(snapshot) }
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
@@ -223,6 +187,17 @@ struct MediaView: View {
         guard access == .full || access == .limited else { return }
         snapshots = library.allSnapshots()
         await syncer.syncIfNeeded()
+    }
+
+    /// Long-press → Delete. iOS shows its own mandatory system confirmation,
+    /// so the app asks nothing itself; the server backup is removed only
+    /// after the local delete succeeds (a cancel there keeps the backup).
+    private func delete(_ item: MediaLibraryWrapper.AssetSnapshot) async {
+        guard await library.deleteAsset(localId: item.id) else { return }
+        if syncer.isUploaded(item.id) {
+            await syncer.delete(localId: item.id)
+        }
+        snapshots.removeAll { $0.id == item.id }
     }
 }
 
