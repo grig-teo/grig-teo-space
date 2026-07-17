@@ -175,6 +175,26 @@ export class MediaService {
     return { id };
   }
 
+  /**
+   * Deletes by the device's asset-local id. The iOS app can't always address
+   * the server id — items uploaded on the background session or reconciled
+   * after a reinstall only record the local id on-device — so this variant
+   * lets it delete any backed-up item regardless.
+   */
+  async removeByLocalId(assetLocalId: string | undefined): Promise<{ id: string }> {
+    const key = (assetLocalId ?? '').trim();
+    if (!key) {
+      throw new BadRequestException('assetLocalId is required');
+    }
+    const item = await this.repo.findOne({ where: { assetLocalId: key } });
+    if (!item) {
+      throw new NotFoundException('Media not found');
+    }
+    await this.storage.removeByKey(item.storageKey);
+    await this.repo.delete(item.id);
+    return { id: item.id };
+  }
+
   // --- Helpers -----------------------------------------------------------
 
   toListItem(row: MediaItem): MediaListItem {

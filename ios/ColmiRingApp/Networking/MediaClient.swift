@@ -162,8 +162,18 @@ final class MediaClient: ObservableObject {
 
     // MARK: - Delete
 
-    func delete(id: String) async throws {
-        guard let url = URL(string: "\(base)/api/media/\(id)") else { throw URLError(.badURL) }
+    /**
+     Deletes a backed-up item by the device's asset-local id (query param —
+     PHAsset local identifiers contain slashes, so they can't be a path
+     segment). Preferred over the server id because the on-device registry
+     doesn't always know it (background uploads, post-reinstall reconcile).
+     */
+    func deleteByLocalId(assetLocalId: String) async throws {
+        guard var components = URLComponents(string: "\(base)/api/media") else {
+            throw URLError(.badURL)
+        }
+        components.queryItems = [URLQueryItem(name: "assetLocalId", value: assetLocalId)]
+        guard let url = components.url else { throw URLError(.badURL) }
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         for (k, v) in authHeaders() { request.setValue(v, forHTTPHeaderField: k) }

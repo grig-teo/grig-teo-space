@@ -273,6 +273,11 @@ struct MediaThumbnailCell: View {
         }
         .aspectRatio(1, contentMode: .fit)
         .clipped()
+        // Constrain hit-testing to the cell's bounds: scaledToFill thumbnails
+        // overflow the frame before clipping, and .clipped() only clips
+        // drawing — not touches. Without this a tap can land on a neighboring
+        // cell's NavigationLink (opens the item below the tapped one).
+        .contentShape(Rectangle())
         .onAppear { loadThumbnail() }
         .animation(.easeInOut(duration: 0.2), value: uploaded)
     }

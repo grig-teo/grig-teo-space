@@ -124,6 +124,17 @@ export class MediaController {
     res.setHeader('Accept-Ranges', 'bytes');
   }
 
+  /**
+   * Deletes by the device's asset-local id (query param, because PHAsset
+   * local identifiers contain slashes and can't travel as a path segment).
+   * The iOS app uses this so delete works even when the server id was never
+   * recorded on-device (background uploads, post-reinstall reconcile).
+   */
+  @Delete()
+  async deleteByLocalId(@Query('assetLocalId') assetLocalId?: string) {
+    return this.media.removeByLocalId(assetLocalId);
+  }
+
   @Delete(':id')
   async delete(@Param('id') id: string) {
     return this.media.remove(id);

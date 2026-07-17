@@ -232,14 +232,15 @@ final class MediaSyncer: ObservableObject {
     /**
      Deletes a media item from the backend (and clears the local uploaded
      marker so the green check disappears). Called from the grid's long-press
-     context menu. `localOnly=true` just forgets the marker without hitting the
-     server (for items that failed to upload).
+     context menu. Goes by asset-local id because the registry doesn't always
+     hold the server id (background uploads and the post-reinstall reconcile
+     store only a sentinel). `localOnly=true` just forgets the marker without
+     hitting the server (for items that failed to upload).
      */
     func delete(localId: String, localOnly: Bool = false) async {
-        let serverId = uploaded[localId]
-        if !localOnly, let serverId {
+        if !localOnly {
             do {
-                try await client.delete(id: serverId)
+                try await client.deleteByLocalId(assetLocalId: localId)
             } catch {
                 lastError = "Delete failed: \(error.localizedDescription)"
                 return
