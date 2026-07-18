@@ -1,6 +1,6 @@
-import { BlogBodyViewer } from '@/components/BlogBodyViewer';
 import { BlogPostingJsonLd } from '@/components/JsonLd';
 import { YoutubeEmbed } from '@/components/YoutubeEmbed';
+import { renderBlockNoteHtml } from '@/lib/blocknote-html';
 import {
   extractYoutubeVideoIdsFromBlockNote,
   stripYoutubeUrlBlocksFromBlockNote,
@@ -77,6 +77,7 @@ export default async function BlogArticlePage({ params }: Props) {
 
   const youtubeVideoIds = extractYoutubeVideoIdsFromBlockNote(post.body);
   const bodyWithoutYoutubeUrls = stripYoutubeUrlBlocksFromBlockNote(post.body);
+  const bodyHtml = renderBlockNoteHtml(bodyWithoutYoutubeUrls);
 
   return (
     <main className="min-h-screen">
@@ -109,7 +110,10 @@ export default async function BlogArticlePage({ params }: Props) {
           ) : null}
 
           <div className="mt-8 border-t border-border pt-8">
-            <BlogBodyViewer key={bodyWithoutYoutubeUrls} body={bodyWithoutYoutubeUrls} />
+            <div
+              className="blog-body-viewer font-sans leading-7 text-foreground"
+              dangerouslySetInnerHTML={{ __html: bodyHtml }}
+            />
           </div>
         </div>
       </section>

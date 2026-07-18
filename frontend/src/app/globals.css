@@ -178,9 +178,117 @@ body {
   animation: blink 1s step-end infinite;
 }
 
-.blog-body-viewer .bn-editor {
+/* The public article body is server-rendered to plain semantic HTML (see
+ * lib/blocknote-html.ts), so style the raw tags under the wrapper. */
+.blog-body-viewer {
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: rgb(var(--color-foreground));
+}
+
+.blog-body-viewer p {
+  margin-block: 0.75rem;
+}
+
+.blog-body-viewer h1,
+.blog-body-viewer h2,
+.blog-body-viewer h3,
+.blog-body-viewer h4 {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+  margin-block: 1.5rem 0.75rem;
+}
+
+.blog-body-viewer h1 {
+  font-size: 1.5rem;
+}
+
+.blog-body-viewer h2 {
+  font-size: 1.25rem;
+}
+
+.blog-body-viewer h3,
+.blog-body-viewer h4 {
+  font-size: 1.1rem;
+}
+
+.blog-body-viewer a {
+  color: rgb(var(--color-accent));
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.blog-body-viewer ul,
+.blog-body-viewer ol {
+  margin-block: 0.75rem;
+  padding-left: 1.5rem;
+}
+
+.blog-body-viewer ul {
+  list-style: disc;
+}
+
+.blog-body-viewer ol {
+  list-style: decimal;
+}
+
+.blog-body-viewer li {
+  margin-block: 0.25rem;
+}
+
+.blog-body-viewer code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+  background: rgb(var(--color-surface));
+  border: 1px solid rgb(var(--color-border));
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.3rem;
+}
+
+.blog-body-viewer pre {
+  background: rgb(var(--color-surface));
+  border: 1px solid rgb(var(--color-border));
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+  margin-block: 1rem;
+}
+
+.blog-body-viewer pre code {
   background: transparent;
-  padding-inline: 0;
+  border: none;
+  padding: 0;
+}
+
+.blog-body-viewer blockquote {
+  border-left: 3px solid rgb(var(--color-accent));
+  padding-left: 1rem;
+  color: rgb(var(--color-muted));
+  margin-block: 1rem;
+}
+
+.blog-body-viewer img {
+  max-width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(var(--color-border));
+  margin-block: 1rem;
+}
+
+.blog-body-viewer table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-block: 1rem;
+}
+
+.blog-body-viewer td {
+  border: 1px solid rgb(var(--color-border));
+  padding: 0.4rem 0.6rem;
+}
+
+.blog-body-viewer video {
+  max-width: 100%;
+  border-radius: 0.5rem;
+  margin-block: 1rem;
 }
 
 .admin-blocknote .bn-editor {
@@ -189,38 +297,14 @@ body {
   padding-inline: 0;
 }
 
-.blog-body-viewer .bn-block-group {
-  font-family: inherit;
-  color: rgb(var(--color-foreground));
-}
-
 .admin-blocknote .bn-block-group {
   font-family: inherit;
-  color: rgb(var(--color-foreground));
-}
-
-.blog-body-viewer .bn-default-styles {
-  font-size: 0.875rem;
-  line-height: 1.625;
   color: rgb(var(--color-foreground));
 }
 
 .admin-blocknote .bn-default-styles {
   font-size: 0.875rem;
   line-height: 1.625;
-  color: rgb(var(--color-foreground));
-}
-
-.blog-body-viewer .bn-container {
-  --bn-colors-editor-background: transparent;
-  --bn-colors-editor-text: rgb(var(--color-foreground));
-  --bn-colors-side-menu: rgb(var(--color-muted));
-  --bn-colors-border: rgb(var(--color-border));
-  --bn-colors-hovered-background: color-mix(in srgb, rgb(var(--color-foreground)) 8%, transparent);
-  --bn-colors-selected-background: color-mix(in srgb, rgb(var(--color-foreground)) 14%, transparent);
-}
-
-.blog-body-viewer .bn-inline-content {
   color: rgb(var(--color-foreground));
 }
 
