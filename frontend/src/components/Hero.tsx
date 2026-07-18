@@ -122,35 +122,33 @@ export function Hero({
 }) {
   return (
     <section id="about" className="px-4 py-20 sm:px-6 md:px-12 md:py-28">
-      <div className="max-w-6xl">
-        <div className="lg:flex lg:items-center lg:gap-12">
-          <div className="flex-1">
-            <TerminalCard profile={profile} />
+      <div className="max-w-6xl lg:grid lg:grid-cols-[1fr_auto] lg:items-start lg:gap-12">
+        <div>
+          <TerminalCard profile={profile} />
+          <div className="mt-8">
+            <StatsStrip stats={stats} />
           </div>
-          <div className="mt-10 flex justify-center lg:mt-0">
-            <div className="flex scale-90 items-center gap-12 lg:scale-100">
-              {bpm ? <HealthScene bpm={bpm} /> : null}
-              {cadence ? (
-                <div className="flex flex-col items-center gap-1">
-                  <WalkerScene cadence={cadence} />
-                  {stepsToday !== undefined && (
-                    <span className="font-mono text-[10px] uppercase tracking-wider text-muted">
-                      {stepsToday} steps today
-                    </span>
-                  )}
-                </div>
-              ) : null}
-            </div>
+          <div className="mt-6">
+            <DomainChips />
+          </div>
+          <div className="mt-8">
+            <HeroCtas />
           </div>
         </div>
-        <div className="mt-8">
-          <StatsStrip stats={stats} />
-        </div>
-        <div className="mt-6">
-          <DomainChips />
-        </div>
-        <div className="mt-8">
-          <HeroCtas />
+        <div className="mt-10 flex justify-center lg:mt-0 lg:pt-4">
+          <div className="flex scale-90 items-center gap-12 lg:scale-100">
+            {bpm ? <HealthScene bpm={bpm} /> : null}
+            {cadence ? (
+              <div className="flex flex-col items-center gap-1">
+                <WalkerScene cadence={cadence} />
+                {stepsToday !== undefined && (
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-muted">
+                    {stepsToday} steps today
+                  </span>
+                )}
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </section>
