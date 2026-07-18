@@ -11,7 +11,7 @@ const baseLinks = [
   { key: 'blog', href: '/#blog' },
   { key: 'projects', href: '/#projects' },
   { key: 'experience', href: '/#experience' },
-  { key: 'health', href: '/health' },
+  { key: 'health', href: '/#health' },
   { key: 'contact', href: '/#contact' },
 ] as const;
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { HealthScene } from '@/components/HealthScene';
 import type { PublicHealthMetric, PublicHealthPayload } from '@/lib/api';
 
 const ACCENT = 'rgb(var(--color-accent))';
@@ -68,8 +69,9 @@ function MetricCard({ metric }: { metric: PublicHealthMetric }) {
 export function HealthWidget({ payload }: { payload: PublicHealthPayload }) {
   const t = useTranslations('health');
   return (
-    <section id="health" className="px-4 py-16 sm:px-6 md:px-12">
-      <div className="mx-auto max-w-5xl">
+    <section id="health" className="relative overflow-hidden px-4 py-16 sm:px-6 md:px-12">
+      {payload.metrics.length > 0 && <HealthScene payload={payload} />}
+      <div className="relative mx-auto max-w-5xl">
         <div className="mb-6">
           <p className="font-mono text-xs text-accent">{t('lastDays', { days: payload.windowDays })}</p>
           <h2 className="mt-1 font-mono text-2xl text-foreground">{payload.displayName}</h2>

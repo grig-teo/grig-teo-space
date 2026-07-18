@@ -113,7 +113,7 @@ export function PublicExposurePanel() {
   return (
     <div className="rounded-lg border border-border bg-surface p-5">
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <h2 className="font-mono text-base text-foreground">Public health page</h2>
+        <h2 className="font-mono text-base text-foreground">Health on the landing page</h2>
         <label className="ml-auto flex cursor-pointer items-center gap-2 font-mono text-sm">
           <input
             type="checkbox"
@@ -121,7 +121,7 @@ export function PublicExposurePanel() {
             onChange={(e) => setConfig({ ...config, enabled: e.target.checked })}
             className="h-4 w-4 accent-[rgb(var(--color-accent))]"
           />
-          Enable public page
+          Enable on landing page
         </label>
       </div>
 
@@ -154,7 +154,8 @@ export function PublicExposurePanel() {
       </div>
 
       <p className="mb-2 font-mono text-xs text-muted">
-        Choose what visitors can see on your public health page. Each metric has a
+        Choose what visitors can see in the health section of your landing page.
+        Enabled metrics also drive the animated 3D backdrop. Each metric has a
         recommendation to help you decide.
       </p>
 
@@ -210,12 +211,12 @@ export function PublicExposurePanel() {
           {saving ? 'Saving…' : 'Save settings'}
         </button>
         <button
-          onClick={() => window.open('/health', '_blank')}
+          onClick={() => window.open('/#health', '_blank')}
           className={GHOST_BTN}
           disabled={!config.enabled || enabledCount === 0}
-          title={config.enabled ? 'Open the public page' : 'Enable the page first'}
+          title={config.enabled ? 'Open the health section on the landing page' : 'Enable it first'}
         >
-          Preview public page
+          Preview on landing page
         </button>
         {savedAt && (
           <span className="font-mono text-xs text-muted">Saved at {savedAt.toLocaleTimeString()}</span>

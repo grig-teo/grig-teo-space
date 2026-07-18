@@ -3,9 +3,10 @@ import type { HeroStats } from '@/components/Hero';
 import { BlogPreview } from '@/components/Blog';
 import { ProjectsPreview } from '@/components/Projects';
 import { Experience } from '@/components/Experience';
+import { HealthWidget } from '@/components/HealthWidget';
 import { JsonLd } from '@/components/JsonLd';
 import { Reveal } from '@/components/Reveal';
-import { getBlogPosts, getExperience, getProfile, getProjects } from '@/lib/api';
+import { getBlogPosts, getExperience, getProfile, getProjects, getPublicHealth } from '@/lib/api';
 import type { BlogPost, ExperienceItem, Locale, Project } from '@/lib/api';
 
 type Props = {
@@ -39,11 +40,12 @@ function computeHeroStats(
 export default async function HomePage({ params }: Props) {
   const { locale } = await params;
 
-  const [profile, blogPosts, projects, experience] = await Promise.all([
+  const [profile, blogPosts, projects, experience, health] = await Promise.all([
     getProfile(locale),
     getBlogPosts(locale),
     getProjects(locale),
     getExperience(locale),
+    getPublicHealth(),
   ]);
 
   const stats = computeHeroStats(experience, projects, blogPosts);
@@ -64,6 +66,11 @@ export default async function HomePage({ params }: Props) {
       <Reveal>
         <Experience items={experience} />
       </Reveal>
+      {health && health.metrics.length > 0 && (
+        <Reveal>
+          <HealthWidget payload={health} />
+        </Reveal>
+      )}
     </main>
   );
 }
