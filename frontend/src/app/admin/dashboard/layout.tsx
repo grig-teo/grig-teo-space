@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { clearAdminToken } from '@/lib/admin-api';
+import { adminLogout } from '@/lib/admin-api';
 import { AdminLocaleProvider, AdminLocaleSwitcher } from '@/components/admin/AdminLocale';
 import { useRouter } from 'next/navigation';
 
@@ -19,8 +19,8 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
 
-  const logout = () => {
-    clearAdminToken();
+  const logout = async () => {
+    await adminLogout();
     router.replace('/admin');
   };
 

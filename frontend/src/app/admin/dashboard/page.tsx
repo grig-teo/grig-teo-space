@@ -1,7 +1,7 @@
 'use client';
 
 import { AdminEditor } from '@/components/admin/AdminEditor';
-import { adminVerify, clearAdminToken } from '@/lib/admin-api';
+import { adminVerify } from '@/lib/admin-api';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -12,7 +12,6 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     adminVerify().then((ok) => {
       if (!ok) {
-        clearAdminToken();
         router.replace('/admin');
         return;
       }

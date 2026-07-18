@@ -67,7 +67,15 @@ export interface SiteContent {
   blog: BlogPost[];
 }
 
-const TOKEN_KEY = 'admin_token';
+/**
+ * The admin JWT lives in an HttpOnly cookie set by the backend on login, so
+ * it is never readable from JS. All admin requests send it automatically via
+ * `credentials: 'include'`.
+ */
+const CREDENTIALS: RequestCredentials = 'include';
+
+/** localStorage key used by the pre-cookie auth scheme; cleaned up on load. */
+export const LEGACY_TOKEN_KEY = 'admin_token';
 
 function apiBase(): string {
   if (typeof window !== 'undefined') {
@@ -77,29 +85,19 @@ function apiBase(): string {
 }
 
 function authHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
+  return { 'Content-Type': 'application/json' };
 }
 
-export function getAdminToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-export function setAdminToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
-}
-
-export function clearAdminToken(): void {
-  localStorage.removeItem(TOKEN_KEY);
+/** Drops a token stored by the old localStorage-based auth scheme. */
+export function clearLegacyToken(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(LEGACY_TOKEN_KEY);
 }
 
 export async function adminLogin(accessKey: string): Promise<string> {
   const res = await fetch(`${apiBase()}/api/admin/auth/login`, {
     method: 'POST',
+    credentials: CREDENTIALS,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ accessKey }),
   });
@@ -107,21 +105,26 @@ export async function adminLogin(accessKey: string): Promise<string> {
     throw new Error('Invalid access key');
   }
   const data = (await res.json()) as { token: string };
-  setAdminToken(data.token);
   return data.token;
 }
 
+export async function adminLogout(): Promise<void> {
+  await fetch(`${apiBase()}/api/admin/auth/logout`, {
+    method: 'POST',
+    credentials: CREDENTIALS,
+  });
+}
+
 export async function adminVerify(): Promise<boolean> {
-  const token = getAdminToken();
-  if (!token) return false;
   const res = await fetch(`${apiBase()}/api/admin/auth/verify`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: CREDENTIALS,
   });
   return res.ok;
 }
 
 export async function adminGetContent(): Promise<SiteContent> {
   const res = await fetch(`${apiBase()}/api/admin/content`, {
+    credentials: CREDENTIALS,
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error('Failed to load content');
@@ -131,6 +134,7 @@ export async function adminGetContent(): Promise<SiteContent> {
 export async function adminSaveProfile(profile: Profile): Promise<boolean> {
   const res = await fetch(`${apiBase()}/api/admin/content/profile`, {
     method: 'PUT',
+    credentials: CREDENTIALS,
     headers: authHeaders(),
     body: JSON.stringify(profile),
   });
@@ -142,6 +146,7 @@ export async function adminSaveProfile(profile: Profile): Promise<boolean> {
 export async function adminSaveProjects(projects: Project[]): Promise<boolean> {
   const res = await fetch(`${apiBase()}/api/admin/content/projects`, {
     method: 'PUT',
+    credentials: CREDENTIALS,
     headers: authHeaders(),
     body: JSON.stringify(projects),
   });
@@ -153,6 +158,7 @@ export async function adminSaveProjects(projects: Project[]): Promise<boolean> {
 export async function adminSaveExperience(experience: ExperienceItem[]): Promise<boolean> {
   const res = await fetch(`${apiBase()}/api/admin/content/experience`, {
     method: 'PUT',
+    credentials: CREDENTIALS,
     headers: authHeaders(),
     body: JSON.stringify(experience),
   });
@@ -164,6 +170,7 @@ export async function adminSaveExperience(experience: ExperienceItem[]): Promise
 export async function adminSaveBlog(blog: BlogPost[]): Promise<void> {
   const res = await fetch(`${apiBase()}/api/admin/content/blog`, {
     method: 'PUT',
+    credentials: CREDENTIALS,
     headers: authHeaders(),
     body: JSON.stringify(blog),
   });
@@ -174,10 +181,9 @@ export async function adminUploadMedia(file: File): Promise<string> {
   const formData = new FormData();
   formData.append('file', file);
 
-  const token = getAdminToken();
   const res = await fetch(`${apiBase()}/api/admin/upload`, {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    credentials: CREDENTIALS,
     body: formData,
   });
 
@@ -252,6 +258,7 @@ export type HealthPublicConfig = {
 
 export async function adminGetHealthOverview(days = 7): Promise<HealthOverview> {
   const res = await fetch(`${apiBase()}/api/admin/health/overview?days=${days}`, {
+    credentials: CREDENTIALS,
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error('Failed to load health overview');
@@ -260,6 +267,7 @@ export async function adminGetHealthOverview(days = 7): Promise<HealthOverview> 
 
 export async function adminGetHealthConfig(): Promise<HealthPublicConfig> {
   const res = await fetch(`${apiBase()}/api/admin/health/config`, {
+    credentials: CREDENTIALS,
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error('Failed to load health config');
@@ -271,6 +279,7 @@ export async function adminSaveHealthConfig(
 ): Promise<HealthPublicConfig> {
   const res = await fetch(`${apiBase()}/api/admin/health/config`, {
     method: 'PUT',
+    credentials: CREDENTIALS,
     headers: authHeaders(),
     body: JSON.stringify(config),
   });

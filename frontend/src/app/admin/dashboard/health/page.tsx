@@ -7,7 +7,6 @@ import { PublicExposurePanel } from '@/components/admin/PublicExposurePanel';
 import {
   adminGetHealthOverview,
   adminVerify,
-  clearAdminToken,
   type HealthOverview,
 } from '@/lib/admin-api';
 
@@ -72,7 +71,6 @@ export default function AdminHealthPage() {
   useEffect(() => {
     adminVerify().then((ok) => {
       if (!ok) {
-        clearAdminToken();
         router.replace('/admin');
         return;
       }

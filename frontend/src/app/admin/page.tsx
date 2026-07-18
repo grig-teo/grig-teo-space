@@ -1,14 +1,28 @@
 'use client';
 
-import { adminLogin } from '@/lib/admin-api';
+import { adminLogin, adminVerify, clearLegacyToken } from '@/lib/admin-api';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const [accessKey, setAccessKey] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    // Drop any token left by the old localStorage-based scheme, then send
+    // already-authenticated users straight to the dashboard.
+    clearLegacyToken();
+    adminVerify().then((ok) => {
+      if (ok) {
+        router.replace('/admin/dashboard');
+        return;
+      }
+      setChecking(false);
+    });
+  }, [router]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -22,6 +36,14 @@ export default function AdminLoginPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (checking) {
+    return (
+      <main className="min-h-screen flex items-center justify-center px-4">
+        <p className="font-mono text-sm text-muted">Checking session…</p>
+      </main>
+    );
   }
 
   return (

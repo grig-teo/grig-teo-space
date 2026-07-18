@@ -10,6 +10,8 @@ async function bootstrap() {
   app.set('trust proxy', 1);
   app.enableCors({
     origin: process.env.CORS_ORIGIN?.split(',') ?? ['http://localhost:3000'],
+    // Allow the admin session cookie on cross-origin dev calls (:3000 → :3001).
+    credentials: true,
   });
   app.setGlobalPrefix('api');
   await app.listen(process.env.PORT ?? 3001);

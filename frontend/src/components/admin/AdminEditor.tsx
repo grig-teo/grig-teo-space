@@ -2,12 +2,12 @@
 
 import {
   adminGetContent,
+  adminLogout,
   adminSaveBlog,
   adminSaveExperience,
   adminSaveProfile,
   adminSaveProjects,
   adminUploadMedia,
-  clearAdminToken,
   type BlogPost,
   type ExperienceItem,
   type LocalizedList,
@@ -323,8 +323,8 @@ export function AdminEditor() {
     };
   }, [ready, persistTab]);
 
-  function logout() {
-    clearAdminToken();
+  async function logout() {
+    await adminLogout();
     router.push('/admin');
   }
 
