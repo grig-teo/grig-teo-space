@@ -2,7 +2,6 @@
 
 import {
   adminGetContent,
-  adminLogout,
   adminSaveBlog,
   adminSaveExperience,
   adminSaveProfile,
@@ -323,11 +322,6 @@ export function AdminEditor() {
     };
   }, [ready, persistTab]);
 
-  async function logout() {
-    await adminLogout();
-    router.push('/admin');
-  }
-
   function autosaveLabel(): string {
     switch (autosaveStatus) {
       case 'pending':
@@ -503,13 +497,6 @@ export function AdminEditor() {
           <h1 className="font-mono text-xl font-semibold">Content admin</h1>
           <p className="text-sm text-muted">Changes save automatically after you stop typing.</p>
         </div>
-        <button
-          type="button"
-          onClick={logout}
-          className="rounded border border-border px-3 py-1.5 font-mono text-sm text-muted transition-colors hover:border-accent hover:text-foreground"
-        >
-          Log out
-        </button>
       </div>
 
       <div className="sticky top-[57px] z-10 mb-6 border-b border-border bg-background/80 py-2 backdrop-blur">

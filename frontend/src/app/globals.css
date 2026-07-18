@@ -112,8 +112,9 @@ html[data-theme='light'] .bg-mesh-dark {
   .walk-bob,
   .walk-shadow,
   .stress-tremble,
-  .stress-breathe,
-  .stress-wave {
+  .rain-drop,
+  .stress-bolt,
+  .cloud-bob {
     animation: none;
   }
 
@@ -291,38 +292,55 @@ body {
   animation: stress-tremble 1s linear infinite;
 }
 
-@keyframes stress-breathe {
-  0%,
+/* StressScene (storm cloud): rain, lightning and drift — counts, speeds,
+ * colors and opacity are derived inline from the stress value. */
+@keyframes rain-fall {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: var(--rain-opacity, 0.7);
+  }
   100% {
-    transform: scale(1);
-    opacity: 0.2;
-  }
-  50% {
-    transform: scale(1.5);
-    opacity: 0.45;
+    transform: translateY(26px);
+    opacity: 0;
   }
 }
 
-.stress-breathe {
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-  animation: stress-breathe 4s ease-in-out infinite;
+.rain-drop {
+  animation: rain-fall 1.2s linear infinite;
 }
 
-@keyframes stress-wave {
+@keyframes stress-bolt-flash {
   0%,
+  88%,
+  92%,
   100% {
     opacity: 0;
-    transform: translateY(1px);
   }
-  50% {
-    opacity: var(--wave-opacity, 0.6);
-    transform: translateY(-2px);
+  90%,
+  96% {
+    opacity: 1;
   }
 }
 
-.stress-wave {
-  animation: stress-wave 1.6s ease-in-out infinite;
+.stress-bolt {
+  animation: stress-bolt-flash 3s linear infinite;
+}
+
+@keyframes cloud-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.cloud-bob {
+  animation: cloud-bob 4s ease-in-out infinite;
 }
 
 /* Markdown rendered inside AI chat bubbles — compact sibling of the
