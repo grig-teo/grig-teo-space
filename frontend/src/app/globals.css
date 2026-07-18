@@ -112,8 +112,8 @@ html[data-theme='light'] .bg-mesh-dark {
   .walk-bob,
   .walk-shadow,
   .stress-tremble,
-  .gauge-spin,
-  .stress-core {
+  .flame,
+  .zen-float {
     animation: none;
   }
 
@@ -291,40 +291,36 @@ body {
   animation: stress-tremble 1s linear infinite;
 }
 
-/* StressScene (pressure gauge): dashed-ring spin, arc fill, tick marks and
- * core pulse — all parameterized inline from the stress value. */
-@keyframes gauge-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.gauge-spin {
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-  animation: gauge-spin 12s linear infinite;
-}
-
-.gauge-spin-rev {
-  animation-direction: reverse;
-}
-
-@keyframes core-pulse {
+/* StressScene (brain): flame flicker and zen float — size/speed/opacity
+ * are derived inline from the stress value. */
+@keyframes flame-flicker {
   0%,
   100% {
-    transform: scale(1);
-    opacity: 0.45;
+    transform: scaleY(1);
   }
   50% {
-    transform: scale(1.45);
-    opacity: 1;
+    transform: scaleY(1.18);
   }
 }
 
-.stress-core {
+.flame {
   transform-box: fill-box;
-  transform-origin: 50% 50%;
-  animation: core-pulse 1.6s ease-in-out infinite;
+  transform-origin: 50% 100%;
+  animation: flame-flicker 0.8s ease-in-out infinite;
+}
+
+@keyframes zen-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.zen-float {
+  animation: zen-float 3.5s ease-in-out infinite;
 }
 
 /* Markdown rendered inside AI chat bubbles — compact sibling of the
