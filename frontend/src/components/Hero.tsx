@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { HealthScene } from '@/components/HealthScene';
+import { StressScene } from '@/components/StressScene';
 import { WalkerScene } from '@/components/WalkerScene';
 import type { Profile } from '@/lib/api';
 
@@ -108,6 +109,7 @@ export function Hero({
   bpm,
   cadence,
   stepsToday,
+  stress,
 }: {
   profile: HeroProfile;
   stats: HeroStats;
@@ -119,6 +121,9 @@ export function Hero({
   cadence?: number;
   /** Steps recorded today, shown under the walking figure. */
   stepsToday?: number;
+  /** Public stress average (0–100); powers the stress figure. Omitted when
+   *  stress isn't shared. */
+  stress?: number;
 }) {
   return (
     <section id="about" className="px-4 py-20 sm:px-6 md:px-12 md:py-28">
@@ -148,6 +153,7 @@ export function Hero({
                 )}
               </div>
             ) : null}
+            {stress !== undefined ? <StressScene stress={stress} /> : null}
           </div>
         </div>
       </div>

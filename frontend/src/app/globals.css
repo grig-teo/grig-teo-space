@@ -110,7 +110,10 @@ html[data-theme='light'] .bg-mesh-dark {
   .ecg-path,
   .walk-limb,
   .walk-bob,
-  .walk-shadow {
+  .walk-shadow,
+  .stress-tremble,
+  .stress-breathe,
+  .stress-wave {
     animation: none;
   }
 
@@ -270,6 +273,56 @@ body {
   transform-box: fill-box;
   transform-origin: 50% 50%;
   animation: walk-shadow 0.8s ease-in-out infinite;
+}
+
+/* StressScene: figure tremble/breathe/waves — intensity, speed and color
+ * are all derived inline from the public stress value (0–100). */
+@keyframes stress-tremble {
+  0%,
+  100% {
+    transform: translateX(calc(var(--tremble-amp, 0px) * -1));
+  }
+  50% {
+    transform: translateX(var(--tremble-amp, 0px));
+  }
+}
+
+.stress-tremble {
+  animation: stress-tremble 1s linear infinite;
+}
+
+@keyframes stress-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.2;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.45;
+  }
+}
+
+.stress-breathe {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: stress-breathe 4s ease-in-out infinite;
+}
+
+@keyframes stress-wave {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translateY(1px);
+  }
+  50% {
+    opacity: var(--wave-opacity, 0.6);
+    transform: translateY(-2px);
+  }
+}
+
+.stress-wave {
+  animation: stress-wave 1.6s ease-in-out infinite;
 }
 
 /* Markdown rendered inside AI chat bubbles — compact sibling of the

@@ -59,6 +59,9 @@ export default async function HomePage({ params }: Props) {
 
   const stats = computeHeroStats(experience, projects, blogPosts);
   const avgBpm = health?.metrics.find((m) => m.metric === 'heart_rate')?.summary.avg;
+  const avgStress = health?.metrics.find((m) => m.metric === 'stress')?.summary.avg;
+  const stress =
+    avgStress != null ? Math.min(Math.max(Math.round(avgStress), 0), 100) : undefined;
   const stepsMetric = health?.metrics.find((m) => m.metric === 'steps');
   // Map the steps average to a plausible stride cadence (0.9–2.2 strides/s).
   const avgSteps = stepsMetric?.summary.avg;
@@ -75,6 +78,7 @@ export default async function HomePage({ params }: Props) {
         bpm={avgBpm ? Math.round(avgBpm) : undefined}
         cadence={cadence}
         stepsToday={stepsToday}
+        stress={stress}
       />
       <div className="flex justify-center py-4">
         <HeroScene />
