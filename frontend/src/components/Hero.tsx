@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
+import { HealthScene } from '@/components/HealthScene';
 import { HeroScene } from '@/components/HeroScene';
 import type { Profile } from '@/lib/api';
 
@@ -101,7 +102,17 @@ function HeroCtas() {
   );
 }
 
-export function Hero({ profile, stats }: { profile: HeroProfile; stats: HeroStats }) {
+export function Hero({
+  profile,
+  stats,
+  bpm,
+}: {
+  profile: HeroProfile;
+  stats: HeroStats;
+  /** Average heart rate shared publicly; powers the beating-heart vignette
+   *  above the tech-stack scene. Omitted when heart rate isn't shared. */
+  bpm?: number;
+}) {
   return (
     <section id="about" className="px-4 py-20 sm:px-6 md:px-12 md:py-28">
       <div className="max-w-6xl lg:grid lg:grid-cols-[1fr_auto] lg:items-center lg:gap-12">
@@ -118,7 +129,8 @@ export function Hero({ profile, stats }: { profile: HeroProfile; stats: HeroStat
           </div>
         </div>
         <div className="mt-10 flex justify-center lg:mt-0">
-          <div className="scale-75 lg:scale-100">
+          <div className="flex scale-75 flex-col items-center gap-10 lg:scale-100">
+            {bpm ? <HealthScene bpm={bpm} /> : null}
             <HeroScene />
           </div>
         </div>

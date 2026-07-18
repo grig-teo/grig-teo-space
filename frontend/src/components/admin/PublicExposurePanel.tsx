@@ -154,9 +154,9 @@ export function PublicExposurePanel() {
       </div>
 
       <p className="mb-2 font-mono text-xs text-muted">
-        Choose what visitors can see in the health section of your landing page.
-        Enabled metrics also drive the animated 3D backdrop. Each metric has a
-        recommendation to help you decide.
+        Choose what visitors can see on your landing page. Heart rate powers the
+        beating-heart animation in the hero. Each metric has a recommendation to
+        help you decide.
       </p>
 
       <div className="space-y-2">

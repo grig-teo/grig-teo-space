@@ -3,7 +3,6 @@ import type { HeroStats } from '@/components/Hero';
 import { BlogPreview } from '@/components/Blog';
 import { ProjectsPreview } from '@/components/Projects';
 import { Experience } from '@/components/Experience';
-import { HealthWidget } from '@/components/HealthWidget';
 import { JsonLd } from '@/components/JsonLd';
 import { Reveal } from '@/components/Reveal';
 import { getBlogPosts, getExperience, getProfile, getProjects, getPublicHealth } from '@/lib/api';
@@ -49,6 +48,7 @@ export default async function HomePage({ params }: Props) {
   ]);
 
   const stats = computeHeroStats(experience, projects, blogPosts);
+  const avgBpm = health?.metrics.find((m) => m.metric === 'heart_rate')?.summary.avg;
 
   return (
     <main className="min-h-screen">
@@ -56,6 +56,7 @@ export default async function HomePage({ params }: Props) {
       <Hero
         profile={{ name: profile.name, title: profile.title, location: profile.location }}
         stats={stats}
+        bpm={avgBpm ? Math.round(avgBpm) : undefined}
       />
       <Reveal>
         <ProjectsPreview projects={projects} />
@@ -66,11 +67,6 @@ export default async function HomePage({ params }: Props) {
       <Reveal>
         <Experience items={experience} />
       </Reveal>
-      {health && health.metrics.length > 0 && (
-        <Reveal>
-          <HealthWidget payload={health} />
-        </Reveal>
-      )}
     </main>
   );
 }
