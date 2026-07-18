@@ -139,11 +139,15 @@ cd ios && xcodegen generate && xcodebuild -scheme ColmiRingApp build
 
 ### Deploy
 
-Production target is the `politrack-vps` host alias (the deploy script
-defaults to a different host, so **always override `VPS_HOST`**):
+Production target is the politrack VDS at `root@159.195.139.229`. The deploy
+key is `~/.ssh/politrack_vps_ed25519` in the current user's home `.ssh/`;
+`deploy.sh` invokes plain `ssh`/`rsync` without `-i`, so load the key into
+the agent first, and **always override `VPS_HOST`** (the script defaults to a
+different host):
 
 ```bash
-VPS_HOST=politrack-vps bash deploy/deploy.sh
+ssh-add ~/.ssh/politrack_vps_ed25519
+VPS_HOST=root@159.195.139.229 bash deploy/deploy.sh
 ```
 
 This rsyncs to `/opt/grig-teo-space`, preserves the on-VPS `.env.production`,
@@ -182,7 +186,7 @@ code-review graph refreshed), do all three before considering it done:
 
 1. **Commit** to `main` with a clear message (trunk-based — no feature branches).
 2. **Push** to `origin/main`.
-3. **Deploy** with `VPS_HOST=politrack-vps bash deploy/deploy.sh`.
+3. **Deploy** with `VPS_HOST=root@159.195.139.229 bash deploy/deploy.sh` (key loaded via `ssh-add ~/.ssh/politrack_vps_ed25519`).
 
 Do this even when the user doesn't explicitly ask — it's the default workflow
 for this repo. Deploying is normally an outward-facing action requiring
