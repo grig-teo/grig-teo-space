@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: Props) {
       type: 'website',
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title: t('title'),
       description: t('description'),
     },

@@ -77,12 +77,9 @@ function buildApiUrl(path: string, locale: Locale): string {
   return `${prefix}${path}?locale=${locale}`;
 }
 
-async function fetchJson<T>(path: string, locale: Locale, dynamic = false): Promise<T> {
+async function fetchJson<T>(path: string, locale: Locale, revalidate = 60): Promise<T> {
   const url = buildApiUrl(path, locale);
-  const res = await fetch(
-    url,
-    dynamic ? { cache: 'no-store' } : { next: { revalidate: 60 } },
-  );
+  const res = await fetch(url, { next: { revalidate } });
   if (!res.ok) {
     throw new Error(`API error: ${res.status} ${path}`);
   }
@@ -102,7 +99,7 @@ export function getExperience(locale: Locale) {
 }
 
 export function getExperienceDetail(id: string, locale: Locale) {
-  return fetchJson<ExperienceDetail>(`/experience/${id}`, locale, true);
+  return fetchJson<ExperienceDetail>(`/experience/${id}`, locale, 3600);
 }
 
 export async function getExperienceIds(): Promise<string[]> {
@@ -120,7 +117,7 @@ export function getBlogPosts(locale: Locale) {
 }
 
 export function getBlogPost(id: string, locale: Locale) {
-  return fetchJson<BlogPostDetail>(`/blog/${id}`, locale, true);
+  return fetchJson<BlogPostDetail>(`/blog/${id}`, locale, 3600);
 }
 
 export async function getBlogIds(): Promise<string[]> {

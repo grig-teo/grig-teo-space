@@ -1,11 +1,12 @@
 import { BlogBodyViewer } from '@/components/BlogBodyViewer';
+import { BlogPostingJsonLd } from '@/components/JsonLd';
 import { YoutubeEmbed } from '@/components/YoutubeEmbed';
 import {
   extractYoutubeVideoIdsFromBlockNote,
   stripYoutubeUrlBlocksFromBlockNote,
 } from '@/lib/youtube';
 import { Link } from '@/i18n/navigation';
-import { getBlogPost } from '@/lib/api';
+import { getBlogPost, getProfile } from '@/lib/api';
 import type { Locale } from '@/lib/api';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -14,7 +15,7 @@ type Props = {
   params: Promise<{ locale: Locale; id: string }>;
 };
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 function formatDate(value: string, locale: string): string {
   const date = new Date(value);
@@ -41,9 +42,12 @@ export async function generateMetadata({ params }: Props) {
       description: post.excerpt,
       alternates: {
         canonical: `/${locale}/blog/${id}`,
-        languages: Object.fromEntries(
-          (['en', 'ru', 'ro'] as Locale[]).map((alt) => [alt, `/${alt}/blog/${id}`]),
-        ),
+        languages: {
+          ...Object.fromEntries(
+            (['en', 'ru', 'ro'] as Locale[]).map((alt) => [alt, `/${alt}/blog/${id}`]),
+          ),
+          'x-default': `/en/blog/${id}`,
+        },
       },
       openGraph: {
         title: post.title,
@@ -69,12 +73,14 @@ export default async function BlogArticlePage({ params }: Props) {
   } catch {
     notFound();
   }
+  const profile = await getProfile(locale);
 
   const youtubeVideoIds = extractYoutubeVideoIdsFromBlockNote(post.body);
   const bodyWithoutYoutubeUrls = stripYoutubeUrlBlocksFromBlockNote(post.body);
 
   return (
     <main className="min-h-screen">
+      <BlogPostingJsonLd post={post} profile={profile} locale={locale} id={id} />
       <section className="px-4 py-8 sm:px-6 sm:py-12 md:px-12">
         <div className="mx-auto max-w-2xl">
           <div className="mb-8 flex flex-col gap-4 sm:mb-10">

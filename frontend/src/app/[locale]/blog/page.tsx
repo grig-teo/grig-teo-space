@@ -1,4 +1,5 @@
 import { BlogList } from '@/components/Blog';
+import { BlogJsonLd } from '@/components/JsonLd';
 import { Link } from '@/i18n/navigation';
 import { getBlogPosts } from '@/lib/api';
 import type { Locale } from '@/lib/api';
@@ -44,6 +45,7 @@ export default async function BlogPage({ params }: Props) {
 
   return (
     <main className="min-h-screen">
+      <BlogJsonLd posts={posts} locale={locale} />
       <section className="px-4 py-8 sm:px-6 sm:py-12 md:px-12">
         <Link
           href="/#blog"

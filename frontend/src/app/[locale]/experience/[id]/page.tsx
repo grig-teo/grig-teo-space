@@ -9,7 +9,7 @@ type Props = {
   params: Promise<{ locale: Locale; id: string }>;
 };
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 /** Renders one experience attachment: inline video, inline image, or a
  *  download chip for documents. */
