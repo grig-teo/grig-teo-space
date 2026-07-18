@@ -5,84 +5,104 @@ type Props = {
   stress: number;
 };
 
-/** Cloud fill: bright slate (calm) → dark storm gray (max stress). */
-function cloudColor(level: number): string {
-  const calm = [148, 163, 184];
-  const storm = [51, 65, 85];
-  const t = level / 100;
-  const rgb = calm.map((channel, i) => Math.round(channel + (storm[i] - channel) * t));
+/** teal (calm) → amber (moderate) → red (stressed). */
+function stressColor(level: number): string {
+  const calm = [45, 212, 191];
+  const mid = [251, 191, 36];
+  const high = [248, 113, 113];
+  const [from, to, t] =
+    level <= 50 ? [calm, mid, level / 50] : [mid, high, (level - 50) / 50];
+  const rgb = from.map((channel, i) => Math.round(channel + (to[i] - channel) * t));
   return `rgb(${rgb[0]} ${rgb[1]} ${rgb[2]})`;
 }
 
-const RAIN_COLOR = 'rgb(96 165 250)';
-const BOLT_COLOR = 'rgb(var(--color-accent-2))';
-/** Fixed drop slots across the cloud's underside; more slots activate as
- *  the stress level rises. */
-const DROP_SLOTS = [30, 39, 48, 57, 66, 75];
+const CX = 50;
+const CY = 62;
+const ARC_R = 34;
+const ARC_C = 2 * Math.PI * ARC_R;
+const TICK_COUNT = 12;
 
 /**
- * Stress visualized as weather: a cloud that darkens from bright slate to
- * storm gray, gathers rain (drop count, speed and opacity rise), starts
- * shaking, and above ~60% fires lightning. Every parameter is derived
- * continuously from the public stress average (0–100). Pure CSS/SVG,
- * frozen under prefers-reduced-motion (see globals.css).
+ * Stress visualized as a pressure gauge: an arc that fills to exactly the
+ * public stress average (stroke-dasharray technique), a dashed ring that
+ * spins faster as stress rises, tick marks that light up one by one, and a
+ * core pulsing quicker at high pressure. Color ramps teal → amber → red.
+ * Pure CSS/SVG, frozen under prefers-reduced-motion (see globals.css).
  */
 export function StressScene({ stress }: Props) {
   const level = Math.min(Math.max(Math.round(stress), 0), 100);
+  const color = stressColor(level);
 
-  const dropCount = Math.round((level / 100) * DROP_SLOTS.length);
-  const rainSec = `${(1.6 - (level / 100) * 1).toFixed(2)}s`;
-  const rainOpacity = (0.35 + (level / 100) * 0.55).toFixed(2);
-  const trembleAmp = `${((level / 100) * 2).toFixed(2)}px`;
-  const trembleSec = `${(1.6 - (level / 100) * 1.4).toFixed(2)}s`;
-  const boltSec = `${(3.2 - (level / 100) * 2).toFixed(2)}s`;
+  const arcLen = (ARC_C * level) / 100;
+  const spinSec = `${(24 - (level / 100) * 20).toFixed(2)}s`;
+  const pulseSec = `${(2 - (level / 100) * 1.5).toFixed(2)}s`;
+  const litTicks = Math.round((level / 100) * TICK_COUNT);
 
   return (
     <div className="flex flex-col items-center gap-1" aria-hidden="true">
-      <svg width="110" height="150" viewBox="0 0 100 140">
-        <g className="cloud-bob" style={{ animationDuration: `${(6 - (level / 100) * 2.5).toFixed(2)}s` }}>
-          <g
-            className="stress-tremble"
-            style={{ '--tremble-amp': trembleAmp, animationDuration: trembleSec } as CSSProperties}
-          >
-            {/* Cloud body: three puffs + base. */}
-            <g fill={cloudColor(level)}>
-              <circle cx="35" cy="52" r="13" />
-              <circle cx="51" cy="42" r="16" />
-              <circle cx="66" cy="52" r="13" />
-              <rect x="28" y="50" width="45" height="14" rx="7" />
-            </g>
-            {/* Lightning — only once the storm is real (~60%+). */}
-            {level >= 60 ? (
-              <polygon
-                className="stress-bolt"
-                style={{ animationDuration: boltSec }}
-                points="53,66 45,88 51,88 47,108 61,84 54,84 59,66"
-                fill={BOLT_COLOR}
-              />
-            ) : null}
-            {/* Rain: active slots fall continuously, staggered. */}
-            <g stroke={RAIN_COLOR} strokeWidth="2" strokeLinecap="round">
-              {DROP_SLOTS.slice(0, dropCount).map((x, i) => (
-                <line
-                  key={x}
-                  className="rain-drop"
-                  style={
-                    {
-                      '--rain-opacity': rainOpacity,
-                      animationDuration: rainSec,
-                      animationDelay: `-${(i * 0.35).toFixed(2)}s`,
-                    } as CSSProperties
-                  }
-                  x1={x}
-                  y1="74"
-                  x2={x - 2}
-                  y2="82"
-                />
-              ))}
-            </g>
-          </g>
-        </g>
+      <svg width="110" height="140" viewBox="0 0 100 140">
+        {/* Dashed outer ring — spins faster with the level. */}
+        <circle
+          className="gauge-spin"
+          style={{ animationDuration: spinSec }}
+          cx={CX}
+          cy={CY}
+          r="44"
+          fill="none"
+          stroke={color}
+          strokeWidth="1.5"
+          strokeDasharray="3 7"
+          strokeLinecap="round"
+          opacity="0.55"
+        />
+        {/* Gauge track. */}
+        <circle
+          cx={CX}
+          cy={CY}
+          r={ARC_R}
+          fill="none"
+          stroke="rgb(var(--color-border))"
+          strokeWidth="4"
+          strokeLinecap="round"
+        />
+        {/* Filled arc — length is exactly `level`% of the circumference. */}
+        <circle
+          cx={CX}
+          cy={CY}
+          r={ARC_R}
+          fill="none"
+          stroke={color}
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeDasharray={`${arcLen.toFixed(1)} ${ARC_C.toFixed(1)}`}
+          transform={`rotate(-90 ${CX} ${CY})`}
+        />
+        {/* Tick marks — lit count follows the level. */}
+        {Array.from({ length: TICK_COUNT }, (_, i) => {
+          const angle = (i / TICK_COUNT) * Math.PI * 2 - Math.PI / 2;
+          const lit = i < litTicks;
+          return (
+            <line
+              key={i}
+              x1={CX + Math.cos(angle) * 27}
+              y1={CY + Math.sin(angle) * 27}
+              x2={CX + Math.cos(angle) * 23}
+              y2={CY + Math.sin(angle) * 23}
+              stroke={lit ? color : 'rgb(var(--color-border))'}
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          );
+        })}
+        {/* Pulsing pressure core. */}
+        <circle
+          className="stress-core"
+          style={{ animationDuration: pulseSec } as CSSProperties}
+          cx={CX}
+          cy={CY}
+          r="7"
+          fill={color}
+        />
       </svg>
       <span className="font-mono text-[10px] uppercase tracking-wider text-muted">
         {level}% stress avg
