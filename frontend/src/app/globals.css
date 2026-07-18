@@ -272,6 +272,114 @@ body {
   animation: walk-shadow 0.8s ease-in-out infinite;
 }
 
+/* Markdown rendered inside AI chat bubbles — compact sibling of the
+ * article-body styles. */
+.chat-md p {
+  margin-block: 0.4rem;
+}
+
+.chat-md p:first-child,
+.chat-md ul:first-child,
+.chat-md ol:first-child,
+.chat-md pre:first-child {
+  margin-top: 0;
+}
+
+.chat-md p:last-child,
+.chat-md ul:last-child,
+.chat-md ol:last-child,
+.chat-md pre:last-child {
+  margin-bottom: 0;
+}
+
+.chat-md strong {
+  font-weight: 700;
+}
+
+.chat-md em {
+  font-style: italic;
+}
+
+.chat-md a {
+  color: rgb(var(--color-accent));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.chat-md ul,
+.chat-md ol {
+  margin-block: 0.4rem;
+  padding-left: 1.2rem;
+}
+
+.chat-md ul {
+  list-style: disc;
+}
+
+.chat-md ol {
+  list-style: decimal;
+}
+
+.chat-md li {
+  margin-block: 0.15rem;
+}
+
+.chat-md h1,
+.chat-md h2,
+.chat-md h3,
+.chat-md h4 {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+  margin-block: 0.6rem 0.3rem;
+}
+
+.chat-md code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+  background: rgb(var(--color-background));
+  border: 1px solid rgb(var(--color-border));
+  border-radius: 0.25rem;
+  padding: 0.05rem 0.3rem;
+}
+
+.chat-md pre {
+  background: rgb(var(--color-background));
+  border: 1px solid rgb(var(--color-border));
+  border-radius: 0.5rem;
+  padding: 0.6rem;
+  overflow-x: auto;
+  margin-block: 0.4rem;
+}
+
+.chat-md pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.chat-md blockquote {
+  border-left: 3px solid rgb(var(--color-accent));
+  padding-left: 0.75rem;
+  color: rgb(var(--color-muted));
+  margin-block: 0.4rem;
+}
+
+.chat-md table {
+  border-collapse: collapse;
+  margin-block: 0.4rem;
+}
+
+.chat-md th,
+.chat-md td {
+  border: 1px solid rgb(var(--color-border));
+  padding: 0.2rem 0.5rem;
+}
+
+.chat-md hr {
+  border-color: rgb(var(--color-border));
+  margin-block: 0.6rem;
+}
+
 /* The public article body is server-rendered to plain semantic HTML (see
  * lib/blocknote-html.ts), so style the raw tags under the wrapper. */
 .blog-body-viewer {

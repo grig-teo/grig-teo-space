@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 type Props = {
   locale: string;
@@ -253,7 +255,24 @@ export function AssistantChatWidget({ locale }: Props) {
                     : 'bg-foreground/5 text-foreground'
                 }`}
               >
-                {item.content}
+                {item.role === 'assistant' ? (
+                  <div className="chat-md">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        a: ({ href, children }) => (
+                          <a href={href} target="_blank" rel="noopener noreferrer">
+                            {children}
+                          </a>
+                        ),
+                      }}
+                    >
+                      {item.content}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  item.content
+                )}
               </div>
             ))}
             {loading ? <div className="text-xs text-muted">Thinking...</div> : null}
