@@ -1,6 +1,7 @@
 import { Hero } from '@/components/Hero';
 import type { HeroStats } from '@/components/Hero';
 import { BlogPreview } from '@/components/Blog';
+import { HeroScene } from '@/components/HeroScene';
 import { ProjectsPreview } from '@/components/Projects';
 import { Experience } from '@/components/Experience';
 import { JsonLd } from '@/components/JsonLd';
@@ -36,6 +37,15 @@ function computeHeroStats(
   };
 }
 
+/** Sums the step readings recorded on the current UTC day. */
+function sumTodaySteps(series: { recordedAt: string; value: number }[]): number {
+  const today = new Date().toISOString().slice(0, 10);
+  const total = series
+    .filter((point) => point.recordedAt.slice(0, 10) === today)
+    .reduce((sum, point) => sum + point.value, 0);
+  return Math.round(total);
+}
+
 export default async function HomePage({ params }: Props) {
   const { locale } = await params;
 
@@ -49,9 +59,12 @@ export default async function HomePage({ params }: Props) {
 
   const stats = computeHeroStats(experience, projects, blogPosts);
   const avgBpm = health?.metrics.find((m) => m.metric === 'heart_rate')?.summary.avg;
-  const avgSteps = health?.metrics.find((m) => m.metric === 'steps')?.summary.avg;
+  const stepsMetric = health?.metrics.find((m) => m.metric === 'steps');
   // Map the steps average to a plausible stride cadence (0.9–2.2 strides/s).
+  const avgSteps = stepsMetric?.summary.avg;
   const cadence = avgSteps ? Math.min(Math.max(avgSteps * 0.06, 0.9), 2.2) : undefined;
+  // Today's step total: sum the series points recorded on the current UTC day.
+  const stepsToday = stepsMetric ? sumTodaySteps(stepsMetric.series) : undefined;
 
   return (
     <main className="min-h-screen">
@@ -61,7 +74,11 @@ export default async function HomePage({ params }: Props) {
         stats={stats}
         bpm={avgBpm ? Math.round(avgBpm) : undefined}
         cadence={cadence}
+        stepsToday={stepsToday}
       />
+      <div className="flex justify-center py-4">
+        <HeroScene />
+      </div>
       <Reveal>
         <ProjectsPreview projects={projects} />
       </Reveal>

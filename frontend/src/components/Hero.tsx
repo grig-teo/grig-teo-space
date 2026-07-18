@@ -3,7 +3,6 @@
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { HealthScene } from '@/components/HealthScene';
-import { HeroScene } from '@/components/HeroScene';
 import { WalkerScene } from '@/components/WalkerScene';
 import type { Profile } from '@/lib/api';
 
@@ -108,6 +107,7 @@ export function Hero({
   stats,
   bpm,
   cadence,
+  stepsToday,
 }: {
   profile: HeroProfile;
   stats: HeroStats;
@@ -117,6 +117,8 @@ export function Hero({
   /** Strides per second derived from the shared steps metric; powers the
    *  walking figure. Omitted when steps aren't shared. */
   cadence?: number;
+  /** Steps recorded today, shown under the walking figure. */
+  stepsToday?: number;
 }) {
   return (
     <section id="about" className="px-4 py-20 sm:px-6 md:px-12 md:py-28">
@@ -134,12 +136,18 @@ export function Hero({
           </div>
         </div>
         <div className="mt-10 flex justify-center lg:mt-0">
-          <div className="flex scale-75 flex-col items-center gap-10 lg:scale-100">
-            <div className="flex items-center gap-12">
-              {bpm ? <HealthScene bpm={bpm} /> : null}
-              {cadence ? <WalkerScene cadence={cadence} /> : null}
-            </div>
-            <HeroScene />
+          <div className="flex scale-90 items-center gap-12 lg:scale-100">
+            {bpm ? <HealthScene bpm={bpm} /> : null}
+            {cadence ? (
+              <div className="flex flex-col items-center gap-1">
+                <WalkerScene cadence={cadence} />
+                {stepsToday !== undefined && (
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-muted">
+                    {stepsToday} steps today
+                  </span>
+                )}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
