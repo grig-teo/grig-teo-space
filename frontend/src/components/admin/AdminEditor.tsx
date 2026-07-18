@@ -10,7 +10,6 @@ import {
   clearAdminToken,
   type BlogPost,
   type ExperienceItem,
-  type Locale,
   type LocalizedList,
   type LocalizedString,
   type Profile,
@@ -18,12 +17,11 @@ import {
   type SiteContent,
 } from '@/lib/admin-api';
 import { attachmentType } from '@/lib/attachments';
+import { useAdminLocale } from '@/components/admin/AdminLocale';
 import { BlogBodyEditor } from '@/components/admin/BlogBodyEditor';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const locales: Locale[] = ['en', 'ru', 'ro'];
-const localeLabels: Record<Locale, string> = { en: 'English', ru: 'Russian', ro: 'Romanian' };
 const AUTOSAVE_DELAY_MS = 1500;
 
 type Tab = 'profile' | 'blog' | 'projects' | 'experience';
@@ -191,7 +189,7 @@ function Field({
 export function AdminEditor() {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('profile');
-  const [locale, setLocale] = useState<Locale>('en');
+  const { locale } = useAdminLocale();
   const [content, setContent] = useState<SiteContent | null>(null);
   const [selectedProject, setSelectedProject] = useState(0);
   const [selectedExperience, setSelectedExperience] = useState(0);
@@ -528,7 +526,7 @@ export function AdminEditor() {
         </span>
       </div>
 
-      <div className="mb-4 inline-flex flex-wrap gap-1 rounded-lg border border-border p-0.5">
+      <div className="mb-6 inline-flex flex-wrap gap-1 rounded-lg border border-border p-0.5">
         {(['profile', 'blog', 'projects', 'experience'] as Tab[]).map((item) => (
           <button
             key={item}
@@ -539,21 +537,6 @@ export function AdminEditor() {
             }`}
           >
             {item.charAt(0).toUpperCase() + item.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      <div className="mb-6 inline-flex flex-wrap gap-1 rounded-lg border border-border p-0.5">
-        {locales.map((loc) => (
-          <button
-            key={loc}
-            type="button"
-            onClick={() => setLocale(loc)}
-            className={`rounded-md px-3 py-1 font-mono text-xs transition-colors ${
-              locale === loc ? 'bg-accent text-background' : 'text-muted hover:text-foreground'
-            }`}
-          >
-            {localeLabels[loc]}
           </button>
         ))}
       </div>
