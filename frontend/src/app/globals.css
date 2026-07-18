@@ -107,7 +107,10 @@ html[data-theme='light'] .bg-mesh-dark {
   }
 
   .health-heartbeat,
-  .ecg-path {
+  .ecg-path,
+  .walk-limb,
+  .walk-bob,
+  .walk-shadow {
     animation: none;
   }
 
@@ -220,6 +223,53 @@ body {
 
 .ecg-path {
   animation: ecg-sweep 1.7s linear infinite;
+}
+
+/* WalkerScene: a stick-figure walk cycle. The stride cadence is derived
+ * from the publicly shared steps metric — durations are set inline. */
+@keyframes walk-swing {
+  from {
+    transform: rotate(26deg);
+  }
+  to {
+    transform: rotate(-26deg);
+  }
+}
+
+.walk-limb {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  animation: walk-swing 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes walk-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.walk-bob {
+  animation: walk-bob 0.8s ease-in-out infinite;
+}
+
+@keyframes walk-shadow {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(1.15);
+  }
+}
+
+.walk-shadow {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: walk-shadow 0.8s ease-in-out infinite;
 }
 
 /* The public article body is server-rendered to plain semantic HTML (see

@@ -49,6 +49,9 @@ export default async function HomePage({ params }: Props) {
 
   const stats = computeHeroStats(experience, projects, blogPosts);
   const avgBpm = health?.metrics.find((m) => m.metric === 'heart_rate')?.summary.avg;
+  const avgSteps = health?.metrics.find((m) => m.metric === 'steps')?.summary.avg;
+  // Map the steps average to a plausible stride cadence (0.9–2.2 strides/s).
+  const cadence = avgSteps ? Math.min(Math.max(avgSteps * 0.06, 0.9), 2.2) : undefined;
 
   return (
     <main className="min-h-screen">
@@ -57,6 +60,7 @@ export default async function HomePage({ params }: Props) {
         profile={{ name: profile.name, title: profile.title, location: profile.location }}
         stats={stats}
         bpm={avgBpm ? Math.round(avgBpm) : undefined}
+        cadence={cadence}
       />
       <Reveal>
         <ProjectsPreview projects={projects} />

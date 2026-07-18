@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { HealthScene } from '@/components/HealthScene';
 import { HeroScene } from '@/components/HeroScene';
+import { WalkerScene } from '@/components/WalkerScene';
 import type { Profile } from '@/lib/api';
 
 export type HeroStats = {
@@ -106,12 +107,16 @@ export function Hero({
   profile,
   stats,
   bpm,
+  cadence,
 }: {
   profile: HeroProfile;
   stats: HeroStats;
   /** Average heart rate shared publicly; powers the beating-heart vignette
    *  above the tech-stack scene. Omitted when heart rate isn't shared. */
   bpm?: number;
+  /** Strides per second derived from the shared steps metric; powers the
+   *  walking figure. Omitted when steps aren't shared. */
+  cadence?: number;
 }) {
   return (
     <section id="about" className="px-4 py-20 sm:px-6 md:px-12 md:py-28">
@@ -130,7 +135,10 @@ export function Hero({
         </div>
         <div className="mt-10 flex justify-center lg:mt-0">
           <div className="flex scale-75 flex-col items-center gap-10 lg:scale-100">
-            {bpm ? <HealthScene bpm={bpm} /> : null}
+            <div className="flex items-center gap-12">
+              {bpm ? <HealthScene bpm={bpm} /> : null}
+              {cadence ? <WalkerScene cadence={cadence} /> : null}
+            </div>
             <HeroScene />
           </div>
         </div>
