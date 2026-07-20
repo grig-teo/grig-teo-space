@@ -497,14 +497,6 @@ export function AdminEditor() {
           <h1 className="font-mono text-xl font-semibold">Content admin</h1>
           <p className="text-sm text-muted">Changes save automatically after you stop typing.</p>
         </div>
-        <a
-          href="https://grig-teo.space/OpenHands/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="rounded border border-accent/60 px-3 py-1.5 font-mono text-sm text-accent transition-colors hover:bg-accent/10"
-        >
-          OpenHands ↗
-        </a>
       </div>
 
       <div className="sticky top-[57px] z-10 mb-6 border-b border-border bg-background/80 py-2 backdrop-blur">
