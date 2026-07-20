@@ -51,6 +51,7 @@ export class PortfolioController {
       url: this.portfolio.pick(project.url, loc),
       tags: project.tags,
       inDevelopment: project.inDevelopment ?? false,
+      image: project.image,
     }));
   }
 

@@ -50,6 +50,14 @@ export function ProjectCard({
         detailed ? 'min-h-0 sm:min-h-[420px]' : 'min-h-0 sm:min-h-[260px] group'
       }`}
     >
+      {project.image && (
+        <img
+          src={project.image}
+          alt={project.title}
+          className="mb-4 aspect-video w-full rounded-md border border-border object-cover"
+          loading="lazy"
+        />
+      )}
       <div className="mb-4 flex items-start justify-between gap-4">
         <div className="min-w-0 space-y-2">
           <h3 className={`font-mono font-semibold text-foreground ${detailed ? 'text-xl' : ''}`}>

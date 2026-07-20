@@ -813,6 +813,16 @@ export function AdminEditor() {
               }))
             }
           />
+          <Field
+            label="Image URL (shown at the top of the card)"
+            value={project.image ?? ''}
+            onChange={(value) =>
+              updateProject(selectedProject, (item) => ({
+                ...item,
+                image: value.trim() || undefined,
+              }))
+            }
+          />
           <label className="flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-muted">
             <input
               type="checkbox"

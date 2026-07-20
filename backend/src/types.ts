@@ -12,6 +12,7 @@ export interface Project {
   url: LocalizedString;
   tags: string[];
   inDevelopment?: boolean;
+  image?: string;
   sortOrder?: number;
 }
 
