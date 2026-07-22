@@ -23,7 +23,10 @@ export interface Project {
   tags: string[];
   inDevelopment?: boolean;
   image?: string;
+  attachments?: ExperienceAttachment[];
 }
+
+export interface ProjectDetail extends Project {}
 
 export interface ExperienceItem {
   id: string;
@@ -93,6 +96,20 @@ export function getProfile(locale: Locale) {
 
 export function getProjects(locale: Locale) {
   return fetchJson<Project[]>('/projects', locale);
+}
+
+export function getProjectDetail(id: string, locale: Locale) {
+  return fetchJson<ProjectDetail>(`/projects/${id}`, locale, 3600);
+}
+
+export async function getProjectIds(): Promise<string[]> {
+  const base = apiBaseUrl();
+  const prefix = base ? `${base}/api` : '/api';
+  const res = await fetch(`${prefix}/projects/ids`, { next: { revalidate: 60 } });
+  if (!res.ok) {
+    throw new Error(`API error: ${res.status} /projects/ids`);
+  }
+  return res.json() as Promise<string[]>;
 }
 
 export function getExperience(locale: Locale) {

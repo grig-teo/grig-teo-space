@@ -89,34 +89,21 @@ export function ProjectCard({
       )}
 
       <p className="mt-auto pt-2 font-mono text-xs text-muted/80">{project.tags.join(' · ')}</p>
-
-      {detailed && (
-        <a
-          href={project.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-6 inline-flex w-fit items-center gap-2 rounded border border-accent px-4 py-2 font-mono text-sm text-accent transition-colors hover:bg-accent hover:text-background"
-        >
-          {t('visit')}
-          <ExternalIcon />
-        </a>
-      )}
     </article>
   );
 
   if (detailed) {
-    return card;
+    return (
+      <Link href={`/projects/${project.id}`} className="group block h-full">
+        {card}
+      </Link>
+    );
   }
 
   return (
-    <a
-      href={project.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group block h-full"
-    >
+    <Link href={`/projects/${project.id}`} className="group block h-full">
       {card}
-    </a>
+    </Link>
   );
 }
 

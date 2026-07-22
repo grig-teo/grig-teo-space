@@ -52,7 +52,34 @@ export class PortfolioController {
       tags: project.tags,
       inDevelopment: project.inDevelopment ?? false,
       image: project.image,
+      attachments: project.attachments,
     }));
+  }
+
+  @Get('projects/ids')
+  async projectIds() {
+    return this.portfolio.getProjectIds();
+  }
+
+  @Get('projects/:id')
+  async projectDetail(@Param('id') id: string, @Query('locale') locale?: string) {
+    const project = await this.portfolio.getProjectById(id);
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+    const loc = this.portfolio.resolveLocale(locale);
+    return {
+      id: project.id,
+      title: this.portfolio.pick(project.title, loc),
+      description: this.portfolio.pick(project.description, loc),
+      overview: this.portfolio.pick(project.overview, loc),
+      highlights: project.highlights[loc] ?? project.highlights.en,
+      url: this.portfolio.pick(project.url, loc),
+      tags: project.tags,
+      inDevelopment: project.inDevelopment ?? false,
+      image: project.image,
+      attachments: project.attachments?.length ? project.attachments : undefined,
+    };
   }
 
   @Get('experience')

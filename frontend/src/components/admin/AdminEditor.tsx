@@ -458,6 +458,32 @@ export function AdminEditor() {
     }
   }
 
+  /** Appends an attachment (video/image/doc) to the selected project. */
+  function addProjectAttachment(url: string) {
+    const clean = url.trim();
+    if (!clean) return;
+    updateProject(selectedProject, (item) => ({
+      ...item,
+      attachments: [...(item.attachments ?? []), { url: clean }],
+    }));
+  }
+
+  /** Uploads files to media storage, then attaches the returned URLs. */
+  async function uploadProjectAttachments(files: File[]) {
+    setAttachmentUploading(true);
+    setError('');
+    try {
+      for (const file of files) {
+        const url = await adminUploadMedia(file);
+        addProjectAttachment(url);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Upload failed');
+    } finally {
+      setAttachmentUploading(false);
+    }
+  }
+
   function updateBlogPost(index: number, updater: (post: BlogPost) => BlogPost) {
     setContent((prev) => {
       if (!prev) return prev;
@@ -823,6 +849,71 @@ export function AdminEditor() {
               }))
             }
           />
+          <div className="space-y-2 rounded border border-border p-3">
+            <span className="block font-mono text-xs uppercase tracking-wider text-muted">
+              Attachments (video, images, docs)
+            </span>
+            {(project.attachments ?? []).map((attachment, index) => (
+              <div key={`${attachment.url}-${index}`} className="flex items-center gap-2">
+                <span className="rounded border border-border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-accent">
+                  {attachmentType(attachment)}
+                </span>
+                <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted" title={attachment.url}>
+                  {attachment.title ?? attachment.url.split('/').pop()}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateProject(selectedProject, (item) => ({
+                      ...item,
+                      attachments: (item.attachments ?? []).filter((_, i) => i !== index),
+                    }))
+                  }
+                  className="rounded border border-red-400/40 px-2 py-0.5 font-mono text-[10px] text-red-400 transition-colors hover:bg-red-400/10"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                value={attachmentUrl}
+                onChange={(e) => setAttachmentUrl(e.target.value)}
+                placeholder="https://…/file.mp4"
+                className="min-w-0 flex-1 rounded border border-border bg-background px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted/60"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  addProjectAttachment(attachmentUrl);
+                  setAttachmentUrl('');
+                }}
+                className="rounded border border-accent/60 px-3 py-2 font-mono text-xs text-accent transition-colors hover:bg-accent/10"
+              >
+                Add URL
+              </button>
+              <label
+                className={`rounded border px-3 py-2 font-mono text-xs transition-colors ${
+                  attachmentUploading
+                    ? 'border-border text-muted'
+                    : 'cursor-pointer border-accent/60 text-accent hover:bg-accent/10'
+                }`}
+              >
+                {attachmentUploading ? 'Uploading…' : 'Upload file(s)'}
+                <input
+                  type="file"
+                  className="hidden"
+                  multiple
+                  disabled={attachmentUploading}
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files ?? []);
+                    e.target.value = '';
+                    if (files.length > 0) void uploadProjectAttachments(files);
+                  }}
+                />
+              </label>
+            </div>
+          </div>
           <label className="flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-muted">
             <input
               type="checkbox"

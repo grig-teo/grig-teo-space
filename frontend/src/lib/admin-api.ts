@@ -13,6 +13,7 @@ export interface Project {
   tags: string[];
   inDevelopment?: boolean;
   image?: string;
+  attachments?: ExperienceAttachment[];
   sortOrder?: number;
 }
 

@@ -23,6 +23,16 @@ export class ContentService {
     return this.sortProjects(projects.map((project) => this.normalizeProject(project)));
   }
 
+  async getProjectById(id: string): Promise<Project | undefined> {
+    const projects = await this.getProjects();
+    return projects.find((project) => project.id === id);
+  }
+
+  async getProjectIds(): Promise<string[]> {
+    const projects = await this.getProjects();
+    return projects.map((project) => project.id);
+  }
+
   async getExperience(): Promise<ExperienceItem[]> {
     const items = await this.getJson<ExperienceItem[]>('experience');
     return items.map((item) => this.normalizeExperienceItem(item));

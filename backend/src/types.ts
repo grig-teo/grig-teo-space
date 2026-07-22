@@ -3,6 +3,15 @@ export type Locale = 'en' | 'ru' | 'ro';
 export type LocalizedString = Record<Locale, string>;
 export type LocalizedList = Record<Locale, string[]>;
 
+export type ExperienceAttachmentType = 'video' | 'image' | 'doc';
+
+export interface ExperienceAttachment {
+  /** Inferred from the URL extension when omitted. */
+  type?: ExperienceAttachmentType;
+  url: string;
+  title?: string;
+}
+
 export interface Project {
   id: string;
   title: LocalizedString;
@@ -13,16 +22,9 @@ export interface Project {
   tags: string[];
   inDevelopment?: boolean;
   image?: string;
+  /** Files attached to this project (demo videos, screenshots, docs…). */
+  attachments?: ExperienceAttachment[];
   sortOrder?: number;
-}
-
-export type ExperienceAttachmentType = 'video' | 'image' | 'doc';
-
-export interface ExperienceAttachment {
-  /** Inferred from the URL extension when omitted. */
-  type?: ExperienceAttachmentType;
-  url: string;
-  title?: string;
 }
 
 export interface ExperienceItem {

@@ -18,6 +18,14 @@ export class PortfolioService {
     return this.content.getProjects();
   }
 
+  async getProjectById(id: string): Promise<Project | undefined> {
+    return this.content.getProjectById(id);
+  }
+
+  async getProjectIds(): Promise<string[]> {
+    return this.content.getProjectIds();
+  }
+
   async getExperience(): Promise<ExperienceItem[]> {
     return this.content.getExperience();
   }

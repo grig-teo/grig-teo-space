@@ -84,13 +84,13 @@ export default async function HomePage({ params }: Props) {
         <HeroScene />
       </div>
       <Reveal>
+        <Experience items={experience} />
+      </Reveal>
+      <Reveal>
         <ProjectsPreview projects={projects} />
       </Reveal>
       <Reveal>
         <BlogPreview posts={blogPosts} locale={locale} />
-      </Reveal>
-      <Reveal>
-        <Experience items={experience} />
       </Reveal>
     </main>
   );
