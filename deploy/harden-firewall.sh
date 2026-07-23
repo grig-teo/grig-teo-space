@@ -11,9 +11,14 @@
 #      are proxied through host nginx on 127.0.0.1, so nothing Docker-published
 #      needs to be reachable from the internet. This is what closes exposures
 #      like "a container bound 0.0.0.0:3000".
+#      Exception: debate_realtime_service's WebRTC media ports (40200-40300,
+#      TCP+UDP) must stay publicly reachable — proxied HTTPS alone can't carry
+#      them.
 #
 # To undo the Docker layer:
 #   iptables -D DOCKER-USER -i <pub-iface> -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+#   iptables -D DOCKER-USER -i <pub-iface> -p udp --dport 40200:40300 -j ACCEPT
+#   iptables -D DOCKER-USER -i <pub-iface> -p tcp --dport 40200:40300 -j ACCEPT
 #   iptables -D DOCKER-USER -i <pub-iface> -j DROP
 #   netfilter-persistent save
 set -euo pipefail
@@ -50,15 +55,26 @@ ufw status verbose
 
 # --- Layer 2: DOCKER-USER chain ------------------------------------------------
 # Docker creates DOCKER-USER on daemon start and never flushes it; rules here
-# are evaluated before any port publishing. Insert accept-established first,
-# then the drop, both idempotently.
+# are evaluated before any port publishing. Insert order matters: established,
+# WebRTC media exception, then the drop. Each rule is added idempotently.
 if ! iptables -C DOCKER-USER -i "${PUB_IFACE}" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT 2>/dev/null; then
   iptables -I DOCKER-USER 1 -i "${PUB_IFACE}" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
   echo "==> Added DOCKER-USER established/related accept on ${PUB_IFACE}"
 fi
 
+# WebRTC media ports for debate_realtime_service (must stay publicly open).
+if ! iptables -C DOCKER-USER -i "${PUB_IFACE}" -p udp --dport 40200:40300 -j ACCEPT 2>/dev/null; then
+  iptables -I DOCKER-USER 2 -i "${PUB_IFACE}" -p udp --dport 40200:40300 -j ACCEPT
+  echo "==> Added DOCKER-USER WebRTC UDP 40200-40300 accept on ${PUB_IFACE}"
+fi
+
+if ! iptables -C DOCKER-USER -i "${PUB_IFACE}" -p tcp --dport 40200:40300 -j ACCEPT 2>/dev/null; then
+  iptables -I DOCKER-USER 3 -i "${PUB_IFACE}" -p tcp --dport 40200:40300 -j ACCEPT
+  echo "==> Added DOCKER-USER WebRTC TCP 40200-40300 accept on ${PUB_IFACE}"
+fi
+
 if ! iptables -C DOCKER-USER -i "${PUB_IFACE}" -j DROP 2>/dev/null; then
-  iptables -I DOCKER-USER 2 -i "${PUB_IFACE}" -j DROP
+  iptables -I DOCKER-USER 4 -i "${PUB_IFACE}" -j DROP
   echo "==> Added DOCKER-USER external drop on ${PUB_IFACE}"
 fi
 
