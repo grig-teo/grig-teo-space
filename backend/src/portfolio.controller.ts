@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Header,
+  BadRequestException,
   NotFoundException,
   Param,
   Query,
@@ -122,6 +123,11 @@ export class PortfolioController {
 
   @Get('blog/:id')
   async blogDetail(@Param('id') id: string, @Query('locale') locale?: string) {
+    // Slugs are plain lowercase-dash ids; anything else (traversal probes like
+    // "..%2f..%2f") is a bad request, not a lookup.
+    if (!/^[a-z0-9-]+$/.test(id)) {
+      throw new BadRequestException('Invalid blog post id');
+    }
     const post = await this.portfolio.getBlogPostById(id);
     if (!post) {
       throw new NotFoundException('Blog post not found');

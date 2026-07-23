@@ -4,6 +4,8 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Don't disclose the framework version banner (nginx also strips it).
+  app.disable('x-powered-by');
   // Trust the proxy chain (nginx → backend) so `req.ip` / `@Ip()` resolves to
   // the real client address from X-Forwarded-For / X-Real-IP instead of the
   // Docker bridge IP. Needed for per-IP rate limiting on the AI chat.

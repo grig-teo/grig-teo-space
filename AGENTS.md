@@ -157,13 +157,15 @@ explicitly told to proceed.
 
 ### Host firewall (one-time per VPS)
 
-`deploy/harden-firewall.sh` hardens the VPS itself with two iptables layers:
-INPUT-chain rules on the public interface (allow 22/80/443 only) plus
-`DOCKER-USER` rules that make all Docker-published ports unreachable from the
-internet (everything is proxied via host nginx on 127.0.0.1; exception:
-WebRTC media ports 40200-40300 for debate_room). Rules are persisted with
-iptables-persistent. Run it on the VPS as root after the first deploy, and
-re-run if rules are ever lost. It is idempotent.
+`deploy/harden-firewall.sh` hardens the VPS itself with two layers: ufw
+(allow 22/80/443, default deny incoming, forward policy forced to ACCEPT so
+Docker egress keeps working) plus `DOCKER-USER` iptables rules that make all
+Docker-published ports unreachable from the internet (everything is proxied
+via host nginx on 127.0.0.1; exception: WebRTC media ports 40200-40300 for
+debate_room). The DOCKER-USER rules are persisted by a systemd oneshot unit
+(`docker-user-fw.service`, PartOf docker.service) because iptables-persistent
+conflicts with ufw on Debian and Docker recreates the chain on daemon start.
+Run it on the VPS as root after the first deploy; it is idempotent.
 
 ### iOS install on a connected device
 
