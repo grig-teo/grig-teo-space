@@ -15,6 +15,11 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const ALLOWED_PREFIXES = ['image/', 'video/', 'audio/'];
 /** Document attachments (e.g. experience PDFs) are allowed on top of media. */
 const ALLOWED_EXACT = ['application/pdf'];
+/**
+ * SVG can embed scripts and uploads are served from this origin (/media/),
+ * which would make an uploaded SVG a stored-XSS vector.
+ */
+const BLOCKED_EXACT = ['image/svg+xml'];
 
 @Controller('admin/upload')
 @UseGuards(AdminAuthGuard)
@@ -31,6 +36,10 @@ export class AdminUploadController {
   async upload(@UploadedFile() file?: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
+    }
+
+    if (BLOCKED_EXACT.includes(file.mimetype)) {
+      throw new BadRequestException('SVG uploads are not allowed');
     }
 
     const allowed =
