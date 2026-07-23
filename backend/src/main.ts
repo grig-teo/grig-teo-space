@@ -10,8 +10,10 @@ async function bootstrap() {
   app.set('trust proxy', 1);
   app.enableCors({
     origin: process.env.CORS_ORIGIN?.split(',') ?? ['http://localhost:3000'],
-    // Allow the admin session cookie on cross-origin dev calls (:3000 → :3001).
-    credentials: true,
+    // Credentials are only needed for the admin session cookie on cross-origin
+    // dev calls (:3000 → :3001). In prod the dashboard is same-origin via
+    // nginx, so don't emit Access-Control-Allow-Credentials there.
+    credentials: (process.env.CORS_ORIGIN ?? 'http://localhost:3000').includes('localhost'),
   });
   app.setGlobalPrefix('api');
   await app.listen(process.env.PORT ?? 3001);

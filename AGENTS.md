@@ -155,6 +155,14 @@ rebuilds all containers, and reloads nginx. **Deploying is an outward-facing
 action on a live server** — confirm with the user before running it unless
 explicitly told to proceed.
 
+### Host firewall (one-time per VPS)
+
+`deploy/harden-firewall.sh` hardens the VPS itself: ufw (allow 22/80/443 only)
+plus `DOCKER-USER` iptables rules that make all Docker-published ports
+unreachable from the internet (everything is proxied via host nginx on
+127.0.0.1). Run it on the VPS as root after the first deploy, and re-run if
+rules are ever lost. It is idempotent.
+
 ### iOS install on a connected device
 
 ```bash
