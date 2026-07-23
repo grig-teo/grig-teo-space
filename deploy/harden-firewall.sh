@@ -3,9 +3,10 @@
 # or Docker upgrade). Run ON the VPS as root:
 #   bash /opt/grig-teo-space/deploy/harden-firewall.sh
 #
-# Two layers, because Docker-published ports bypass ufw INPUT rules:
-#   1. ufw — protects host-level listeners (SSH, nginx, anything binding the
-#      host network directly).
+# Two layers, because Docker-published ports bypass host INPUT rules:
+#   1. INPUT chain — protects host-level listeners (SSH, nginx, anything
+#      binding the host network directly). Scoped to the public interface so
+#      Docker bridge traffic (containers reaching the host) is unaffected.
 #   2. DOCKER-USER chain — drops traffic arriving on the public interface
 #      before it reaches any Docker-published port. All services on this box
 #      are proxied through host nginx on 127.0.0.1, so nothing Docker-published
@@ -15,7 +16,13 @@
 #      TCP+UDP) must stay publicly reachable — proxied HTTPS alone can't carry
 #      them.
 #
-# To undo the Docker layer:
+# NOTE: ufw is deliberately NOT used — on Debian, iptables-persistent
+# (needed to persist the DOCKER-USER rules) conflicts with and removes ufw.
+# Plain iptables covers both layers with one persistence mechanism.
+#
+# To undo:
+#   iptables -D INPUT -i <pub-iface> -j DROP
+#   iptables -D INPUT -i <pub-iface> -p tcp -m multiport --dports 22,80,443 -j ACCEPT
 #   iptables -D DOCKER-USER -i <pub-iface> -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 #   iptables -D DOCKER-USER -i <pub-iface> -p udp --dport 40200:40300 -j ACCEPT
 #   iptables -D DOCKER-USER -i <pub-iface> -p tcp --dport 40200:40300 -j ACCEPT
@@ -38,20 +45,28 @@ echo "==> Public interface: ${PUB_IFACE}"
 echo "==> Listening sockets BEFORE:"
 ss -tlnp || true
 
-# --- Layer 1: ufw -------------------------------------------------------------
-if ! command -v ufw >/dev/null 2>&1; then
-  echo "==> Installing ufw..."
-  apt-get update -qq
-  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ufw
+# --- Layer 1: INPUT chain (host-level listeners) -------------------------------
+# Rules are scoped to the public interface; loopback and Docker bridge traffic
+# stay unaffected. SSH (22) is allowed before the drop — no lockout risk.
+if ! iptables -C INPUT -i lo -j ACCEPT 2>/dev/null; then
+  iptables -I INPUT 1 -i lo -j ACCEPT
+  echo "==> Added INPUT loopback accept"
 fi
 
-ufw default deny incoming
-ufw default allow outgoing
-ufw allow 22/tcp   # SSH — must come before enabling
-ufw allow 80/tcp   # HTTP (ACME challenges + redirect to HTTPS)
-ufw allow 443/tcp  # HTTPS
-ufw --force enable
-ufw status verbose
+if ! iptables -C INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT 2>/dev/null; then
+  iptables -I INPUT 2 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+  echo "==> Added INPUT established/related accept"
+fi
+
+if ! iptables -C INPUT -i "${PUB_IFACE}" -p tcp -m multiport --dports 22,80,443 -j ACCEPT 2>/dev/null; then
+  iptables -I INPUT 3 -i "${PUB_IFACE}" -p tcp -m multiport --dports 22,80,443 -j ACCEPT
+  echo "==> Added INPUT 22/80/443 accept on ${PUB_IFACE}"
+fi
+
+if ! iptables -C INPUT -i "${PUB_IFACE}" -j DROP 2>/dev/null; then
+  iptables -I INPUT 4 -i "${PUB_IFACE}" -j DROP
+  echo "==> Added INPUT external drop on ${PUB_IFACE}"
+fi
 
 # --- Layer 2: DOCKER-USER chain ------------------------------------------------
 # Docker creates DOCKER-USER on daemon start and never flushes it; rules here
@@ -84,6 +99,9 @@ if ! command -v netfilter-persistent >/dev/null 2>&1; then
   DEBIAN_FRONTEND=noninteractive apt-get install -y -qq iptables-persistent
 fi
 netfilter-persistent save
+
+echo "==> INPUT chain now:"
+iptables -L INPUT -n -v --line-numbers | head -12
 
 echo "==> DOCKER-USER chain now:"
 iptables -L DOCKER-USER -n -v --line-numbers
