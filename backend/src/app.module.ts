@@ -1,9 +1,12 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AiController } from './ai.controller';
 import { AiService } from './ai.service';
 import { AiRateLimiter } from './ai-rate-limiter';
 import { AdminModule } from './admin/admin.module';
+import { SecurityModule } from './security/security.module';
 import { ContentModule } from './content/content.module';
 import { CvModule } from './cv/cv.module';
 import { AiChatMessage } from './entities/ai-chat-message.entity';
@@ -27,6 +30,11 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
   imports: [
+    // Global throttle: 300 req/min per IP by default (generous baseline that
+    // covers legitimate automation — iOS app, Telegram bot, public reads).
+    // Auth routes override this with a stricter limit via @Throttle().
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
+    SecurityModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
@@ -54,6 +62,15 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     WebhooksModule,
   ],
   controllers: [PortfolioController, AiController, LinkedInController],
-  providers: [PortfolioService, AiService, LinkedInService, AiRateLimiter],
+  providers: [
+    PortfolioService,
+    AiService,
+    LinkedInService,
+    AiRateLimiter,
+    // Global guard: applies the ThrottlerModule config to every route.
+    // Routes can override the limit with @Throttle() or opt out with
+    // @SkipThrottle().
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}
