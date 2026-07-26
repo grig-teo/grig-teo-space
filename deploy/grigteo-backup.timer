@@ -1,0 +1,17 @@
+# deploy/grigteo-backup.timer
+# Daily off-server backup. Runs ~03:00 local with up to 1h jitter (so a flapping
+# nightly target isn't hammered at the exact same second every night).
+# Persistent=true means: if the box was off/down at the scheduled time, the
+# missed run executes shortly after the next boot (no silent gaps).
+[Unit]
+Description=Run grigteo-backup.service daily
+Requires=grigteo-backup.service
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=1h
+Persistent=true
+Unit=grigteo-backup.service
+
+[Install]
+WantedBy=timers.target
