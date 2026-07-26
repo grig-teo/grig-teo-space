@@ -85,6 +85,12 @@ docker-compose.prod.yml     production stack (VPS)
   so large videos survive app termination via a background `URLSession`.
 - **Telegram bot:** Telegraf, text-only (`/note`, `/mood`, `/today`, `/week`).
   It does NOT handle media. Talks to the backend with the device key.
+- **Dev-bot webhook bridge:** `POST /api/webhooks/lemniscate` (module
+  `backend/src/webhooks/`) receives lemniscate notification webhooks, verifies
+  the `x-lemniscate-signature` HMAC against the raw body
+  (`LEMNISCATE_WEBHOOK_SECRET`), and forwards the event to the
+  `@grig_teo_dev_bot` Telegram chat (`DEV_TELEGRAM_BOT_TOKEN` /
+  `DEV_TELEGRAM_CHAT_ID`). All three values live only in `.env.production`.
 
 ## Coding standards
 

@@ -14,7 +14,15 @@ async function bootstrap() {
   });
   // Don't disclose the framework version banner (nginx also strips it).
   app.disable('x-powered-by');
-  app.use(json());
+  // Capture the raw body while parsing — HMAC webhook verification
+  // (/api/webhooks/lemniscate) needs the exact bytes, pre-parse.
+  app.use(
+    json({
+      verify: (req, _res, buf) => {
+        (req as Request & { rawBody?: Buffer }).rawBody = buf;
+      },
+    }),
+  );
   app.use(urlencoded({ extended: true }));
   app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
     if ((err as { type?: string })?.type === 'entity.parse.failed') {

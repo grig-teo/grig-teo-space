@@ -23,6 +23,7 @@ import { LinkedInService } from './linkedin.service';
 import { PortfolioController } from './portfolio.controller';
 import { PortfolioService } from './portfolio.service';
 import { StorageModule } from './storage/storage.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { StorageModule } from './storage/storage.module';
     HealthModule,
     DocumentsModule,
     MediaModule,
+    WebhooksModule,
   ],
   controllers: [PortfolioController, AiController, LinkedInController],
   providers: [PortfolioService, AiService, LinkedInService, AiRateLimiter],
