@@ -5,7 +5,7 @@
 #   systemctl start grigteo-backup.service
 [Unit]
 Description=grig-teo nightly off-server backup (Postgres + MinIO)
-Documentation=file:///opt/grig-teo-space/deploy/RESTORE.md
+Documentation=file://__REMOTE_DIR__/deploy/RESTORE.md
 Wants=network-online.target
 After=network-online.target docker.service
 Requires=docker.service

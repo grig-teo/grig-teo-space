@@ -46,6 +46,9 @@ AGE_RECIPIENT="${BACKUP_AGE_RECIPIENT:-}"
 # Transport + retention.
 TRANSPORT="${BACKUP_TRANSPORT:-rsync}"
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
+# Local artifact cache is pruned independently (default 7 days) so it can be
+# shorter than the 30-day remote retention — keeps the VPS disk from filling.
+LOCAL_RETENTION_DAYS="${BACKUP_LOCAL_RETENTION_DAYS:-7}"
 
 TS="$(date -u +%Y%m%dT%H%M%SZ)"
 ARTIFACT_NAME="grigteo-backup-${TS}.tar.gz.age"
@@ -266,6 +269,14 @@ prune() {
   esac
 }
 
+prune_local() {
+  log "pruning local artifacts older than ${LOCAL_RETENTION_DAYS} days"
+  find "${ARTIFACT_DIR}" -maxdepth 1 -type f \
+    -name 'grigteo-backup-*.tar.gz.age' \
+    -mtime +"${LOCAL_RETENTION_DAYS}" -delete 2>/dev/null \
+    || log "WARN: local prune failed (continuing)"
+}
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -279,6 +290,7 @@ main() {
 
   upload
   prune
+  prune_local
 
   log "DONE: ${ARTIFACT_NAME} ($(du -h "${ARTIFACT_DIR}/${ARTIFACT_NAME}" | cut -f1))"
 }

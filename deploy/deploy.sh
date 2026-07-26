@@ -28,6 +28,7 @@ rsync -avz --delete \
   --exclude 'backend/.venv' \
   --exclude '.env' \
   --exclude '.env.production' \
+  --exclude 'backups/' \
   "${ROOT_DIR}/" "${VPS_HOST}:${REMOTE_DIR}/"
 
 ssh "${VPS_HOST}" bash -s <<EOF
