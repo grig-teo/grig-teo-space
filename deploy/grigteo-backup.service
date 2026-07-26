@@ -1,0 +1,28 @@
+# deploy/grigteo-backup.service
+# Installed by deploy/deploy.sh (the __REMOTE_DIR__ token is substituted with
+# the actual deploy directory, normally /opt/grig-teo-space). Triggered daily by
+# grigteo-backup.timer, but can also be started by hand:
+#   systemctl start grigteo-backup.service
+[Unit]
+Description=grig-teo nightly off-server backup (Postgres + MinIO)
+Documentation=file://__REMOTE_DIR__/deploy/RESTORE.md
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=__REMOTE_DIR__
+ExecStart=__REMOTE_DIR__/deploy/backup.sh
+# Backups must not fail silently — give the dump+mirror+upload plenty of room.
+TimeoutStartSec=2h
+# backup.sh sources .env.production itself, so no EnvironmentFile here (avoids
+# systemd parsing quirks with URL/comma values).
+PrivateTmp=true
+# "nice" priority so the nightly dump doesn't starve the live stack.
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=timers.target
