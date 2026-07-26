@@ -38,7 +38,7 @@ rebuild) are plain gzipped SQL dumps:
 
 ## 1. Obtain the private key
 
-The VPS only ever holds the **public** key (`BACKUP_AGE_RECIPIENTENT`).
+The VPS only ever holds the **public** key (`BACKUP_AGE_RECIPIENT`).
 The private half must already be in your password manager as a file, e.g.
 `backup-key.txt`, whose contents look like:
 
