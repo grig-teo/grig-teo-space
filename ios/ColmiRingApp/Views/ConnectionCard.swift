@@ -29,13 +29,11 @@ struct ConnectionCard: View {
             }
 
             if let name = ble.deviceName {
-                LabeledRow(label: "Device", value: name)
+                let battery = ble.batteryLevel.map { " · \($0)%" } ?? ""
+                LabeledRow(label: "Device", value: "\(name)\(battery)")
             }
             if let rssi = ble.rssi {
                 LabeledRow(label: "Signal", value: "\(rssi) dBm")
-            }
-            if let battery = ble.batteryLevel {
-                LabeledRow(label: "Battery", value: "\(battery)%")
             }
             if let last = ble.lastReadingAt {
                 LabeledRow(label: "Last reading", value: last.formatted(date: .omitted, time: .shortened))
