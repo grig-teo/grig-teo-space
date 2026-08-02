@@ -230,7 +230,7 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
         switch metric {
         case .distanceKm:
             value = String(format: "%.2f", reading.value)
-        case .sleepDurationH:
+        case .sleepDurationH, .bodyTemperature:
             value = String(format: "%.1f", reading.value)
         case .sleepQuality:
             value = "\(Int(reading.value))"
@@ -430,13 +430,30 @@ extension RingBluetoothManager: CBPeripheralDelegate {
         case .syncStress, .syncHRV:
             handleIntervalLog(bytes)
         case .notification:
-            if bytes.count >= 2,
-               bytes[1] == ColmiProtocol.NotificationType.liveActivity.rawValue,
-               let live = ColmiProtocol.parseLiveActivity(bytes) {
-                logTraffic("← Live: \(live.steps) steps · \(live.calories) kcal · \(live.distanceMeters) m today")
+            guard bytes.count >= 2 else { break }
+            switch bytes[1] {
+            case ColmiProtocol.NotificationType.liveActivity.rawValue:
+                if let live = ColmiProtocol.parseLiveActivity(bytes) {
+                    logTraffic("← Live: \(live.steps) steps · \(live.calories) kcal · \(live.distanceMeters) m today")
+                }
+            case ColmiProtocol.NotificationType.temperature.rawValue:
+                if let celsius = ColmiProtocol.parseTemperature(bytes) {
+                    let reading = HealthReading(metric: .bodyTemperature, value: celsius)
+                    emit(reading)
+                    logTraffic("← \(describe(reading))")
+                } else {
+                    // Unknown layout — log raw so the encoding can be pinned.
+                    logTraffic("← Temperature frame: \(ColmiProtocol.hex(data))")
+                }
+            default:
+                logTraffic("← Notify 0x\(String(bytes[1], radix: 16, uppercase: true)): \(ColmiProtocol.hex(data))")
             }
         case .setTime:
-            logTraffic("← Ring time set")
+            if let supportsTemperature = ColmiProtocol.parseCapabilities(bytes) {
+                logTraffic("← Ring time set · temperature sensor: \(supportsTemperature ? "yes" : "no")")
+            } else {
+                logTraffic("← Ring time set")
+            }
         case .bigDataV2:
             handleBigData(data)
         default:

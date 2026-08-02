@@ -73,6 +73,7 @@ enum ColmiProtocol {
 
     /// Notification subtypes (byte 1 of an 0x73 frame).
     enum NotificationType: UInt8 {
+        case temperature = 0x05
         case liveActivity = 0x12
     }
 
@@ -205,6 +206,35 @@ enum ColmiProtocol {
             Int(bytes[lo]) | (Int(bytes[lo + 1]) << 8) | (Int(bytes[lo + 2]) << 16)
         }
         return (uint24(2), uint24(5) / 10, uint24(8))
+    }
+
+    /// Temperature push (opcode 115, subtype 0x05). The frame layout is not
+    /// documented; QRing reports values like 36.7 °C. Try the plausible
+    /// encodings in order: uint16 LE centi-°C at bytes 2..3 (2500–4500),
+    /// then a whole-°C byte at byte 2 (25–45). Returns nil when neither
+    /// fits so garbage frames stay out of the series.
+    static func parseTemperature(_ bytes: [UInt8]) -> Double? {
+        guard bytes.count >= 4 else { return nil }
+        let centi = Int(bytes[2]) | (Int(bytes[3]) << 8)
+        if (2500...4500).contains(centi) {
+            return Double(centi) / 100
+        }
+        if (25...45).contains(Int(bytes[2])) {
+            return Double(bytes[2])
+        }
+        return nil
+    }
+
+    /// Capability flags from the set-time response (opcode 1):
+    /// byte 1 = temperature sensor present.
+    static func parseCapabilities(_ bytes: [UInt8]) -> Bool? {
+        guard bytes.count >= 2 else { return nil }
+        return bytes[1] == 1
+    }
+
+    /// Hex dump for discovery logging of unrecognized frames.
+    static func hex(_ data: Data) -> String {
+        data.map { String(format: "%02X", $0) }.joined(separator: " ")
     }
 }
 

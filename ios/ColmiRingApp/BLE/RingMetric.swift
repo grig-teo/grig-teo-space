@@ -11,6 +11,7 @@ enum RingMetric: String, CaseIterable, Codable {
     case hrv = "hrv"
     case sleepDurationH = "sleep_duration_h"
     case sleepQuality = "sleep_quality"
+    case bodyTemperature = "body_temperature"
 
     var displayName: String {
         switch self {
@@ -23,6 +24,7 @@ enum RingMetric: String, CaseIterable, Codable {
         case .hrv: return "HRV"
         case .sleepDurationH: return "Sleep"
         case .sleepQuality: return "Sleep Quality"
+        case .bodyTemperature: return "Body Temp"
         }
     }
 
@@ -37,6 +39,7 @@ enum RingMetric: String, CaseIterable, Codable {
         case .hrv: return "ms"
         case .sleepDurationH: return "h"
         case .sleepQuality: return "%"
+        case .bodyTemperature: return "°C"
         }
     }
 }

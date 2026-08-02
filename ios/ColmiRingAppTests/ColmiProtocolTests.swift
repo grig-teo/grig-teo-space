@@ -276,3 +276,33 @@ struct ColmiHistoryParserTests {
         #expect(hrv?.metric == "hrv" && hrv?.value == 55)
     }
 }
+
+@MainActor
+struct ColmiTemperatureTests {
+    @Test
+    func parsesCentiCelsiusFrames() {
+        // 36.7 °C = 3670 centi-°C = 0x0E56 → LE bytes 56 0E
+        let value = ColmiProtocol.parseTemperature([0x73, 0x05, 0x56, 0x0E])
+        #expect(value == 36.7)
+    }
+
+    @Test
+    func parsesWholeCelsiusByte() {
+        let value = ColmiProtocol.parseTemperature([0x73, 0x05, 36, 0x00])
+        #expect(value == 36)
+    }
+
+    @Test
+    func rejectsGarbageFrames() {
+        #expect(ColmiProtocol.parseTemperature([0x73, 0x05]) == nil)
+        #expect(ColmiProtocol.parseTemperature([0x73, 0x05, 0xFF, 0xFF]) == nil)
+        #expect(ColmiProtocol.parseTemperature([0x73, 0x05, 10, 0x00]) == nil)
+    }
+
+    @Test
+    func parsesTemperatureCapability() {
+        #expect(ColmiProtocol.parseCapabilities([0x01, 0x01]) == true)
+        #expect(ColmiProtocol.parseCapabilities([0x01, 0x00]) == false)
+        #expect(ColmiProtocol.parseCapabilities([0x01]) == nil)
+    }
+}

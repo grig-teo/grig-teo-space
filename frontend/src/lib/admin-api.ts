@@ -208,7 +208,8 @@ export type HealthMetric =
   | 'stress'
   | 'hrv'
   | 'sleep_duration_h'
-  | 'sleep_quality';
+  | 'sleep_quality'
+  | 'body_temperature';
 
 export type MetricSeriesPoint = {
   recordedAt: string;

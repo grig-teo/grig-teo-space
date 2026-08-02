@@ -21,6 +21,7 @@ const RECOMMENDATIONS: Record<HealthMetric, Recommendation> = {
   hrv: 'optional',
   sleep_duration_h: 'optional',
   sleep_quality: 'personal',
+  body_temperature: 'personal',
 };
 
 const RECOMMENDATION_LABEL: Record<Recommendation, string> = {
@@ -45,6 +46,7 @@ const ALL_METRICS: HealthMetric[] = [
   'stress',
   'sleep_duration_h',
   'sleep_quality',
+  'body_temperature',
 ];
 
 const ACCENT_BTN =

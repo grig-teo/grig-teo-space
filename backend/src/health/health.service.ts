@@ -152,6 +152,7 @@ const DEFAULT_UNITS: Record<HealthMetric, string> = {
   hrv: 'ms',
   sleep_duration_h: 'h',
   sleep_quality: '%',
+  body_temperature: '°C',
 };
 
 export const METRIC_LABELS: Record<HealthMetric, string> = {
@@ -164,6 +165,7 @@ export const METRIC_LABELS: Record<HealthMetric, string> = {
   hrv: 'Heart Rate Variability',
   sleep_duration_h: 'Sleep Duration',
   sleep_quality: 'Sleep Quality',
+  body_temperature: 'Body Temperature',
 };
 
 // Anomaly thresholds. A reading outside these bounds in the recent window
