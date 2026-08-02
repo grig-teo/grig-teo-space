@@ -39,21 +39,21 @@ struct RingView: View {
         .navigationTitle("Ring")
     }
 
-    /// Raw ring traffic (newest at the bottom): what the app sent (→) and
-    /// what the ring answered (←), so collected data is visible on the page
-    /// before it is uploaded to the server.
+    /// Live activity with the ring (newest at the bottom): what the app
+    /// asked for (→) and what the ring answered (←), in readable form — the
+    /// data is visible here before it is uploaded to the server.
     private var trafficCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Ring traffic").font(.headline)
-            Text("Raw packets exchanged with the ring.")
+            Text("Ring activity").font(.headline)
+            Text("Live data read from the ring.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             ForEach(Array(appState.bleBox.traffic.enumerated()), id: \.offset) { _, line in
                 Text(line)
-                    .font(.caption2.monospaced())
+                    .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
-                    .truncationMode(.middle)
+                    .truncationMode(.tail)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

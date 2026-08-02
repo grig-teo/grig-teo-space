@@ -146,11 +146,6 @@ enum ColmiProtocol {
         guard bytes.count >= 3 else { return nil }
         return (Int(bytes[1]), bytes[2] != 0)
     }
-
-    /// Hex dump for the on-screen traffic log.
-    static func hex(_ data: Data) -> String {
-        data.map { String(format: "%02X", $0) }.joined(separator: " ")
-    }
 }
 
 /**

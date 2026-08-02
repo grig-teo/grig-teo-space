@@ -116,12 +116,12 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
     func requestRealtimeReading(command: ColmiProtocol.Command = .realtimeHeartRate) {
         switch command {
         case .setTime:
-            write(ColmiProtocol.setTimePacket())
+            write(ColmiProtocol.setTimePacket(), "Set ring time")
         case .battery:
-            write(ColmiProtocol.batteryPacket())
+            write(ColmiProtocol.batteryPacket(), "Request battery")
         case .steps:
             stepsParser.reset()
-            write(ColmiProtocol.stepsPacket(dayOffset: 0))
+            write(ColmiProtocol.stepsPacket(dayOffset: 0), "Request today's activity")
         case .realtimeHeartRate:
             startRealTime(kind: .heartRate)
         case .realtimeSpo2:
@@ -131,13 +131,15 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
 
     /// Start (or keep alive) a realtime stream, switching kinds if needed.
     private func startRealTime(kind: ColmiProtocol.RealTimeKind) {
+        let name = kind == .heartRate ? "heart rate" : "blood oxygen"
         if activeRealTime == kind {
-            write(ColmiProtocol.realTimePacket(kind: kind, action: .continue))
+            write(ColmiProtocol.realTimePacket(kind: kind, action: .continue), "Continue realtime \(name)")
         } else {
             if let previous = activeRealTime {
-                write(ColmiProtocol.stopRealTimePacket(kind: previous))
+                let previousName = previous == .heartRate ? "heart rate" : "blood oxygen"
+                write(ColmiProtocol.stopRealTimePacket(kind: previous), "Stop realtime \(previousName)")
             }
-            write(ColmiProtocol.realTimePacket(kind: kind, action: .start))
+            write(ColmiProtocol.realTimePacket(kind: kind, action: .start), "Start realtime \(name)")
             activeRealTime = kind
         }
     }
@@ -160,9 +162,9 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
 
     // MARK: - Packet I/O
 
-    private func write(_ packet: Data) {
+    private func write(_ packet: Data, _ label: String) {
         guard let peripheral, let txCharacteristic else { return }
-        logTraffic("→", packet)
+        logTraffic("→ \(label)")
         peripheral.writeValue(packet, for: txCharacteristic, type: .withResponse)
     }
 
@@ -171,8 +173,19 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
         readings.send(reading)
     }
 
-    private func logTraffic(_ direction: String, _ data: Data) {
-        traffic.append("\(direction) \(ColmiProtocol.hex(data))")
+    /// Human-readable line for one parsed reading (e.g. "Heart rate: 72 bpm").
+    private func describe(_ reading: HealthReading) -> String {
+        guard let metric = RingMetric(rawValue: reading.metric) else {
+            return "\(reading.metric): \(Int(reading.value))"
+        }
+        let value = reading.metric == RingMetric.distanceKm.rawValue
+            ? String(format: "%.2f", reading.value)
+            : "\(Int(reading.value))"
+        return "\(metric.displayName): \(value)\(metric.unit.isEmpty ? "" : " \(metric.unit)")"
+    }
+
+    private func logTraffic(_ line: String) {
+        traffic.append(line)
         if traffic.count > 30 {
             traffic.removeFirst(traffic.count - 30)
         }
@@ -299,25 +312,43 @@ extension RingBluetoothManager: CBPeripheralDelegate {
         }
         guard characteristic.uuid == ColmiProtocol.rxCharacteristicUUID else { return }
 
-        logTraffic("←", data)
         let bytes = [UInt8](data)
         guard let opcode = bytes.first, let kind = ColmiProtocol.Opcode(rawValue: opcode) else { return }
         switch kind {
         case .battery:
             if let info = ColmiProtocol.parseBattery(bytes) {
                 batteryLevel = info.level
+                logTraffic("← Battery: \(info.level)%\(info.charging ? " (charging)" : "")")
             }
         case .startRealTime:
             if let reading = ColmiProtocol.parseRealTime(bytes) {
                 emit(reading)
+                logTraffic("← \(describe(reading))")
             }
+            // Frames with error codes or settling values (0) are skipped
+            // silently — they flood the log while a stream warms up.
         case .getSteps:
             if let slotReadings = stepsParser.parse(bytes) {
-                slotReadings.forEach(emit)
+                if slotReadings.isEmpty {
+                    logTraffic("← Activity: no data for today")
+                } else {
+                    slotReadings.forEach(emit)
+                    logTraffic("← \(describeSlot(slotReadings))")
+                }
             }
+            // Header/continuation frames carry no slot data — skip.
+        case .setTime:
+            logTraffic("← Ring time set")
         default:
-            // setTime ack, HR-log frames, etc. — not parsed yet.
-            break
+            logTraffic("← Unknown frame (0x\(String(opcode, radix: 16, uppercase: true)))")
         }
+    }
+
+    /// One line for a 15-minute activity slot, e.g.
+    /// "Activity 04:00 — 300 steps · 1000 kcal · 0.50 km".
+    private func describeSlot(_ readings: [HealthReading]) -> String {
+        let time = readings.first?.recordedAt.formatted(date: .omitted, time: .shortened) ?? ""
+        let parts = readings.map(describe).joined(separator: " · ")
+        return "Activity \(time) — \(parts)"
     }
 }
