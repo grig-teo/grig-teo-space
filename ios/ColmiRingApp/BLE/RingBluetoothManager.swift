@@ -31,6 +31,11 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
     /// on the Ring page so collected data is visible before it is uploaded.
     @Published private(set) var traffic: [String] = []
 
+    /// Today's live totals pushed by the ring in real time (steps walk in
+    /// as you take them). UI-only: the server series stays slot-based to
+    /// avoid double counting.
+    @Published private(set) var liveActivity: LiveActivityTotals?
+
     /** New readings are published here; the API client drains them. */
     let readings = PassthroughSubject<HealthReading, Never>()
 
@@ -480,6 +485,11 @@ extension RingBluetoothManager: CBPeripheralDelegate {
             switch bytes[1] {
             case ColmiProtocol.NotificationType.liveActivity.rawValue:
                 if let live = ColmiProtocol.parseLiveActivity(bytes) {
+                    liveActivity = LiveActivityTotals(
+                        steps: live.steps,
+                        calories: live.calories,
+                        distanceMeters: live.distanceMeters,
+                    )
                     logTraffic("← Live: \(live.steps) steps · \(live.calories) kcal · \(live.distanceMeters) m today")
                 }
             case ColmiProtocol.NotificationType.temperature.rawValue:

@@ -43,7 +43,7 @@ struct RingView: View {
                         ForEach(RingMetric.allCases, id: \.self) { metric in
                             MetricCard(
                                 metric: metric,
-                                value: latestByMetric[metric],
+                                value: valueForDisplay(metric),
                                 loading: lifecycle.isSyncing,
                             )
                         }
@@ -58,6 +58,20 @@ struct RingView: View {
             .padding(.vertical)
         }
         .navigationTitle("Ring")
+    }
+
+    /// Activity cards show the ring's live totals (update on every step);
+    /// everything else shows the latest parsed reading.
+    private func valueForDisplay(_ metric: RingMetric) -> Double? {
+        if let live = appState.bleBox.liveActivity {
+            switch metric {
+            case .steps: return Double(live.steps)
+            case .calories: return Double(live.calories)
+            case .distanceKm: return Double(live.distanceMeters) / 1000
+            default: break
+            }
+        }
+        return latestByMetric[metric]
     }
 
     /// Live activity with the ring (newest at the bottom): what the app

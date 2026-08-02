@@ -28,6 +28,9 @@ final class MockRingClient: ObservableObject, RingDataSource {
     /// Mock exchanges no real packets, so the traffic log stays empty.
     let traffic: [String] = []
 
+    /// The mock pushes no live activity totals.
+    let liveActivity: LiveActivityTotals? = nil
+
     let readings = PassthroughSubject<HealthReading, Never>()
 
     /// Canned readings popped in order by `requestRealtimeReading`.

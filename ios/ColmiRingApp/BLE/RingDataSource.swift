@@ -20,8 +20,14 @@ import Combine
  the main queue without the class itself being isolated. Consumers that need
  main-actor isolation (views, `AppLifecycleManager`) apply it themselves.
  */
+/// Today's live totals as pushed by the ring (notification 0x73/0x12).
+struct LiveActivityTotals {
+    let steps: Int
+    let calories: Int
+    let distanceMeters: Int
+}
+
 protocol RingDataSource: ObservableObject {
-    /// Current connection lifecycle phase.
     var state: RingConnectionState { get }
     /// Advertised device name, once discovered.
     var deviceName: String? { get }
@@ -36,6 +42,11 @@ protocol RingDataSource: ObservableObject {
     var lastActivityAt: Date? { get }
     /// Last error message; non-nil while in a failed/unhealthy state.
     var lastError: String? { get }
+
+    /// Today's live totals pushed by the ring in real time (steps walk in
+    /// as you take them). UI-only: the server series stays slot-based to
+    /// avoid double counting.
+    var liveActivity: LiveActivityTotals? { get }
 
     /// New readings are published here; the API client drains them.
     var readings: PassthroughSubject<HealthReading, Never> { get }
