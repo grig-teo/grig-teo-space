@@ -45,6 +45,9 @@ protocol RingDataSource: ObservableObject {
     func connect()
     /// Stop scanning and release the connection (or stop emitting).
     func disconnect()
+    /// Restart a scan that has run fruitlessly for too long (no-op for
+    /// sources that don't scan).
+    func refreshScanIfStale(olderThan maxAge: TimeInterval)
     /// Request a fresh real-time reading once connected.
     func requestRealtimeReading(command: ColmiProtocol.Command)
 }

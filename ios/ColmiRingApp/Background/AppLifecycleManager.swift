@@ -98,6 +98,9 @@ final class AppLifecycleManager: ObservableObject {
     /// One collection cycle: asks the ring for the next metric in the
     /// round-robin, reconnecting first if the link dropped.
     private func tick() {
+        // Recycle a scan that has run fruitlessly for minutes (e.g. the ring
+        // was held by another app and has since been released).
+        ble.refreshScanIfStale(olderThan: 120)
         guard ble.state == .connected else {
             wasConnected = false
             // Try to (re)connect if we're not.

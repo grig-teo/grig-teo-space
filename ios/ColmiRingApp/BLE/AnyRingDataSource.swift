@@ -48,6 +48,9 @@ final class AnyRingDataSource: ObservableObject, RingDataSource {
 
     func connect() { source.connect() }
     func disconnect() { source.disconnect() }
+    func refreshScanIfStale(olderThan maxAge: TimeInterval) {
+        source.refreshScanIfStale(olderThan: maxAge)
+    }
     func requestRealtimeReading(command: ColmiProtocol.Command) {
         source.requestRealtimeReading(command: command)
     }

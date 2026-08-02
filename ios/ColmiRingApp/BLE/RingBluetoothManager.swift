@@ -48,6 +48,8 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
     private var scanFallback: DispatchWorkItem?
     /// Pending "ring not found" hint shown after a long fruitless scan.
     private var scanHint: DispatchWorkItem?
+    /// When the current scan started — stale scans get recycled by the poll.
+    private var scanningSince: Date?
     /// Guards the one-shot full sync that runs after characteristics are up.
     private var didRunInitialSync = false
     /// Multi-packet steps response state.
@@ -109,6 +111,7 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
             return
         }
         state = .scanning
+        scanningSince = Date()
         central?.scanForPeripherals(
             withServices: [ColmiProtocol.serviceUUID],
             options: [CBCentralManagerScanOptionAllowDuplicatesKey: false],
@@ -139,11 +142,23 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
         DispatchQueue.main.asyncAfter(deadline: .now() + 12, execute: fallback)
     }
 
+    /// Restart a stale scan. The one-shot fallback timers can't recover
+    /// when the ring becomes free *after* they fired (e.g. another app held
+    /// it for a while), so the periodic poll calls this to cycle the scan
+    /// (including the system-held peripheral check and fresh hint timers).
+    func refreshScanIfStale(olderThan maxAge: TimeInterval = 120) {
+        guard state == .scanning, let since = scanningSince,
+              Date().timeIntervalSince(since) > maxAge else { return }
+        disconnect()
+        connect()
+    }
+
     func disconnect() {
         scanFallback?.cancel()
         scanFallback = nil
         scanHint?.cancel()
         scanHint = nil
+        scanningSince = nil
         if state == .scanning { central?.stopScan() }
         if let peripheral { central?.cancelPeripheralConnection(peripheral) }
         state = .disconnected
@@ -342,6 +357,7 @@ extension RingBluetoothManager: CBCentralManagerDelegate {
         scanFallback = nil
         scanHint?.cancel()
         scanHint = nil
+        scanningSince = nil
         central.stopScan()
         self.peripheral = peripheral
         self.peripheral?.delegate = self
