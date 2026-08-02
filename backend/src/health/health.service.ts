@@ -299,7 +299,7 @@ export class HealthService {
       .insert()
       .into(HealthReading)
       .values(values)
-      .orUpdate(['value', 'unit', 'raw', 'source'], ['metric', 'recordedAt'])
+      .orUpdate(['value', 'unit', 'raw', 'source'], ['metric', 'recorded_at'])
       .execute();
     return { inserted: rows.length };
   }
