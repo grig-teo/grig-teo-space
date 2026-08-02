@@ -200,19 +200,17 @@ enum ColmiProtocol {
         return (Int(bytes[1]), bytes[2] != 0)
     }
 
-    /// Live activity push (opcode 115, subtype 0x12): today's totals —
-    /// steps uint24 **big-endian** at bytes 2..4, calories uint16
-    /// little-endian deci-kcal (÷10) at bytes 5..6, distance (m) uint24
-    /// big-endian at bytes 8..10. Displayed in the UI only; NOT emitted as
-    /// readings, since the per-slot history (opcode 67) feeds the series
-    /// and totals would double-count.
+    /// Live activity push (opcode 115, subtype 0x12) — the "Today's Sports"
+    /// struct: totalSteps uint24 BE at bytes 2..4, runningSteps at 5..7,
+    /// calories (deci-kcal, ÷10) at 8..10, distance (m) at 11..13.
+    /// Displayed in the log only; the per-slot history (opcode 67) feeds the
+    /// cards and the server series (the live counter proved unreliable).
     static func parseLiveActivity(_ bytes: [UInt8]) -> (steps: Int, calories: Int, distanceMeters: Int)? {
-        guard bytes.count >= 11 else { return nil }
+        guard bytes.count >= 14 else { return nil }
         func uint24BE(_ hi: Int) -> Int {
             (Int(bytes[hi]) << 16) | (Int(bytes[hi + 1]) << 8) | Int(bytes[hi + 2])
         }
-        let caloriesRaw = Int(bytes[5]) | (Int(bytes[6]) << 8)
-        return (uint24BE(2), caloriesRaw / 10, uint24BE(8))
+        return (uint24BE(2), uint24BE(8) / 10, uint24BE(11))
     }
 
     /// Temperature push (opcode 115, subtype 0x05). The frame layout is not

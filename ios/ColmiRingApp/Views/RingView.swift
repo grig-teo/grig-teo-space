@@ -60,19 +60,10 @@ struct RingView: View {
         .navigationTitle("Ring")
     }
 
-    /// Activity cards show the ring's live totals for steps/distance
-    /// (update on every step); calories use the slot history (activity
-    /// burn — the ring's live calorie total includes basal metabolism,
-    /// which reads as inflated); everything else shows the latest reading.
+    /// Cards show the slot-history totals (same data the server gets —
+    /// the ring's live counter is unreliable and reads inflated).
     private func valueForDisplay(_ metric: RingMetric) -> Double? {
-        if let live = appState.bleBox.liveActivity {
-            switch metric {
-            case .steps: return Double(live.steps)
-            case .distanceKm: return Double(live.distanceMeters) / 1000
-            default: break
-            }
-        }
-        return latestByMetric[metric]
+        latestByMetric[metric]
     }
 
     /// Live activity with the ring (newest at the bottom): what the app
