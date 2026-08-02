@@ -274,7 +274,9 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
      overwhelmed. Runs once per connection: set the ring clock (logs are
      timestamped by it), battery, today's activity, then the stress / HRV /
      SpO2 / sleep histories, and finally start the realtime heart-rate
-     stream.
+     stream. Ends with a big-data probe for undocumented types — the ring
+     advertises "new data" markers for 0x2B/0x2C (one is likely temperature
+     history), and the answers land raw in the activity log.
      */
     func startFullSync() {
         let schedule: [(seconds: TimeInterval, command: ColmiProtocol.Command)] = [
@@ -291,6 +293,15 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                 guard let self, self.state == .connected else { return }
                 self.requestRealtimeReading(command: command)
+            }
+        }
+        // Probe undocumented big-data types (temperature candidates).
+        let probeTypes: [UInt8] = [0x28, 0x29, 0x2B, 0x2C, 0x2D]
+        for (index, type) in probeTypes.enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 13 + TimeInterval(index)) { [weak self] in
+                guard let self, self.state == .connected else { return }
+                let request = Data([0xBC, type, 0x01, 0x00, 0xFF, 0x00, 0xFF])
+                self.writeBigData(request, "Probe big data 0x\(String(type, radix: 16, uppercase: true))")
             }
         }
     }
@@ -625,8 +636,15 @@ extension RingBluetoothManager: CBPeripheralDelegate {
         bigDataBuffer.removeAll(keepingCapacity: false)
         bigDataExpectedLength = nil
 
-        guard frame.count >= 2, frame[0] == ColmiProtocol.Opcode.bigDataV2.rawValue,
-              let type = ColmiProtocol.BigDataType(rawValue: frame[1]) else { return }
+        guard frame.count >= 2, frame[0] == ColmiProtocol.Opcode.bigDataV2.rawValue else { return }
+        guard let type = ColmiProtocol.BigDataType(rawValue: frame[1]) else {
+            // Undocumented type (probe response) — log raw for reverse
+            // engineering. Temperature candidates: look for centi-°C
+            // (e.g. 36.7 °C = 0x0E96 LE) or whole-°C bytes around 33–42.
+            let hex = frame.map { String(format: "%02X", $0) }.joined(separator: " ")
+            logTraffic("← Big data 0x\(String(frame[1], radix: 16, uppercase: true)): \(hex)")
+            return
+        }
         switch type {
         case .sleep:
             let sessions = sleepParser.parse(frame)
