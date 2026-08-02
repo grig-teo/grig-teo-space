@@ -103,6 +103,7 @@ enum ColmiProtocol {
     enum RealTimeKind: UInt8 {
         case heartRate = 1
         case spo2 = 3
+        case healthCheck = 5
         case stress = 8     // "pressure" in the protocol docs
         case hrv = 10
     }

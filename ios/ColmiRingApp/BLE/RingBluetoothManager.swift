@@ -251,6 +251,7 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
         switch kind {
         case .heartRate: return "heart rate"
         case .spo2: return "blood oxygen"
+        case .healthCheck: return "health check"
         case .stress: return "stress"
         case .hrv: return "HRV"
         }
@@ -295,14 +296,30 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
                 self.requestRealtimeReading(command: command)
             }
         }
-        // Probe undocumented big-data types (temperature candidates).
-        let probeTypes: [UInt8] = [0x28, 0x29, 0x2B, 0x2C, 0x2D]
+        // Probe undocumented big-data types (temperature candidates), two
+        // request flavors: the sleep/SpO2 shape (last byte 0xFF) and a
+        // day-offset shape (last byte 0 = today).
+        let probeTypes: [UInt8] = [0x28, 0x2B, 0x2C, 0x2D]
         for (index, type) in probeTypes.enumerated() {
             DispatchQueue.main.asyncAfter(deadline: .now() + 13 + TimeInterval(index)) { [weak self] in
                 guard let self, self.state == .connected else { return }
                 let request = Data([0xBC, type, 0x01, 0x00, 0xFF, 0x00, 0xFF])
                 self.writeBigData(request, "Probe big data 0x\(String(type, radix: 16, uppercase: true))")
             }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 18 + TimeInterval(index)) { [weak self] in
+                guard let self, self.state == .connected else { return }
+                let request = Data([0xBC, type, 0x01, 0x00, 0xFF, 0x00, 0x00])
+                self.writeBigData(request, "Probe big data 0x\(String(type, radix: 16, uppercase: true)) today")
+            }
+        }
+        // HealthCheck realtime stream (kind 5) — QRing's on-demand
+        // measurement may return temperature here.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 23) { [weak self] in
+            guard let self, self.state == .connected else { return }
+            self.write(
+                ColmiProtocol.realTimePacket(kind: .healthCheck, action: .start),
+                "Start health check",
+            )
         }
     }
 
@@ -538,6 +555,11 @@ extension RingBluetoothManager: CBPeripheralDelegate {
             if let reading = ColmiProtocol.parseRealTime(bytes) {
                 emit(reading)
                 logTraffic("← \(describe(reading))")
+            } else if bytes.count >= 4, bytes[1] == ColmiProtocol.RealTimeKind.healthCheck.rawValue {
+                // HealthCheck frames (probe): log raw — the temperature
+                // layout inside is undocumented.
+                let hex = bytes.map { String(format: "%02X", $0) }.joined(separator: " ")
+                logTraffic("← HealthCheck: \(hex)")
             }
             // Frames with error codes or settling values (0) are skipped
             // silently — they flood the log while a stream warms up.
@@ -570,9 +592,12 @@ extension RingBluetoothManager: CBPeripheralDelegate {
                     let reading = HealthReading(metric: .bodyTemperature, value: celsius)
                     emit(reading)
                     logTraffic("← \(describe(reading))")
+                } else {
+                    // Temperature frame in an unknown layout — log raw so
+                    // the encoding can be pinned.
+                    let hex = bytes.map { String(format: "%02X", $0) }.joined(separator: " ")
+                    logTraffic("← Temp frame: \(hex)")
                 }
-                // Temperature frames in an unknown layout are skipped
-                // silently — the encoding varies by firmware.
             case ColmiProtocol.NotificationType.batteryLevel.rawValue:
                 guard bytes.count >= 3 else { break }
                 batteryLevel = Int(bytes[2])
