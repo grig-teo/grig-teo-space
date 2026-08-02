@@ -59,6 +59,7 @@ enum ColmiProtocol {
         case syncStress = 55            // 0x37
         case syncHRV = 57               // 0x39
         case getSteps = 67              // 0x43
+        case getSleep = 68              // 0x44 — V1 sleep history (per puxtril)
         case startRealTime = 105        // 0x69
         case stopRealTime = 106         // 0x6A
         case notification = 115         // 0x73 — ring-pushed live data
@@ -153,6 +154,13 @@ enum ColmiProtocol {
     /// packet per 15-minute slot. Trailing bytes are protocol constants.
     static func stepsPacket(dayOffset: UInt8 = 0) -> Data {
         buildPacket(.getSteps, subData: [dayOffset, 0x0f, 0x00, 0x5f, 0x01])
+    }
+
+    /// Sleep history for a day (0 = today) on the V1 channel — sibling of
+    /// the steps request (puxtril ID 68). Some firmware answers on big
+    /// data instead; both are tried during full sync.
+    static func sleepV1Packet(dayOffset: UInt8 = 0) -> Data {
+        buildPacket(.getSleep, subData: [dayOffset, 0x0f, 0x00, 0x5f])
     }
 
     /// Stress (pressure) history for today: 30-minute interval values.

@@ -305,6 +305,18 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
             )
             self.activeRealTime = nil
         }
+        // Sleep may live on the V1 channel (puxtril ID 68) rather than big
+        // data — request today and last night, responses are logged raw
+        // until the layout is pinned.
+        for (index, day) in [UInt8(0), UInt8(1)].enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 14 + TimeInterval(index)) { [weak self] in
+                guard let self, self.state == .connected else { return }
+                self.write(
+                    ColmiProtocol.sleepV1Packet(dayOffset: day),
+                    day == 0 ? "Request sleep history (V1)" : "Request sleep history (V1, yesterday)",
+                )
+            }
+        }
     }
 
     // MARK: - Packet I/O
@@ -604,9 +616,14 @@ extension RingBluetoothManager: CBPeripheralDelegate {
                 // keep them out of the log.
                 break
             }
+        case .getSleep:
+            // V1 sleep frames — layout not pinned yet; log raw.
+            let hex = bytes.map { String(format: "%02X", $0) }.joined(separator: " ")
+            logTraffic("← Sleep frame: \(hex)")
         case .setTime:
             if let supportsTemperature = ColmiProtocol.parseCapabilities(bytes) {
-                logTraffic("← Ring time set · temperature sensor: \(supportsTemperature ? "yes" : "no")")
+                let hex = bytes.map { String(format: "%02X", $0) }.joined(separator: " ")
+                logTraffic("← Ring time set · temperature sensor: \(supportsTemperature ? "yes" : "no") · caps \(hex)")
             } else {
                 logTraffic("← Ring time set")
             }
@@ -660,7 +677,8 @@ extension RingBluetoothManager: CBPeripheralDelegate {
         case .sleep:
             let sessions = sleepParser.parse(frame)
             if sessions.isEmpty {
-                logTraffic("← Sleep: no data")
+                let hex = frame.map { String(format: "%02X", $0) }.joined(separator: " ")
+                logTraffic("← Sleep: no data (\(hex))")
             }
             for session in sessions {
                 let readings = sleepParser.readings(for: session)
