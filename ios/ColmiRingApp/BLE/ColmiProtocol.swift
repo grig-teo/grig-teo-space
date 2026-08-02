@@ -237,6 +237,29 @@ enum ColmiProtocol {
         guard bytes.count >= 2 else { return nil }
         return bytes[1] == 1
     }
+
+    /**
+     HealthCheck frame (opcode 105, kind 5) — decoded from live R10 frames:
+
+       byte 2    : error code (0 = ok)
+       byte 3    : heart rate, bpm
+       bytes 4–5 : skin temperature, uint16 BIG-endian, milli-°C
+                   (0x8055 = 32.85 °C; 0 while the sensor warms up)
+       bytes 6–7 : RR interval, uint16 little-endian, ms
+
+     QRing's "body temperature" is the skin value plus a ~+4 °C core
+     compensation — applied here so the card matches.
+     */
+    static func parseHealthCheck(_ bytes: [UInt8]) -> (heartRate: Int, bodyTempC: Double, rrMs: Int)? {
+        guard bytes.count >= 8, bytes[2] == 0 else { return nil }
+        let skinMilliC = (Int(bytes[4]) << 8) | Int(bytes[5])
+        guard skinMilliC > 0 else { return nil } // sensor still warming up
+        return (
+            heartRate: Int(bytes[3]),
+            bodyTempC: Double(skinMilliC) / 1000 + 4.0,
+            rrMs: Int(bytes[6]) | (Int(bytes[7]) << 8),
+        )
+    }
 }
 
 /**

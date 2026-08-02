@@ -274,10 +274,8 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
      Fire every read the ring supports, staggered so the firmware isn't
      overwhelmed. Runs once per connection: set the ring clock (logs are
      timestamped by it), battery, today's activity, then the stress / HRV /
-     SpO2 / sleep histories, and finally start the realtime heart-rate
-     stream. Ends with a big-data probe for undocumented types — the ring
-     advertises "new data" markers for 0x2B/0x2C (one is likely temperature
-     history), and the answers land raw in the activity log.
+     SpO2 / sleep histories, then the realtime heart-rate stream, and a
+     HealthCheck (per-beat HR + skin temperature) last.
      */
     func startFullSync() {
         let schedule: [(seconds: TimeInterval, command: ColmiProtocol.Command)] = [
@@ -296,30 +294,16 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
                 self.requestRealtimeReading(command: command)
             }
         }
-        // Probe undocumented big-data types (temperature candidates), two
-        // request flavors: the sleep/SpO2 shape (last byte 0xFF) and a
-        // day-offset shape (last byte 0 = today).
-        let probeTypes: [UInt8] = [0x28, 0x2B, 0x2C, 0x2D]
-        for (index, type) in probeTypes.enumerated() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 13 + TimeInterval(index)) { [weak self] in
-                guard let self, self.state == .connected else { return }
-                let request = Data([0xBC, type, 0x01, 0x00, 0xFF, 0x00, 0xFF])
-                self.writeBigData(request, "Probe big data 0x\(String(type, radix: 16, uppercase: true))")
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 18 + TimeInterval(index)) { [weak self] in
-                guard let self, self.state == .connected else { return }
-                let request = Data([0xBC, type, 0x01, 0x00, 0xFF, 0x00, 0x00])
-                self.writeBigData(request, "Probe big data 0x\(String(type, radix: 16, uppercase: true)) today")
-            }
-        }
-        // HealthCheck realtime stream (kind 5) — QRing's on-demand
-        // measurement may return temperature here.
+        // HealthCheck realtime stream (kind 5) — per-beat HR + skin
+        // temperature. Pauses the HR stream on the ring; clear the tracker
+        // so the next poll re-starts it cleanly.
         DispatchQueue.main.asyncAfter(deadline: .now() + 23) { [weak self] in
             guard let self, self.state == .connected else { return }
             self.write(
                 ColmiProtocol.realTimePacket(kind: .healthCheck, action: .start),
                 "Start health check",
             )
+            self.activeRealTime = nil
         }
     }
 
@@ -552,14 +536,16 @@ extension RingBluetoothManager: CBPeripheralDelegate {
                 logTraffic("← Battery: \(info.level)%\(info.charging ? " (charging)" : "")")
             }
         case .startRealTime:
-            if let reading = ColmiProtocol.parseRealTime(bytes) {
+            if bytes.count >= 2, bytes[1] == ColmiProtocol.RealTimeKind.healthCheck.rawValue {
+                // HealthCheck: per-beat HR + skin temperature + RR interval.
+                if let check = ColmiProtocol.parseHealthCheck(bytes) {
+                    emit(HealthReading(metric: .bodyTemperature, value: check.bodyTempC))
+                    emit(HealthReading(metric: .heartRate, value: Double(check.heartRate)))
+                    logTraffic("← Check: \(check.heartRate) bpm · \(String(format: "%.1f", check.bodyTempC)) °C · RR \(check.rrMs) ms")
+                }
+            } else if let reading = ColmiProtocol.parseRealTime(bytes) {
                 emit(reading)
                 logTraffic("← \(describe(reading))")
-            } else if bytes.count >= 4, bytes[1] == ColmiProtocol.RealTimeKind.healthCheck.rawValue {
-                // HealthCheck frames (probe): log raw — the temperature
-                // layout inside is undocumented.
-                let hex = bytes.map { String(format: "%02X", $0) }.joined(separator: " ")
-                logTraffic("← HealthCheck: \(hex)")
             }
             // Frames with error codes or settling values (0) are skipped
             // silently — they flood the log while a stream warms up.
