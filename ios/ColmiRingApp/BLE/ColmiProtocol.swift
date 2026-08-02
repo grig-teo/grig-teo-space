@@ -201,16 +201,16 @@ enum ColmiProtocol {
     }
 
     /// Live activity push (opcode 115, subtype 0x12): today's totals —
-    /// steps uint24 LE at bytes 2..4, calories (÷10) at 5..7, distance (m)
-    /// at 8..10. Displayed in the UI only; NOT emitted as readings, since
-    /// the per-slot history (opcode 67) feeds the series and totals would
-    /// double-count.
+    /// steps uint24 **big-endian** at bytes 2..4, calories (÷10) at 5..7,
+    /// distance (m) at 8..10. Displayed in the UI only; NOT emitted as
+    /// readings, since the per-slot history (opcode 67) feeds the series
+    /// and totals would double-count.
     static func parseLiveActivity(_ bytes: [UInt8]) -> (steps: Int, calories: Int, distanceMeters: Int)? {
         guard bytes.count >= 11 else { return nil }
-        func uint24(_ lo: Int) -> Int {
-            Int(bytes[lo]) | (Int(bytes[lo + 1]) << 8) | (Int(bytes[lo + 2]) << 16)
+        func uint24BE(_ hi: Int) -> Int {
+            (Int(bytes[hi]) << 16) | (Int(bytes[hi + 1]) << 8) | Int(bytes[hi + 2])
         }
-        return (uint24(2), uint24(5) / 10, uint24(8))
+        return (uint24BE(2), uint24BE(5) / 10, uint24BE(8))
     }
 
     /// Temperature push (opcode 115, subtype 0x05). The frame layout is not

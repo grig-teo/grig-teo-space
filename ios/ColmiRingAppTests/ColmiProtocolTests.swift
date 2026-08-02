@@ -259,13 +259,27 @@ struct ColmiHistoryParserTests {
     func parsesLiveActivityTotals() {
         var bytes = [UInt8](repeating: 0, count: 16)
         bytes[0] = 0x73; bytes[1] = 0x12
-        bytes[2] = 0x56; bytes[3] = 0x34; bytes[4] = 0x12  // steps 0x123456
-        bytes[5] = 0xE8; bytes[6] = 0x03; bytes[7] = 0x00  // calories 1000 → 100
-        bytes[8] = 0x10; bytes[9] = 0x27; bytes[10] = 0x00 // distance 10000 m
+        bytes[2] = 0x12; bytes[3] = 0x34; bytes[4] = 0x56  // steps 0x123456 (big-endian)
+        bytes[5] = 0x00; bytes[6] = 0x03; bytes[7] = 0xE8  // calories 1000 → 100
+        bytes[8] = 0x00; bytes[9] = 0x27; bytes[10] = 0x10 // distance 10000 m
         let live = ColmiProtocol.parseLiveActivity(bytes)
         #expect(live?.steps == 0x123456)
         #expect(live?.calories == 100)
         #expect(live?.distanceMeters == 10000)
+    }
+
+    @Test
+    func liveActivityDoesNotExplodeOnSmallValues() {
+        // Real frame from an R10: 0x2B steps (43), not 0x2B0000 (2.8M).
+        var bytes = [UInt8](repeating: 0, count: 16)
+        bytes[0] = 0x73; bytes[1] = 0x12
+        bytes[4] = 0x2B
+        bytes[7] = 0x0A  // 10 raw → 1 kcal
+        bytes[10] = 0x26 // 38 m
+        let live = ColmiProtocol.parseLiveActivity(bytes)
+        #expect(live?.steps == 43)
+        #expect(live?.calories == 1)
+        #expect(live?.distanceMeters == 38)
     }
 
     @Test
