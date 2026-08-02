@@ -24,6 +24,7 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
     @Published private(set) var rssi: Int?
     @Published private(set) var batteryLevel: Int?
     @Published private(set) var lastReadingAt: Date?
+    @Published private(set) var lastActivityAt: Date?
     @Published var lastError: String?
 
     /// Last raw packets exchanged with the ring (newest last, capped), shown
@@ -191,10 +192,6 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
             startRealTime(kind: .heartRate)
         case .realtimeSpo2:
             startRealTime(kind: .spo2)
-        case .realtimeStress:
-            startRealTime(kind: .stress)
-        case .realtimeHrv:
-            startRealTime(kind: .hrv)
         }
     }
 
@@ -440,6 +437,7 @@ extension RingBluetoothManager: CBPeripheralDelegate {
                     didUpdateValueFor characteristic: CBCharacteristic,
                     error: Error?) {
         guard let data = characteristic.value else { return }
+        lastActivityAt = Date()
         if characteristic.uuid == ColmiProtocol.batteryLevelUUID {
             batteryLevel = Int(data.first ?? 0)
             return

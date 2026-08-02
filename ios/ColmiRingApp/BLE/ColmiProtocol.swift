@@ -95,11 +95,11 @@ enum ColmiProtocol {
         case spo2Log
         case realtimeHeartRate
         case realtimeSpo2
-        case realtimeStress
-        case realtimeHrv
     }
 
     /// Realtime stream kinds (payload byte 1 of start/stop real-time).
+    /// NB: only heart rate and SpO2 are streamed — starting a realtime
+    /// pressure(8)/HRV(10) stream wedges R10 firmware into silence.
     enum RealTimeKind: UInt8 {
         case heartRate = 1
         case spo2 = 3

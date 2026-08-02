@@ -31,6 +31,9 @@ protocol RingDataSource: ObservableObject {
     var batteryLevel: Int? { get }
     /// When the most recent reading was parsed.
     var lastReadingAt: Date? { get }
+    /// When the ring last sent any frame — the silence watchdog uses this
+    /// to detect a wedged link that still reports "connected".
+    var lastActivityAt: Date? { get }
     /// Last error message; non-nil while in a failed/unhealthy state.
     var lastError: String? { get }
 

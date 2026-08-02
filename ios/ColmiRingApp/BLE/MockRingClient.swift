@@ -22,6 +22,7 @@ final class MockRingClient: ObservableObject, RingDataSource {
     @Published private(set) var rssi: Int?
     @Published private(set) var batteryLevel: Int?
     @Published private(set) var lastReadingAt: Date?
+    @Published private(set) var lastActivityAt: Date?
     @Published var lastError: String?
 
     /// Mock exchanges no real packets, so the traffic log stays empty.

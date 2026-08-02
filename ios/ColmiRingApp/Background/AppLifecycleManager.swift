@@ -46,6 +46,8 @@ final class AppLifecycleManager: ObservableObject {
     private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
     /// Tracks link transitions so the upload flush fires once per connect.
     private var wasConnected = false
+    /// When the current link came up — the silence watchdog's floor.
+    private var connectedAt: Date?
     /// Last full-history sync; ticks re-run it every `fullSyncInterval`.
     private var lastFullSyncAt: Date?
     /// When the current manual sync started (for spinner bookkeeping).
@@ -138,6 +140,7 @@ final class AppLifecycleManager: ObservableObject {
         ble.refreshScanIfStale(olderThan: 120)
         guard ble.state == .connected else {
             wasConnected = false
+            connectedAt = nil
             // Try to (re)connect if we're not.
             if ble.state == .disconnected || ble.state == .failed {
                 ble.connect()
@@ -148,8 +151,18 @@ final class AppLifecycleManager: ObservableObject {
         // timer here and push any queued readings to the backend.
         if !wasConnected {
             wasConnected = true
+            connectedAt = Date()
             lastFullSyncAt = Date()
             api.flushAll()
+        }
+        // Silence watchdog: a wedged ring still reports "connected" but
+        // sends nothing. After 3 minutes without any frame, force a
+        // reconnect (which re-runs the full sync on discovery).
+        let aliveSince = ble.lastActivityAt ?? connectedAt ?? Date()
+        if Date().timeIntervalSince(aliveSince) > 180 {
+            ble.disconnect()
+            ble.connect()
+            return
         }
         // Every `fullSyncInterval`, re-pull all history (activity, stress,
         // HRV, SpO2, sleep) so the server stays complete, not just live.
@@ -157,11 +170,11 @@ final class AppLifecycleManager: ObservableObject {
             requestFullSync()
         }
         // Round-robin through the poll commands: steps lead every other
-        // tick so activity stays near-realtime; the realtime stream rotates
-        // (HR → SpO2 → stress → HRV) with battery checks between.
+        // tick so activity stays near-realtime; the realtime stream
+        // alternates HR ↔ SpO2 with battery checks between. (Realtime
+        // stress/HRV kinds are deliberately unused — see ColmiProtocol.)
         let cycle: [ColmiProtocol.Command] = [
-            .steps, .realtimeHeartRate, .steps, .realtimeSpo2,
-            .battery, .steps, .realtimeStress, .steps, .realtimeHrv, .battery,
+            .steps, .realtimeHeartRate, .steps, .realtimeSpo2, .battery,
         ]
         let command = cycle[pollStep % cycle.count]
         pollStep += 1

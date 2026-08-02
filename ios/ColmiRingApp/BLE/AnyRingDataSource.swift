@@ -22,6 +22,7 @@ final class AnyRingDataSource: ObservableObject, RingDataSource {
     var rssi: Int? { source.rssi }
     var batteryLevel: Int? { source.batteryLevel }
     var lastReadingAt: Date? { source.lastReadingAt }
+    var lastActivityAt: Date? { source.lastActivityAt }
     var lastError: String? { source.lastError }
     var traffic: [String] { source.traffic }
 
