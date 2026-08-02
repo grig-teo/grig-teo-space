@@ -46,6 +46,8 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
     private var bigDataExpectedLength: Int?
     /// Pending fallback that restarts the scan without a service filter.
     private var scanFallback: DispatchWorkItem?
+    /// Pending "ring not found" hint shown after a long fruitless scan.
+    private var scanHint: DispatchWorkItem?
     /// Guards the one-shot full sync that runs after characteristics are up.
     private var didRunInitialSync = false
     /// Multi-packet steps response state.
@@ -89,6 +91,23 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
             ])
             return
         }
+        // If iOS holds a system-level connection to the ring (e.g. another
+        // app bonded it for ANCS), the ring does not advertise — grab it
+        // directly instead of scanning for something invisible.
+        let systemConnected = central?.retrieveConnectedPeripherals(
+            withServices: [ColmiProtocol.serviceUUID],
+        ) ?? []
+        if let known = systemConnected.first(where: { $0.name.map(ColmiProtocol.matchesName) == true }) {
+            peripheral = known
+            known.delegate = self
+            deviceName = known.name
+            state = .connecting
+            central?.connect(known, options: [
+                CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
+                CBConnectPeripheralOptionNotifyOnConnectionKey: true,
+            ])
+            return
+        }
         state = .scanning
         central?.scanForPeripherals(
             withServices: [ColmiProtocol.serviceUUID],
@@ -106,6 +125,15 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
                 withServices: nil,
                 options: [CBCentralManagerScanOptionAllowDuplicatesKey: false],
             )
+            // Still nothing after the wide scan: the ring is almost
+            // certainly held by another app — tell the user what to do
+            // instead of spinning forever. Scanning continues meanwhile.
+            let hint = DispatchWorkItem { [weak self] in
+                guard let self, self.state == .scanning, self.peripheral == nil else { return }
+                self.lastError = "Ring not found. Another app (e.g. QRing) may be holding the connection — force-close it, keep the ring near the phone, and wait a few seconds."
+            }
+            self.scanHint = hint
+            DispatchQueue.main.asyncAfter(deadline: .now() + 45, execute: hint)
         }
         scanFallback = fallback
         DispatchQueue.main.asyncAfter(deadline: .now() + 12, execute: fallback)
@@ -114,6 +142,8 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
     func disconnect() {
         scanFallback?.cancel()
         scanFallback = nil
+        scanHint?.cancel()
+        scanHint = nil
         if state == .scanning { central?.stopScan() }
         if let peripheral { central?.cancelPeripheralConnection(peripheral) }
         state = .disconnected
@@ -310,6 +340,8 @@ extension RingBluetoothManager: CBCentralManagerDelegate {
         guard ColmiProtocol.matchesName(name) else { return }
         scanFallback?.cancel()
         scanFallback = nil
+        scanHint?.cancel()
+        scanHint = nil
         central.stopScan()
         self.peripheral = peripheral
         self.peripheral?.delegate = self
