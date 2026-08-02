@@ -74,6 +74,7 @@ enum ColmiProtocol {
     /// Notification subtypes (byte 1 of an 0x73 frame).
     enum NotificationType: UInt8 {
         case temperature = 0x05
+        case batteryLevel = 0x0C
         case liveActivity = 0x12
     }
 

@@ -493,6 +493,10 @@ extension RingBluetoothManager: CBPeripheralDelegate {
                     // Unknown layout — log raw so the encoding can be pinned.
                     logTraffic("← Temperature frame: \(ColmiProtocol.hex(data))")
                 }
+            case ColmiProtocol.NotificationType.batteryLevel.rawValue:
+                guard bytes.count >= 3 else { break }
+                batteryLevel = Int(bytes[2])
+                logTraffic("← Battery: \(bytes[2])%")
             default:
                 logTraffic("← Notify 0x\(String(bytes[1], radix: 16, uppercase: true)): \(ColmiProtocol.hex(data))")
             }
