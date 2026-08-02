@@ -45,12 +45,19 @@ struct ConnectionCard: View {
             }
 
             HStack(spacing: 12) {
-                Button("Connect") { ble.connect() }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(ble.state == .connecting || ble.state == .scanning)
-                Button("Disconnect") { ble.disconnect() }
-                    .buttonStyle(.bordered)
-                    .disabled(ble.state == .disconnected)
+                switch ble.state {
+                case .connected:
+                    // Connected: the only action is to drop the link.
+                    Button("Disconnect") { ble.disconnect() }
+                        .buttonStyle(.borderedProminent)
+                case .scanning, .connecting:
+                    // In-flight attempt: the only action is to cancel it.
+                    Button("Cancel") { ble.disconnect() }
+                        .buttonStyle(.bordered)
+                case .disconnected, .failed:
+                    Button("Connect") { ble.connect() }
+                        .buttonStyle(.borderedProminent)
+                }
             }
         }
         .padding()

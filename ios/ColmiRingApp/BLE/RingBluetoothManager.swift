@@ -40,6 +40,8 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
     private var batteryCharacteristic: CBCharacteristic?
     /// Pending fallback that restarts the scan without a service filter.
     private var scanFallback: DispatchWorkItem?
+    /// Guards the one-shot full sync that runs after characteristics are up.
+    private var didRunInitialSync = false
 
     override init() {
         super.init()
@@ -108,6 +110,25 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
         guard let peripheral, let txCharacteristic else { return }
         let packet = ColmiProtocol.buildPacket(command: command)
         peripheral.writeValue(packet, for: txCharacteristic, type: .withResponse)
+    }
+
+    /**
+     Fire every read command the ring supports, back to back. Runs once per
+     connection (after characteristics are discovered) so a fresh link pulls
+     all data immediately instead of waiting for the 90s round-robin.
+     Responses the parser doesn't understand yet (e.g. history frames) are
+     ignored by `ColmiProtocol.parse`.
+     */
+    func startFullSync() {
+        if let batteryCharacteristic, let peripheral {
+            peripheral.readValue(for: batteryCharacteristic)
+        }
+        let commands: [ColmiProtocol.Command] = [
+            .realtimeHeartRate, .realtimeSpo2, .battery, .historyFetch,
+        ]
+        for command in commands {
+            requestRealtimeReading(command: command)
+        }
     }
 
     // MARK: - RX parsing (delegates to ColmiProtocol — R11-specific, must be verified)
@@ -191,6 +212,7 @@ extension RingBluetoothManager: CBCentralManagerDelegate {
                         didDisconnectPeripheral peripheral: CBPeripheral,
                         error: Error?) {
         state = .disconnected
+        didRunInitialSync = false
         if let error { lastError = error.localizedDescription }
     }
 }
@@ -220,6 +242,12 @@ extension RingBluetoothManager: CBPeripheralDelegate {
             default:
                 break
             }
+        }
+        // Both channels up → pull everything once (guarded so repeated
+        // discovery callbacks don't re-fire).
+        if txCharacteristic != nil && rxCharacteristic != nil && !didRunInitialSync {
+            didRunInitialSync = true
+            startFullSync()
         }
     }
 

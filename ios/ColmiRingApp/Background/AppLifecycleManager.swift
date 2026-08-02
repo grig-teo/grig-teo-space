@@ -37,6 +37,8 @@ final class AppLifecycleManager: ObservableObject {
     private var bag = Set<AnyCancellable>()
     private var pollStep = 0
     private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
+    /// Tracks link transitions so the upload flush fires once per connect.
+    private var wasConnected = false
 
     /// Production wiring: the real BLE manager.
     init() {
@@ -97,11 +99,17 @@ final class AppLifecycleManager: ObservableObject {
     /// round-robin, reconnecting first if the link dropped.
     private func tick() {
         guard ble.state == .connected else {
+            wasConnected = false
             // Try to (re)connect if we're not.
             if ble.state == .disconnected || ble.state == .failed {
                 ble.connect()
             }
             return
+        }
+        // Fresh link: push any queued readings to the backend right away.
+        if !wasConnected {
+            wasConnected = true
+            api.flushAll()
         }
         // Round-robin through the realtime-readable metrics.
         let cycle: [ColmiProtocol.Command] = [.realtimeHeartRate, .realtimeSpo2, .battery]
