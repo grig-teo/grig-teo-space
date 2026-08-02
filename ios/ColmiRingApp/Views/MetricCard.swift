@@ -1,9 +1,10 @@
 import SwiftUI
 
-/** Displays the most recent value for one metric. */
+/** Displays the most recent value for one metric, or "—" until the first
+ *  reading of that kind arrives. */
 struct MetricCard: View {
     let metric: RingMetric
-    let value: Double
+    let value: Double?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -11,9 +12,9 @@ struct MetricCard: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
             HStack(alignment: .lastTextBaseline, spacing: 2) {
-                Text(format(value))
+                Text(value.map(format) ?? "—")
                     .font(.system(.title2, design: .rounded).bold())
-                if !metric.unit.isEmpty {
+                if value != nil, !metric.unit.isEmpty {
                     Text(metric.unit)
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -26,8 +27,13 @@ struct MetricCard: View {
     }
 
     private func format(_ v: Double) -> String {
-        metric == .sleepDurationH || metric == .distanceKm
-            ? String(format: "%.1f", v)
-            : String(Int(v))
+        switch metric {
+        case .sleepDurationH, .bodyTemperature:
+            return String(format: "%.1f", v)
+        case .distanceKm:
+            return String(format: "%.2f", v)
+        default:
+            return String(Int(v))
+        }
     }
 }

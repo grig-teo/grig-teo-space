@@ -68,10 +68,27 @@ final class AppLifecycleManager: ObservableObject {
     }
 
     private func handle(_ reading: HealthReading) {
-        if let metric = RingMetric(rawValue: reading.metric) {
+        guard let metric = RingMetric(rawValue: reading.metric) else { return }
+        // Activity metrics arrive as 15-minute increments — the card should
+        // show today's running total, not the last slot's slice.
+        if Self.activityMetrics.contains(metric) {
+            let day = String(reading.recordedAt.formatted(.iso8601.year().month().day()).prefix(10))
+            if day != activityTotalsDay {
+                activityTotalsDay = day
+                activityTotals = [:]
+            }
+            let total = (activityTotals[metric] ?? 0) + reading.value
+            activityTotals[metric] = total
+            latestByMetric[metric] = total
+        } else {
             latestByMetric[metric] = reading.value
         }
     }
+
+    /// Metrics whose readings are per-slot increments summed into a daily total.
+    private static let activityMetrics: Set<RingMetric> = [.steps, .calories, .distanceKm]
+    private var activityTotalsDay: String?
+    private var activityTotals: [RingMetric: Double] = [:]
 
     // MARK: - Polling
 

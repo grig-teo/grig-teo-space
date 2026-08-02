@@ -73,9 +73,13 @@ enum ColmiProtocol {
 
     /// Notification subtypes (byte 1 of an 0x73 frame).
     enum NotificationType: UInt8 {
+        case newHeartRateData = 0x01
+        case newSpo2Data = 0x03
+        case newStepsData = 0x04
         case temperature = 0x05
         case batteryLevel = 0x0C
         case liveActivity = 0x12
+        case newSleepData = 0x27
     }
 
     /// Logical poll commands the app uses; mapped to wire packets by the
@@ -231,11 +235,6 @@ enum ColmiProtocol {
     static func parseCapabilities(_ bytes: [UInt8]) -> Bool? {
         guard bytes.count >= 2 else { return nil }
         return bytes[1] == 1
-    }
-
-    /// Hex dump for discovery logging of unrecognized frames.
-    static func hex(_ data: Data) -> String {
-        data.map { String(format: "%02X", $0) }.joined(separator: " ")
     }
 }
 

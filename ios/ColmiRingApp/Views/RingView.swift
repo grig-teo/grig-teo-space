@@ -16,18 +16,14 @@ struct RingView: View {
                 ConnectionCard(ble: appState.bleBox)
                 SyncLogView(api: lifecycle.api)
 
-                if !latestByMetric.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Latest readings").font(.headline).padding(.horizontal)
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                            ForEach(RingMetric.allCases, id: \.self) { metric in
-                                if let value = latestByMetric[metric] {
-                                    MetricCard(metric: metric, value: value)
-                                }
-                            }
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Latest readings").font(.headline).padding(.horizontal)
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                        ForEach(RingMetric.allCases, id: \.self) { metric in
+                            MetricCard(metric: metric, value: latestByMetric[metric])
                         }
-                        .padding(.horizontal)
                     }
+                    .padding(.horizontal)
                 }
 
                 if !appState.bleBox.traffic.isEmpty {

@@ -451,7 +451,7 @@ extension RingBluetoothManager: CBPeripheralDelegate {
         guard characteristic.uuid == ColmiProtocol.rxCharacteristicUUID else { return }
 
         let bytes = [UInt8](data)
-        guard let opcode = bytes.first, let kind = ColmiProtocol.Opcode(rawValue: opcode) else { return }
+        guard let first = bytes.first, let kind = ColmiProtocol.Opcode(rawValue: first) else { return }
         switch kind {
         case .battery:
             if let info = ColmiProtocol.parseBattery(bytes) {
@@ -489,16 +489,28 @@ extension RingBluetoothManager: CBPeripheralDelegate {
                     let reading = HealthReading(metric: .bodyTemperature, value: celsius)
                     emit(reading)
                     logTraffic("← \(describe(reading))")
-                } else {
-                    // Unknown layout — log raw so the encoding can be pinned.
-                    logTraffic("← Temperature frame: \(ColmiProtocol.hex(data))")
                 }
+                // Temperature frames in an unknown layout are skipped
+                // silently — the encoding varies by firmware.
             case ColmiProtocol.NotificationType.batteryLevel.rawValue:
                 guard bytes.count >= 3 else { break }
                 batteryLevel = Int(bytes[2])
                 logTraffic("← Battery: \(bytes[2])%")
+            case ColmiProtocol.NotificationType.newStepsData.rawValue:
+                logTraffic("← Ring has new activity data — syncing")
+                requestRealtimeReading(command: .steps)
+            case ColmiProtocol.NotificationType.newSpo2Data.rawValue:
+                logTraffic("← Ring has new blood oxygen data — syncing")
+                requestRealtimeReading(command: .spo2Log)
+            case ColmiProtocol.NotificationType.newSleepData.rawValue:
+                logTraffic("← Ring has new sleep data — syncing")
+                requestRealtimeReading(command: .sleepLog)
+            case ColmiProtocol.NotificationType.newHeartRateData.rawValue:
+                logTraffic("← Ring has new heart-rate history")
             default:
-                logTraffic("← Notify 0x\(String(bytes[1], radix: 16, uppercase: true)): \(ColmiProtocol.hex(data))")
+                // Unrecognized notify markers carry no displayable value —
+                // keep them out of the log.
+                break
             }
         case .setTime:
             if let supportsTemperature = ColmiProtocol.parseCapabilities(bytes) {
@@ -509,7 +521,9 @@ extension RingBluetoothManager: CBPeripheralDelegate {
         case .bigDataV2:
             handleBigData(data)
         default:
-            logTraffic("← Unknown frame (0x\(String(opcode, radix: 16, uppercase: true)))")
+            // Frames we don't parse (keep-alive echoes, HR-log chunks, …)
+            // carry no displayable value — keep them out of the log.
+            break
         }
     }
 
