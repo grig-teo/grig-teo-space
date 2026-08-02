@@ -324,7 +324,19 @@ extension RingBluetoothManager: CBCentralManagerDelegate {
                 self.peripheral = peripheral
                 peripheral.delegate = self
                 self.deviceName = peripheral.name
-                self.state = peripheral.state == .connected ? .connected : .disconnected
+                if peripheral.state == .connected {
+                    state = .connected
+                    // The link survived but this process's characteristics
+                    // did not — without rediscovery every write no-ops and
+                    // the page shows "Connected" with no data at all.
+                    peripheral.discoverServices([
+                        ColmiProtocol.serviceUUID,
+                        ColmiProtocol.batteryServiceUUID,
+                        ColmiProtocol.bigDataServiceUUID,
+                    ])
+                } else {
+                    state = .disconnected
+                }
             }
         }
     }
