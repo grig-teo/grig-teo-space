@@ -282,8 +282,24 @@ export class HealthService {
     if (rows.length === 0) {
       return { inserted: 0 };
     }
-    const saved = await this.readingRepo.save(rows);
-    return { inserted: saved.length };
+    // Upsert on (metric, recorded_at): the ring's history sync resends the
+    // same 15-minute slots with fresher values — replace, never duplicate.
+    const values = rows.map(({ metric, value, unit, recordedAt, source, raw }) => ({
+      metric,
+      value,
+      unit,
+      recordedAt,
+      source,
+      raw,
+    }));
+    await this.readingRepo
+      .createQueryBuilder()
+      .insert()
+      .into(HealthReading)
+      .values(values)
+      .orUpdate(['value', 'unit', 'raw', 'source'], ['metric', 'recordedAt'])
+      .execute();
+    return { inserted: rows.length };
   }
 
   async addNote(note: IncomingNote): Promise<HealthNote> {

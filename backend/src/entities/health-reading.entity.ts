@@ -40,7 +40,9 @@ export const HEALTH_SOURCES: readonly HealthSource[] = [
 ] as const;
 
 @Entity('health_reading')
-@Index('idx_health_reading_metric_recorded', ['metric', 'recordedAt'])
+// One row per (metric, timestamp): ring history re-syncs resend the same
+// slots with updated values, and the latest value must win, not append.
+@Index('idx_health_reading_metric_recorded', ['metric', 'recordedAt'], { unique: true })
 export class HealthReading {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
