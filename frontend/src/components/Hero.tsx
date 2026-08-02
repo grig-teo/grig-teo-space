@@ -5,7 +5,12 @@ import { Link } from '@/i18n/navigation';
 import { HealthScene } from '@/components/HealthScene';
 import { StressScene } from '@/components/StressScene';
 import { WalkerScene } from '@/components/WalkerScene';
-import type { Profile } from '@/lib/api';
+import type { Profile, PublicHealthPayload } from '@/lib/api';
+import { computeVitals, type HealthVitals } from '@/lib/health-vitals';
+import { useEffect, useState } from 'react';
+
+/** How often the hero vitals refetch from the server (ms). */
+const VITALS_REFRESH_MS = 60_000;
 
 export type HeroStats = {
   years: number;
@@ -106,25 +111,42 @@ function HeroCtas() {
 export function Hero({
   profile,
   stats,
-  bpm,
-  cadence,
-  stepsToday,
-  stress,
+  initialVitals,
 }: {
   profile: HeroProfile;
   stats: HeroStats;
-  /** Average heart rate shared publicly; powers the beating-heart vignette
-   *  above the tech-stack scene. Omitted when heart rate isn't shared. */
-  bpm?: number;
-  /** Strides per second derived from the shared steps metric; powers the
-   *  walking figure. Omitted when steps aren't shared. */
-  cadence?: number;
-  /** Steps recorded today, shown under the walking figure. */
-  stepsToday?: number;
-  /** Public stress average (0–100); powers the stress figure. Omitted when
-   *  stress isn't shared. */
-  stress?: number;
+  /** SSR first-paint vitals; the hero then refetches `/api/health/public`
+   *  every minute so the figures track the server instead of the cached
+   *  page render. */
+  initialVitals: HealthVitals;
 }) {
+  const [vitals, setVitals] = useState<HealthVitals>(initialVitals);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refresh() {
+      try {
+        const res = await fetch('/api/health/public', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = (await res.json()) as PublicHealthPayload;
+        if (!cancelled && data.enabled) {
+          setVitals(computeVitals(data));
+        }
+      } catch {
+        // Keep the last good values on network errors.
+      }
+    }
+
+    refresh();
+    const timer = window.setInterval(refresh, VITALS_REFRESH_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  const { bpm, cadence, stepsToday, stress } = vitals;
   return (
     <section id="about" className="px-4 py-20 sm:px-6 md:px-12 md:py-28">
       <div className="max-w-6xl lg:grid lg:grid-cols-[1fr_auto] lg:items-start lg:gap-12">

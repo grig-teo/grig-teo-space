@@ -8,6 +8,7 @@ import { JsonLd } from '@/components/JsonLd';
 import { Reveal } from '@/components/Reveal';
 import { getBlogPosts, getExperience, getProfile, getProjects, getPublicHealth } from '@/lib/api';
 import type { BlogPost, ExperienceItem, Locale, Project } from '@/lib/api';
+import { computeVitals } from '@/lib/health-vitals';
 
 type Props = {
   params: Promise<{ locale: Locale }>;
@@ -37,15 +38,6 @@ function computeHeroStats(
   };
 }
 
-/** Sums the step readings recorded on the current UTC day. */
-function sumTodaySteps(series: { recordedAt: string; value: number }[]): number {
-  const today = new Date().toISOString().slice(0, 10);
-  const total = series
-    .filter((point) => point.recordedAt.slice(0, 10) === today)
-    .reduce((sum, point) => sum + point.value, 0);
-  return Math.round(total);
-}
-
 export default async function HomePage({ params }: Props) {
   const { locale } = await params;
 
@@ -58,16 +50,7 @@ export default async function HomePage({ params }: Props) {
   ]);
 
   const stats = computeHeroStats(experience, projects, blogPosts);
-  const avgBpm = health?.metrics.find((m) => m.metric === 'heart_rate')?.summary.avg;
-  const avgStress = health?.metrics.find((m) => m.metric === 'stress')?.summary.avg;
-  const stress =
-    avgStress != null ? Math.min(Math.max(Math.round(avgStress), 0), 100) : undefined;
-  const stepsMetric = health?.metrics.find((m) => m.metric === 'steps');
-  // Map the steps average to a plausible stride cadence (0.9–2.2 strides/s).
-  const avgSteps = stepsMetric?.summary.avg;
-  const cadence = avgSteps ? Math.min(Math.max(avgSteps * 0.06, 0.9), 2.2) : undefined;
-  // Today's step total: sum the series points recorded on the current UTC day.
-  const stepsToday = stepsMetric ? sumTodaySteps(stepsMetric.series) : undefined;
+  const vitals = computeVitals(health);
 
   return (
     <main className="min-h-screen">
@@ -75,10 +58,7 @@ export default async function HomePage({ params }: Props) {
       <Hero
         profile={{ name: profile.name, title: profile.title, location: profile.location }}
         stats={stats}
-        bpm={avgBpm ? Math.round(avgBpm) : undefined}
-        cadence={cadence}
-        stepsToday={stepsToday}
-        stress={stress}
+        initialVitals={vitals}
       />
       <div className="flex justify-center py-4">
         <HeroScene />
