@@ -552,7 +552,7 @@ extension RingBluetoothManager: CBPeripheralDelegate {
                         calories: live.calories,
                         distanceMeters: live.distanceMeters,
                     )
-                    logTraffic("← Live: \(live.steps) steps · \(live.calories) kcal · \(live.distanceMeters) m today")
+                    logTraffic("← Live: \(live.steps) steps · \(live.distanceMeters) m today")
                 }
             case ColmiProtocol.NotificationType.temperature.rawValue:
                 if let celsius = ColmiProtocol.parseTemperature(bytes) {

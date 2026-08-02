@@ -282,9 +282,17 @@ export class HealthService {
     if (rows.length === 0) {
       return { inserted: 0 };
     }
+    // Collapse duplicate (metric, recorded_at) keys inside the batch —
+    // Postgres rejects ON CONFLICT DO UPDATE when one command touches the
+    // same row twice.
+    const byKey = new Map<string, (typeof rows)[number]>();
+    for (const row of rows) {
+      byKey.set(`${row.metric}|${row.recordedAt.toISOString()}`, row);
+    }
+    const deduped = [...byKey.values()];
     // Upsert on (metric, recorded_at): the ring's history sync resends the
     // same 15-minute slots with fresher values — replace, never duplicate.
-    const values = rows.map(({ metric, value, unit, recordedAt, source }) => ({
+    const values = deduped.map(({ metric, value, unit, recordedAt, source }) => ({
       metric,
       value,
       unit,
