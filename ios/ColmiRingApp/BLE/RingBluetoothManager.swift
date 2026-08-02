@@ -38,13 +38,23 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
     private var txCharacteristic: CBCharacteristic?
     private var rxCharacteristic: CBCharacteristic?
     private var batteryCharacteristic: CBCharacteristic?
+    /// Big data (V2) channel: sleep / SpO2 history.
+    private var bigDataCommandCharacteristic: CBCharacteristic?
+    private var bigDataNotifyCharacteristic: CBCharacteristic?
+    /// Reassembly buffer for big data frames split across notifications.
+    private var bigDataBuffer = Data()
+    private var bigDataExpectedLength: Int?
     /// Pending fallback that restarts the scan without a service filter.
     private var scanFallback: DispatchWorkItem?
     /// Guards the one-shot full sync that runs after characteristics are up.
     private var didRunInitialSync = false
     /// Multi-packet steps response state.
     private let stepsParser = StepsParser()
-    /// Realtime stream currently active on the ring (HR or SpO2).
+    /// Stress / HRV 30-minute-interval history state (recreated per request).
+    private var intervalLogParser: IntervalLogParser?
+    private let sleepParser = SleepParser()
+    private let spo2LogParser = Spo2LogParser()
+    /// Realtime stream currently active on the ring (HR / SpO2 / stress / HRV).
     private var activeRealTime: ColmiProtocol.RealTimeKind?
 
     override init() {
@@ -122,41 +132,73 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
         case .steps:
             stepsParser.reset()
             write(ColmiProtocol.stepsPacket(dayOffset: 0), "Request today's activity")
+        case .stressLog:
+            intervalLogParser = IntervalLogParser(metric: .stress, dayStart: Calendar.current.startOfDay(for: Date()))
+            write(ColmiProtocol.stressPacket(), "Request stress history")
+        case .hrvLog:
+            intervalLogParser = IntervalLogParser(metric: .hrv, dayStart: Calendar.current.startOfDay(for: Date()))
+            write(ColmiProtocol.hrvPacket(daysAgo: 0), "Request HRV history")
+        case .sleepLog:
+            writeBigData(ColmiProtocol.bigDataRequest(type: .sleep), "Request sleep history")
+        case .spo2Log:
+            writeBigData(ColmiProtocol.bigDataRequest(type: .spo2), "Request blood oxygen history")
         case .realtimeHeartRate:
             startRealTime(kind: .heartRate)
         case .realtimeSpo2:
             startRealTime(kind: .spo2)
+        case .realtimeStress:
+            startRealTime(kind: .stress)
+        case .realtimeHrv:
+            startRealTime(kind: .hrv)
+        }
+    }
+
+    /// Display name for a realtime stream kind.
+    private func realTimeName(_ kind: ColmiProtocol.RealTimeKind) -> String {
+        switch kind {
+        case .heartRate: return "heart rate"
+        case .spo2: return "blood oxygen"
+        case .stress: return "stress"
+        case .hrv: return "HRV"
         }
     }
 
     /// Start (or keep alive) a realtime stream, switching kinds if needed.
     private func startRealTime(kind: ColmiProtocol.RealTimeKind) {
-        let name = kind == .heartRate ? "heart rate" : "blood oxygen"
         if activeRealTime == kind {
-            write(ColmiProtocol.realTimePacket(kind: kind, action: .continue), "Continue realtime \(name)")
+            write(ColmiProtocol.realTimePacket(kind: kind, action: .continue), "Continue realtime \(realTimeName(kind))")
         } else {
             if let previous = activeRealTime {
-                let previousName = previous == .heartRate ? "heart rate" : "blood oxygen"
-                write(ColmiProtocol.stopRealTimePacket(kind: previous), "Stop realtime \(previousName)")
+                write(ColmiProtocol.stopRealTimePacket(kind: previous), "Stop realtime \(realTimeName(previous))")
             }
-            write(ColmiProtocol.realTimePacket(kind: kind, action: .start), "Start realtime \(name)")
+            write(ColmiProtocol.realTimePacket(kind: kind, action: .start), "Start realtime \(realTimeName(kind))")
             activeRealTime = kind
         }
     }
 
     /**
-     Fire every read the ring supports, in order. Runs once per connection
-     (after characteristics are discovered) so a fresh link pulls all data
-     immediately instead of waiting for the 90s round-robin: set the ring
-     clock (logs are timestamped by it), battery, today's steps, then start
-     the realtime heart-rate stream.
+     Fire every read the ring supports, staggered so the firmware isn't
+     overwhelmed. Runs once per connection: set the ring clock (logs are
+     timestamped by it), battery, today's activity, then the stress / HRV /
+     SpO2 / sleep histories, and finally start the realtime heart-rate
+     stream.
      */
     func startFullSync() {
-        let commands: [ColmiProtocol.Command] = [
-            .setTime, .battery, .steps, .realtimeHeartRate,
+        let schedule: [(seconds: TimeInterval, command: ColmiProtocol.Command)] = [
+            (0.0, .setTime),
+            (0.3, .battery),
+            (0.6, .steps),
+            (3.0, .stressLog),
+            (6.0, .hrvLog),
+            (9.0, .spo2Log),
+            (12.0, .sleepLog),
+            (16.0, .realtimeHeartRate),
         ]
-        for command in commands {
-            requestRealtimeReading(command: command)
+        for (delay, command) in schedule {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                guard let self, self.state == .connected else { return }
+                self.requestRealtimeReading(command: command)
+            }
         }
     }
 
@@ -166,6 +208,12 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
         guard let peripheral, let txCharacteristic else { return }
         logTraffic("→ \(label)")
         peripheral.writeValue(packet, for: txCharacteristic, type: .withResponse)
+    }
+
+    private func writeBigData(_ packet: Data, _ label: String) {
+        guard let peripheral, let bigDataCommandCharacteristic else { return }
+        logTraffic("→ \(label)")
+        peripheral.writeValue(packet, for: bigDataCommandCharacteristic, type: .withResponse)
     }
 
     private func emit(_ reading: HealthReading) {
@@ -178,17 +226,43 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
         guard let metric = RingMetric(rawValue: reading.metric) else {
             return "\(reading.metric): \(Int(reading.value))"
         }
-        let value = reading.metric == RingMetric.distanceKm.rawValue
-            ? String(format: "%.2f", reading.value)
-            : "\(Int(reading.value))"
+        let value: String
+        switch metric {
+        case .distanceKm:
+            value = String(format: "%.2f", reading.value)
+        case .sleepDurationH:
+            value = String(format: "%.1f", reading.value)
+        case .sleepQuality:
+            value = "\(Int(reading.value))"
+        default:
+            value = "\(Int(reading.value))"
+        }
         return "\(metric.displayName): \(value)\(metric.unit.isEmpty ? "" : " \(metric.unit)")"
     }
 
+    /// Appends a log line, collapsing consecutive duplicates into a ×N
+    /// suffix (e.g. repeated "Battery: 57%" while polling).
     private func logTraffic(_ line: String) {
+        if let last = traffic.last {
+            let (base, count) = splitRepeat(last)
+            if base == line {
+                traffic[traffic.count - 1] = "\(base) (×\(count + 1))"
+                return
+            }
+        }
         traffic.append(line)
         if traffic.count > 30 {
             traffic.removeFirst(traffic.count - 30)
         }
+    }
+
+    /// Splits "line (×N)" back into ("line", N); plain lines give (line, 1).
+    private func splitRepeat(_ line: String) -> (String, Int) {
+        guard let open = line.lastIndex(of: "("), line.hasSuffix(")"),
+              let number = Int(line[line.index(after: open)..<line.index(before: line.endIndex)].dropFirst()) else {
+            return (line, 1)
+        }
+        return (String(line[..<open]).trimmingCharacters(in: .whitespaces), number)
     }
 }
 
@@ -247,7 +321,11 @@ extension RingBluetoothManager: CBCentralManagerDelegate {
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         state = .connected
-        peripheral.discoverServices([ColmiProtocol.serviceUUID, ColmiProtocol.batteryServiceUUID])
+        peripheral.discoverServices([
+            ColmiProtocol.serviceUUID,
+            ColmiProtocol.batteryServiceUUID,
+            ColmiProtocol.bigDataServiceUUID,
+        ])
     }
 
     func centralManager(_ central: CBCentralManager,
@@ -264,6 +342,9 @@ extension RingBluetoothManager: CBCentralManagerDelegate {
         didRunInitialSync = false
         activeRealTime = nil
         stepsParser.reset()
+        intervalLogParser = nil
+        bigDataBuffer.removeAll()
+        bigDataExpectedLength = nil
         if let error { lastError = error.localizedDescription }
     }
 }
@@ -290,6 +371,11 @@ extension RingBluetoothManager: CBPeripheralDelegate {
             case ColmiProtocol.batteryLevelUUID:
                 batteryCharacteristic = characteristic
                 peripheral.readValue(for: characteristic)
+            case ColmiProtocol.bigDataCommandUUID:
+                bigDataCommandCharacteristic = characteristic
+            case ColmiProtocol.bigDataNotifyUUID:
+                bigDataNotifyCharacteristic = characteristic
+                peripheral.setNotifyValue(true, for: characteristic)
             default:
                 break
             }
@@ -308,6 +394,10 @@ extension RingBluetoothManager: CBPeripheralDelegate {
         guard let data = characteristic.value else { return }
         if characteristic.uuid == ColmiProtocol.batteryLevelUUID {
             batteryLevel = Int(data.first ?? 0)
+            return
+        }
+        if characteristic.uuid == ColmiProtocol.bigDataNotifyUUID {
+            handleBigData(data)
             return
         }
         guard characteristic.uuid == ColmiProtocol.rxCharacteristicUUID else { return }
@@ -337,10 +427,75 @@ extension RingBluetoothManager: CBPeripheralDelegate {
                 }
             }
             // Header/continuation frames carry no slot data — skip.
+        case .syncStress, .syncHRV:
+            handleIntervalLog(bytes)
+        case .notification:
+            if bytes.count >= 2,
+               bytes[1] == ColmiProtocol.NotificationType.liveActivity.rawValue,
+               let live = ColmiProtocol.parseLiveActivity(bytes) {
+                logTraffic("← Live: \(live.steps) steps · \(live.calories) kcal · \(live.distanceMeters) m today")
+            }
         case .setTime:
             logTraffic("← Ring time set")
+        case .bigDataV2:
+            handleBigData(data)
         default:
             logTraffic("← Unknown frame (0x\(String(opcode, radix: 16, uppercase: true)))")
+        }
+    }
+
+    /// Stress / HRV history packet: feed the shared interval parser, emit
+    /// readings, and log the batch when it completes.
+    private func handleIntervalLog(_ bytes: [UInt8]) {
+        guard let parser = intervalLogParser else { return }
+        let (batch, done) = parser.parse(bytes)
+        batch.forEach(emit)
+        if done {
+            let name = parser.metric == .stress ? "Stress" : "HRV"
+            logTraffic(batch.isEmpty
+                ? "← \(name) history: no data for today"
+                : "← \(name) history: \(batch.count) values, latest \(describe(batch.last!))")
+            intervalLogParser = nil
+        }
+    }
+
+    /// Big data frames (sleep / SpO2 history) can span multiple
+    /// notifications: reassemble by the length header, then parse.
+    private func handleBigData(_ data: Data) {
+        bigDataBuffer.append(data)
+        if bigDataExpectedLength == nil, bigDataBuffer.count >= 4 {
+            let length = Int(bigDataBuffer[2]) | (Int(bigDataBuffer[3]) << 8)
+            bigDataExpectedLength = length + 6 // 6-byte frame header
+        }
+        guard let expected = bigDataExpectedLength, bigDataBuffer.count >= expected else { return }
+        let frame = [UInt8](bigDataBuffer.prefix(expected))
+        bigDataBuffer.removeAll(keepingCapacity: false)
+        bigDataExpectedLength = nil
+
+        guard frame.count >= 2, frame[0] == ColmiProtocol.Opcode.bigDataV2.rawValue,
+              let type = ColmiProtocol.BigDataType(rawValue: frame[1]) else { return }
+        switch type {
+        case .sleep:
+            let sessions = sleepParser.parse(frame)
+            if sessions.isEmpty {
+                logTraffic("← Sleep: no data")
+            }
+            for session in sessions {
+                let readings = sleepParser.readings(for: session)
+                readings.forEach(emit)
+                let deep = session.stageMinutes[3, default: 0]
+                let rem = session.stageMinutes[4, default: 0]
+                let light = session.stageMinutes[2, default: 0]
+                let span = "\(session.start.formatted(date: .omitted, time: .shortened)) → \(session.end.formatted(date: .omitted, time: .shortened))"
+                let duration = readings.first.map(describe) ?? "Sleep"
+                logTraffic("← Sleep \(span) — \(duration), deep \(deep)m, REM \(rem)m, light \(light)m")
+            }
+        case .spo2:
+            let batch = spo2LogParser.parse(frame)
+            batch.forEach(emit)
+            logTraffic(batch.isEmpty
+                ? "← Blood oxygen history: no data"
+                : "← Blood oxygen history: \(batch.count) hourly values, latest \(describe(batch.last!))")
         }
     }
 

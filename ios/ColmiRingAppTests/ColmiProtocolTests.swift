@@ -166,3 +166,113 @@ struct ColmiProtocolTests {
         #expect(parser.parse(packet)?.isEmpty == true)
     }
 }
+
+// MARK: - History parsers (stress/HRV intervals, sleep, SpO2, live activity)
+
+@MainActor
+struct ColmiHistoryParserTests {
+
+    @Test
+    func intervalLogParsesThirtyMinuteValues() {
+        let dayStart = Calendar.current.startOfDay(for: Date())
+        let parser = IntervalLogParser(metric: .stress, dayStart: dayStart)
+
+        // Header packet: not done, no readings.
+        var header = [UInt8](repeating: 0, count: 16)
+        header[0] = 0x37; header[1] = 0; header[2] = 4
+        let headerResult = parser.parse(header)
+        #expect(headerResult.readings.isEmpty && !headerResult.done)
+
+        // Packet 1: values start at byte 3; byte 3 = 40 → 00:00, byte 4 = 55 → 00:30.
+        var packet1 = [UInt8](repeating: 0, count: 16)
+        packet1[0] = 0x37; packet1[1] = 1; packet1[3] = 40; packet1[4] = 55
+        let (readings, done) = parser.parse(packet1)
+        #expect(!done)
+        #expect(readings.count == 2)
+        #expect(readings[0].metric == "stress" && readings[0].value == 40)
+        #expect(readings[0].recordedAt == dayStart)
+        #expect(readings[1].value == 55)
+        #expect(readings[1].recordedAt == dayStart.addingTimeInterval(30 * 60))
+
+        // Packet 4: values start at byte 2 and mark the end.
+        var packet4 = [UInt8](repeating: 0, count: 16)
+        packet4[0] = 0x37; packet4[1] = 4; packet4[2] = 70
+        let last = parser.parse(packet4)
+        #expect(last.done)
+        // (12 + 2*13) * 30 minutes before packet 4's first value
+        #expect(last.readings.first?.value == 70)
+    }
+
+    @Test
+    func intervalLogHandlesNoData() {
+        let parser = IntervalLogParser(metric: .hrv, dayStart: Date())
+        var packet = [UInt8](repeating: 0, count: 16)
+        packet[0] = 0x39; packet[1] = 0xFF
+        let noData = parser.parse(packet)
+        #expect(noData.readings.isEmpty && noData.done)
+    }
+
+    @Test
+    func sleepParserReadsSessionAndStages() {
+        let parser = SleepParser()
+        var frame = [UInt8](repeating: 0, count: 17)
+        frame[0] = 0xBC; frame[1] = 0x27
+        frame[2] = 10; frame[3] = 0        // payload length (unused by parser)
+        frame[6] = 1                        // one day
+        frame[7] = 1                        // daysAgo = 1
+        frame[8] = 8                        // dayBytes = 8 → 2 stage pairs
+        frame[9] = 0x64; frame[10] = 0x05   // sleepStart = 1380 min (23:00)
+        frame[11] = 0xA4; frame[12] = 0x01  // sleepEnd = 420 min (07:00)
+        frame[13] = 3; frame[14] = 120      // deep 120 min
+        frame[15] = 4; frame[16] = 120      // REM 120 min
+
+        let sessions = parser.parse(frame)
+        #expect(sessions.count == 1)
+        guard let session = sessions.first else { return }
+
+        // 23:00 → 07:00 next morning = 8 h
+        #expect(session.end.timeIntervalSince(session.start) == 8 * 3600)
+        #expect(session.stageMinutes[3] == 120)
+        #expect(session.stageMinutes[4] == 120)
+
+        let readings = parser.readings(for: session)
+        let duration = readings.first { $0.metric == "sleep_duration_h" }
+        #expect(duration?.value == 8.0)
+        let quality = readings.first { $0.metric == "sleep_quality" }
+        #expect(quality?.value == 50) // (120 + 120) / 480 * 100
+    }
+
+    @Test
+    func spo2LogParsesHourlyAverages() {
+        let parser = Spo2LogParser()
+        var frame: [UInt8] = [0xBC, 0x2A, 49, 0, 0, 0, 0] // length 49, daysAgo = 0 (today)
+        for _ in 0..<24 { frame.append(95); frame.append(99) }
+        let readings = parser.parse(frame)
+        #expect(readings.count == 24)
+        #expect(readings.first?.metric == "spo2")
+        #expect(readings.first?.value == 97)
+        let dayStart = Calendar.current.startOfDay(for: Date())
+        #expect(readings.last?.recordedAt == dayStart.addingTimeInterval(23 * 3600))
+    }
+
+    @Test
+    func parsesLiveActivityTotals() {
+        var bytes = [UInt8](repeating: 0, count: 16)
+        bytes[0] = 0x73; bytes[1] = 0x12
+        bytes[2] = 0x56; bytes[3] = 0x34; bytes[4] = 0x12  // steps 0x123456
+        bytes[5] = 0xE8; bytes[6] = 0x03; bytes[7] = 0x00  // calories 1000 → 100
+        bytes[8] = 0x10; bytes[9] = 0x27; bytes[10] = 0x00 // distance 10000 m
+        let live = ColmiProtocol.parseLiveActivity(bytes)
+        #expect(live?.steps == 0x123456)
+        #expect(live?.calories == 100)
+        #expect(live?.distanceMeters == 10000)
+    }
+
+    @Test
+    func parsesRealTimeStressAndHrv() {
+        let stress = ColmiProtocol.parseRealTime([0x69, 0x08, 0x00, 42])
+        #expect(stress?.metric == "stress" && stress?.value == 42)
+        let hrv = ColmiProtocol.parseRealTime([0x69, 0x0A, 0x00, 55])
+        #expect(hrv?.metric == "hrv" && hrv?.value == 55)
+    }
+}

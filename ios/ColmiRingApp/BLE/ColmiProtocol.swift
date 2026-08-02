@@ -30,6 +30,14 @@ enum ColmiProtocol {
     static let batteryServiceUUID = CBUUID(string: "180F")
     static let batteryLevelUUID = CBUUID(string: "2A19")
 
+    /// "Big data" channel (V2): sleep and SpO2 history travel here, as
+    /// multi-packet frames with their own length header.
+    static let bigDataServiceUUID = CBUUID(string: "de5bf728-d711-4e47-af26-65e3012a5dc7")
+    /// Big data write target (app → ring).
+    static let bigDataCommandUUID = CBUUID(string: "de5bf72a-d711-4e47-af26-65e3012a5dc7")
+    /// Big data notify source (ring → app).
+    static let bigDataNotifyUUID = CBUUID(string: "de5bf729-d711-4e47-af26-65e3012a5dc7")
+
     /// Device-name substrings to filter scan results (case-insensitive).
     /// COLMI models advertise differently — "R02_XXXX", "R10…", "A201…" —
     /// so match any known variant.
@@ -48,9 +56,24 @@ enum ColmiProtocol {
         case battery = 3
         case readHeartRateLog = 21      // 0x15
         case keepAliveRealTimeHR = 30   // 0x1E
+        case syncStress = 55            // 0x37
+        case syncHRV = 57               // 0x39
         case getSteps = 67              // 0x43
         case startRealTime = 105        // 0x69
         case stopRealTime = 106         // 0x6A
+        case notification = 115         // 0x73 — ring-pushed live data
+        case bigDataV2 = 188            // 0xBC — sleep / SpO2 history frames
+    }
+
+    /// Big data frame types (byte 1 of a 0xBC frame).
+    enum BigDataType: UInt8 {
+        case sleep = 0x27
+        case spo2 = 0x2A
+    }
+
+    /// Notification subtypes (byte 1 of an 0x73 frame).
+    enum NotificationType: UInt8 {
+        case liveActivity = 0x12
     }
 
     /// Logical poll commands the app uses; mapped to wire packets by the
@@ -60,14 +83,22 @@ enum ColmiProtocol {
         case setTime
         case battery
         case steps
+        case stressLog
+        case hrvLog
+        case sleepLog
+        case spo2Log
         case realtimeHeartRate
         case realtimeSpo2
+        case realtimeStress
+        case realtimeHrv
     }
 
     /// Realtime stream kinds (payload byte 1 of start/stop real-time).
     enum RealTimeKind: UInt8 {
         case heartRate = 1
         case spo2 = 3
+        case stress = 8     // "pressure" in the protocol docs
+        case hrv = 10
     }
 
     /// Realtime stream actions (payload byte 2 of start real-time).
@@ -117,6 +148,20 @@ enum ColmiProtocol {
         buildPacket(.getSteps, subData: [dayOffset, 0x0f, 0x00, 0x5f, 0x01])
     }
 
+    /// Stress (pressure) history for today: 30-minute interval values.
+    static func stressPacket() -> Data { buildPacket(.syncStress) }
+
+    /// HRV history for a day (0 = today): 30-minute interval values.
+    static func hrvPacket(daysAgo: UInt8 = 0) -> Data {
+        buildPacket(.syncHRV, subData: [daysAgo, 0, 0, 0])
+    }
+
+    /// Big data history request (sleep / SpO2). Sent on the V2 command
+    /// characteristic; NOT a 16-byte checksummed packet.
+    static func bigDataRequest(type: BigDataType) -> Data {
+        Data([Opcode.bigDataV2.rawValue, type.rawValue, 0x01, 0x00, 0xFF, 0x00, 0xFF])
+    }
+
     static func realTimePacket(kind: RealTimeKind, action: RealTimeAction) -> Data {
         buildPacket(.startRealTime, subData: [kind.rawValue, action.rawValue])
     }
@@ -136,6 +181,8 @@ enum ColmiProtocol {
         switch RealTimeKind(rawValue: bytes[1]) {
         case .heartRate: metric = .heartRate
         case .spo2: metric = .spo2
+        case .stress: metric = .stress
+        case .hrv: metric = .hrv
         default: return nil
         }
         return HealthReading(metric: metric, value: Double(bytes[3]))
@@ -145,6 +192,19 @@ enum ColmiProtocol {
     static func parseBattery(_ bytes: [UInt8]) -> (level: Int, charging: Bool)? {
         guard bytes.count >= 3 else { return nil }
         return (Int(bytes[1]), bytes[2] != 0)
+    }
+
+    /// Live activity push (opcode 115, subtype 0x12): today's totals —
+    /// steps uint24 LE at bytes 2..4, calories (÷10) at 5..7, distance (m)
+    /// at 8..10. Displayed in the UI only; NOT emitted as readings, since
+    /// the per-slot history (opcode 67) feeds the series and totals would
+    /// double-count.
+    static func parseLiveActivity(_ bytes: [UInt8]) -> (steps: Int, calories: Int, distanceMeters: Int)? {
+        guard bytes.count >= 11 else { return nil }
+        func uint24(_ lo: Int) -> Int {
+            Int(bytes[lo]) | (Int(bytes[lo + 1]) << 8) | (Int(bytes[lo + 2]) << 16)
+        }
+        return (uint24(2), uint24(5) / 10, uint24(8))
     }
 }
 
@@ -202,5 +262,156 @@ final class StepsParser {
             HealthReading(metric: .calories, value: Double(calories), recordedAt: timestamp),
             HealthReading(metric: .distanceKm, value: Double(distanceMeters) / 1000, recordedAt: timestamp),
         ]
+    }
+}
+
+/**
+ Parser for the 30-minute-interval history logs (stress opcode 55, HRV
+ opcode 57). Both share one layout:
+
+   packet 0xFF       : "no data"
+   packet 0          : header (byte 2 = total packet count)
+   packet 1          : values start at byte 3
+   packets 2..4      : values start at byte 2, 13 per packet
+   (packet 1 carries 12 values; each value covers 30 minutes of the day)
+ */
+final class IntervalLogParser {
+    let metric: RingMetric
+    private let dayStart: Date
+
+    init(metric: RingMetric, dayStart: Date) {
+        self.metric = metric
+        self.dayStart = dayStart
+    }
+
+    /// Parses one packet. Returns readings for the values it carries and a
+    /// `done` flag (true on the last packet or "no data").
+    func parse(_ bytes: [UInt8]) -> (readings: [HealthReading], done: Bool) {
+        guard bytes.count >= 2 else { return ([], true) }
+        let packetNr = Int(bytes[1])
+        if packetNr == 0xFF { return ([], true) }   // no data
+        if packetNr == 0 { return ([], false) }     // header
+
+        let startIndex = packetNr == 1 ? 3 : 2
+        var minutesBefore = 0
+        if packetNr > 1 {
+            minutesBefore = 12 * 30 + (packetNr - 2) * 13 * 30
+        }
+        var readings: [HealthReading] = []
+        for index in startIndex..<(bytes.count - 1) where bytes[index] != 0 {
+            let minuteOfDay = minutesBefore + (index - startIndex) * 30
+            let timestamp = dayStart.addingTimeInterval(TimeInterval(minuteOfDay * 60))
+            readings.append(HealthReading(metric: metric, value: Double(bytes[index]), recordedAt: timestamp))
+        }
+        return (readings, packetNr >= 4)
+    }
+}
+
+/**
+ Parser for sleep history (big data type 0x27). Layout of a complete,
+ reassembled frame:
+
+   bytes 0..1 : 0xBC, type
+   bytes 2..3 : payload length (uint16 LE)
+   byte  6    : number of days in the frame
+   per day    : daysAgo(1), dayBytes(1), sleepStart uint16 LE (min after
+                midnight), sleepEnd uint16 LE, then (stage, minutes) pairs
+
+ Stage types: 2 = light, 3 = deep, 4 = REM, 5 = awake.
+ */
+final class SleepParser {
+    struct Session {
+        let start: Date
+        let end: Date
+        let stageMinutes: [UInt8: Int]  // stage type → minutes
+    }
+
+    /// Parses a complete big data frame into sleep sessions.
+    func parse(_ bytes: [UInt8]) -> [Session] {
+        guard bytes.count >= 8 else { return [] }
+        let daysInPacket = Int(bytes[6])
+        var index = 7
+        var sessions: [Session] = []
+        let calendar = Calendar.current
+
+        for _ in 0..<daysInPacket {
+            guard index + 6 <= bytes.count else { break }
+            let daysAgo = Int(bytes[index]); index += 1
+            let dayBytes = Int(bytes[index]); index += 1
+            let sleepStart = Int(bytes[index]) | (Int(bytes[index + 1]) << 8); index += 2
+            let sleepEnd = Int(bytes[index]) | (Int(bytes[index + 1]) << 8); index += 2
+
+            guard let dayBase = calendar.date(byAdding: .day, value: -daysAgo, to: Date()).flatMap({
+                calendar.startOfDay(for: $0)
+            }) else { break }
+
+            // sleepStart can exceed 1440 (before midnight of the base day).
+            let start = dayBase.addingTimeInterval(TimeInterval((sleepStart - (sleepStart > sleepEnd ? 1440 : 0)) * 60))
+            let end = dayBase.addingTimeInterval(TimeInterval(sleepEnd * 60))
+
+            var stageMinutes: [UInt8: Int] = [:]
+            for _ in stride(from: 4, to: dayBytes, by: 2) {
+                guard index + 2 <= bytes.count else { break }
+                let stage = bytes[index]
+                let minutes = Int(bytes[index + 1])
+                index += 2
+                if minutes > 0 {
+                    stageMinutes[stage, default: 0] += minutes
+                }
+            }
+            sessions.append(Session(start: start, end: end, stageMinutes: stageMinutes))
+        }
+        return sessions
+    }
+
+    /// Readings for one session: duration in hours and a quality score
+    /// (deep + REM share of the session, 0–100).
+    func readings(for session: Session) -> [HealthReading] {
+        let minutes = session.end.timeIntervalSince(session.start) / 60
+        guard minutes > 0 else { return [] }
+        let restorative = Double(session.stageMinutes[3, default: 0] + session.stageMinutes[4, default: 0])
+        let quality = min(100, (restorative / minutes) * 100)
+        return [
+            HealthReading(metric: .sleepDurationH, value: minutes / 60, recordedAt: session.end),
+            HealthReading(metric: .sleepQuality, value: quality, recordedAt: session.end),
+        ]
+    }
+}
+
+/**
+ Parser for SpO2 history (big data type 0x2A). Layout after the 6-byte big
+ data header: repeating blocks of daysAgo(1) followed by 24 hourly
+ (min, max) pairs; the block with daysAgo == 0 (today) ends the frame.
+ Values are averaged per hour.
+ */
+final class Spo2LogParser {
+    /// Parses a complete big data frame into hourly SpO2 readings.
+    func parse(_ bytes: [UInt8]) -> [HealthReading] {
+        guard bytes.count >= 7 else { return [] }
+        let length = Int(bytes[2]) | (Int(bytes[3]) << 8)
+        var index = 6
+        var readings: [HealthReading] = []
+        let calendar = Calendar.current
+
+        while index < bytes.count && index - 6 < length {
+            let daysAgo = Int(bytes[index]); index += 1
+            guard let dayBase = calendar.date(byAdding: .day, value: -daysAgo, to: Date()).flatMap({
+                calendar.startOfDay(for: $0)
+            }) else { break }
+            for hour in 0..<24 {
+                guard index + 2 <= bytes.count else { break }
+                let minValue = bytes[index]
+                let maxValue = bytes[index + 1]
+                index += 2
+                if minValue > 0 && maxValue > 0 {
+                    let timestamp = dayBase.addingTimeInterval(TimeInterval(hour * 3600))
+                    let average = (Double(minValue) + Double(maxValue)) / 2
+                    readings.append(HealthReading(metric: .spo2, value: average, recordedAt: timestamp))
+                }
+                if index - 6 >= length { break }
+            }
+            if daysAgo == 0 { break }
+        }
+        return readings
     }
 }
