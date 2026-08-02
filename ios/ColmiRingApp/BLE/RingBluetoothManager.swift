@@ -99,10 +99,12 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
                 state = .connected
                 peripheral.delegate = self
                 if txCharacteristic == nil || rxCharacteristic == nil {
+                    logTraffic("· Ring already linked — rediscovering")
                     discoverRingServices(on: peripheral)
                 }
                 return
             }
+            logTraffic("· Reconnecting to known ring")
             state = .connecting
             central?.connect(peripheral, options: [
                 CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
@@ -117,6 +119,7 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
             withServices: [ColmiProtocol.serviceUUID],
         ) ?? []
         if let known = systemConnected.first(where: { $0.name.map(ColmiProtocol.matchesName) == true }) {
+            logTraffic("· Adopting system-held ring")
             peripheral = known
             known.delegate = self
             deviceName = known.name
@@ -177,13 +180,30 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
 
     /// Discover the ring's services on an already-up link (state restoration
     /// or system-held connection — paths where didConnect never fires).
+    /// Arms a watchdog: if the channels aren't up within 10 s, the link is
+    /// a zombie (iOS thinks it's connected; the ring is gone) → reconnect.
     private func discoverRingServices(on peripheral: CBPeripheral) {
+        logTraffic("· Discovering services…")
         peripheral.discoverServices([
             ColmiProtocol.serviceUUID,
             ColmiProtocol.batteryServiceUUID,
             ColmiProtocol.bigDataServiceUUID,
         ])
+        let watchdog = DispatchWorkItem { [weak self, weak peripheral] in
+            guard let self, self.txCharacteristic == nil || self.rxCharacteristic == nil else { return }
+            self.logTraffic("· Discovery stalled — reconnecting")
+            if let peripheral { self.central?.cancelPeripheralConnection(peripheral) }
+            self.peripheral = nil
+            self.state = .disconnected
+            self.connect()
+        }
+        discoveryWatchdog?.cancel()
+        discoveryWatchdog = watchdog
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: watchdog)
     }
+
+    /// Pending watchdog that forces a reconnect when service discovery hangs.
+    private var discoveryWatchdog: DispatchWorkItem?
 
     func disconnect() {
         scanFallback?.cancel()
@@ -347,6 +367,7 @@ extension RingBluetoothManager: CBCentralManagerDelegate {
     func centralManager(_ central: CBCentralManager, willRestoreState dict: [String: Any]) {
         if let peripherals = dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral] {
             for peripheral in peripherals where peripheral.name.map(ColmiProtocol.matchesName) == true {
+                logTraffic("· Restored ring link")
                 self.peripheral = peripheral
                 peripheral.delegate = self
                 self.deviceName = peripheral.name
@@ -413,6 +434,7 @@ extension RingBluetoothManager: CBCentralManagerDelegate {
                         error: Error?) {
         state = .failed
         lastError = error?.localizedDescription ?? "Failed to connect"
+        logTraffic("· Connect failed: \(lastError ?? "?")")
     }
 
     func centralManager(_ central: CBCentralManager,
@@ -425,13 +447,20 @@ extension RingBluetoothManager: CBCentralManagerDelegate {
         intervalLogParser = nil
         bigDataBuffer.removeAll()
         bigDataExpectedLength = nil
-        if let error { lastError = error.localizedDescription }
+        if let error {
+            lastError = error.localizedDescription
+            logTraffic("· Link dropped: \(error.localizedDescription)")
+        }
     }
 }
 
 extension RingBluetoothManager: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
-        if let error { lastError = error.localizedDescription; return }
+        if let error {
+            lastError = error.localizedDescription
+            logTraffic("· Service discovery error: \(error.localizedDescription)")
+            return
+        }
         for service in peripheral.services ?? [] {
             peripheral.discoverCharacteristics(nil, for: service)
         }
@@ -464,6 +493,9 @@ extension RingBluetoothManager: CBPeripheralDelegate {
         // discovery callbacks don't re-fire).
         if txCharacteristic != nil && rxCharacteristic != nil && !didRunInitialSync {
             didRunInitialSync = true
+            discoveryWatchdog?.cancel()
+            discoveryWatchdog = nil
+            logTraffic("· Channels ready — syncing")
             startFullSync()
         }
     }
