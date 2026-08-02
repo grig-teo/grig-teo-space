@@ -6,8 +6,6 @@ import Combine
 
  Implemented by:
    - `RingBluetoothManager` — the real CoreBluetooth path.
-   - `DemoDataFeed` — the foreground timer that emits plausible readings
-     before the physical ring is paired.
    - `MockRingClient` — a fixture-driven stand-in used in unit tests and
      SwiftUI previews (no hardware, no CoreBluetooth).
 
@@ -39,7 +37,7 @@ protocol RingDataSource: ObservableObject {
     /// New readings are published here; the API client drains them.
     var readings: PassthroughSubject<HealthReading, Never> { get }
 
-    /// Begin scanning/connecting (or, for demo/mock sources, start emitting).
+    /// Begin scanning/connecting (or, for mock sources, start emitting).
     func connect()
     /// Stop scanning and release the connection (or stop emitting).
     func disconnect()
@@ -48,8 +46,8 @@ protocol RingDataSource: ObservableObject {
 }
 
 /// Connection lifecycle phases shared by every `RingDataSource`.
-/// Lifted out of `RingBluetoothManager` so the protocol, the mock, and the
-/// demo feed all use one state type.
+/// Lifted out of `RingBluetoothManager` so the protocol and the mock use one
+/// state type.
 enum RingConnectionState: String {
     case disconnected
     case scanning

@@ -6,7 +6,7 @@ import SwiftUI
  - Profile: grig-teo identity + CV download (per language).
  - Health:  ring connection, sync, latest metrics, settings.
  - Media:   photo/video gallery grid + one-tap backup to the backend.
- - Settings: demo mode, Face ID app lock, backend info.
+ - Settings: Face ID app lock, backend info.
 
  Both tabs observe the shared `AppState` so BLE collection and uploads keep
  running regardless of which tab is active.

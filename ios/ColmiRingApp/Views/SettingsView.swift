@@ -6,7 +6,7 @@ import SwiftUI
 
  The app-lock toggle is gated on a `verifyIdentity` prompt so enabling or
  disabling it always requires authentication. A "Lock now" button forces the
- lock screen for testing. The demo-mode toggle lives on the Ring page.
+ lock screen for testing.
  */
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings

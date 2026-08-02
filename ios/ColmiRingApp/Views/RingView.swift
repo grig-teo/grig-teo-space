@@ -13,17 +13,8 @@ struct RingView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                ConnectionCard(
-                    ble: appState.bleBox,
-                    demo: appState.demoBox,
-                    demoMode: Binding(
-                        get: { appState.settings.demoMode },
-                        set: { appState.settings.demoMode = $0 },
-                    ),
-                )
+                ConnectionCard(ble: appState.bleBox)
                 SyncLogView(api: lifecycle.api)
-
-                demoModeCard
 
                 if !latestByMetric.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
@@ -42,23 +33,5 @@ struct RingView: View {
             .padding(.vertical)
         }
         .navigationTitle("Ring")
-    }
-
-    /// Demo data feed toggle, inline on the Ring page. Mirrors the card
-    /// styling used by `ConnectionCard` so it reads as part of the page.
-    private var demoModeCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Toggle(isOn: Binding(
-                get: { appState.settings.demoMode },
-                set: { appState.settings.demoMode = $0 },
-            )) {
-                Text("Demo data feed").font(.subheadline.weight(.semibold))
-            }
-            Text("Emit simulated readings instead of reading the real ring. Useful to test the pipeline before the ring is paired.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding()
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemBackground)))
     }
 }

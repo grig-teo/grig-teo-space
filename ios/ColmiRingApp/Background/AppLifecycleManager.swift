@@ -4,9 +4,9 @@ import SwiftUI
 import UIKit
 
 /**
- The long-lived coordinator that owns the BLE manager, demo feed, and API
- client, plus the timers and background-task guards that keep data flowing
- when the app is backgrounded or relaunched by iOS.
+ The long-lived coordinator that owns the BLE manager and API client, plus
+ the timers and background-task guards that keep data flowing when the app is
+ backgrounded or relaunched by iOS.
 
  This object lives for the lifetime of the app (held by `AppState`), NOT tied
  to a view. That is what lets collection survive backgrounding and view
@@ -26,7 +26,6 @@ final class AppLifecycleManager: ObservableObject {
     let pollInterval: TimeInterval = 90.0
 
     let ble: any RingDataSource
-    let demo: any RingDataSource
     let api = ApiClient.shared
     let settings = AppSettings.shared
 
@@ -39,62 +38,36 @@ final class AppLifecycleManager: ObservableObject {
     private var pollStep = 0
     private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
 
-    /// Production wiring: real BLE manager + demo feed.
+    /// Production wiring: the real BLE manager.
     init() {
         self.ble = RingBluetoothManager()
-        self.demo = DemoDataFeed()
         wireUp()
-        applyMode()
-
-        // React to demo mode toggles from anywhere (settings sheet).
-        settings.$demoMode
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in self?.applyMode() }
-            .store(in: &bag)
+        ble.connect()
+        startPolling()
+        isCollecting = true
     }
 
-    /// Test/preview wiring: inject both data sources (e.g. a `MockRingClient`).
-    /// Skips auto-`applyMode` so the test controls start/stop explicitly.
-    init(ble: any RingDataSource, demo: any RingDataSource) {
+    /// Test/preview wiring: inject a data source (e.g. a `MockRingClient`).
+    /// Skips auto-start so the test controls start/stop explicitly.
+    init(ble: any RingDataSource) {
         self.ble = ble
-        self.demo = demo
         wireUp()
     }
 
     // MARK: - Wiring
 
-    /// Route readings from both sources to the UI and the API client. Runs
+    /// Route readings from the ring to the UI and the API client. Runs
     /// exactly once at construction, not per-view-appear.
     private func wireUp() {
         ble.readings
             .sink { [weak self] reading in self?.handle(reading) }
             .store(in: &bag)
-        demo.readings
-            .sink { [weak self] reading in self?.handle(reading) }
-            .store(in: &bag)
-        api.subscribe(to: ble.readings.merge(with: demo.readings))
+        api.subscribe(to: ble.readings)
     }
 
     private func handle(_ reading: HealthReading) {
         if let metric = RingMetric(rawValue: reading.metric) {
             latestByMetric[metric] = reading.value
-        }
-    }
-
-    // MARK: - Mode (demo vs real ring)
-
-    /// Start/stop the right data source and the poll timer based on settings.
-    private func applyMode() {
-        if settings.demoMode {
-            ble.disconnect()
-            (demo as? DemoDataFeed)?.start() ?? demo.connect()
-            startPolling() // keeps background task alive; demo emits on its own timer
-            isCollecting = true
-        } else {
-            (demo as? DemoDataFeed)?.stop() ?? demo.disconnect()
-            ble.connect()
-            startPolling()
-            isCollecting = true
         }
     }
 
@@ -120,19 +93,9 @@ final class AppLifecycleManager: ObservableObject {
         isCollecting = false
     }
 
-    /// One collection cycle. In real-ring mode it asks the ring for the next
-    /// metric in the round-robin; in demo mode the feed emits on its own
-    /// foreground timer, but that timer is suspended while backgrounded — so
-    /// when woken by a BG task we emit a full cycle here to keep data flowing.
+    /// One collection cycle: asks the ring for the next metric in the
+    /// round-robin, reconnecting first if the link dropped.
     private func tick() {
-        if settings.demoMode {
-            // Demo feed's foreground timer pauses while backgrounded; emit a
-            // full metric cycle on each wakeup so data keeps flowing.
-            if let demoFeed = demo as? DemoDataFeed {
-                demoFeed.emitFullCycle()
-            }
-            return
-        }
         guard ble.state == .connected else {
             // Try to (re)connect if we're not.
             if ble.state == .disconnected || ble.state == .failed {

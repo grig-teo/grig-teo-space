@@ -6,19 +6,12 @@ import Combine
  *  `backendURL` and `deviceKey` are baked into the binary at build time via
  *  `Shared.xcconfig` → Info.plist keys `BACKEND_URL` / `DEVICE_API_KEY`, so
  *  the host app and the widget extension carry identical values without
- *  needing a shared App Group (which would require a paid developer account).
- *
- *  `demoMode` is a runtime preference persisted in UserDefaults.standard —
- *  the widget does not read it, and the app is the only writer. */
+ *  needing a shared App Group (which would require a paid developer account). */
 final class AppSettings: ObservableObject {
     static let shared = AppSettings()
 
-    @Published var demoMode: Bool {
-        didSet { UserDefaults.standard.set(demoMode, forKey: "demoMode") }
-    }
-
     /** When on, the app requires Face ID (or the device passcode) on launch
-     *  and on return from background. Mirrors `demoMode`'s UserDefaults pattern. */
+     *  and on return from background. Persisted in UserDefaults.standard. */
     @Published var appLockEnabled: Bool {
         didSet { UserDefaults.standard.set(appLockEnabled, forKey: "appLockEnabled") }
     }
@@ -34,7 +27,6 @@ final class AppSettings: ObservableObject {
         self.backendURL = (info?["BACKEND_URL"] as? String ?? "http://localhost:3001")
             .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         self.deviceKey = info?["DEVICE_API_KEY"] as? String ?? "dev-device-key"
-        self.demoMode = UserDefaults.standard.bool(forKey: "demoMode")
         self.appLockEnabled = UserDefaults.standard.bool(forKey: "appLockEnabled")
     }
 }

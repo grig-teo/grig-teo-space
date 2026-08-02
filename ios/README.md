@@ -20,15 +20,12 @@ open ColmiRingApp.xcodeproj    # build & run on a device/simulator from Xcode
 Requirements: Xcode 15+, iOS 16+ deployment target.
 
 > ⚠️ Bluetooth cannot run on the Simulator — test the BLE path on a real iPhone.
-> Demo mode works on the Simulator.
 
 ## First-run setup
 
 1. Open the app → tap the **gear** icon (Settings).
 2. Set **Backend URL** to your server (e.g. `https://grig-teo.space`).
 3. Set **Device API key** to the same value as `DEVICE_API_KEY` in the backend env.
-4. To exercise the full pipeline before the ring arrives, enable **Demo data feed**.
-   The app will emit simulated readings every 30 s and upload them.
 
 ## How the real ring flow works
 
@@ -73,7 +70,7 @@ ColmiRingApp/
 │   ├── ColmiProtocol.swift     # ⭐ all GATT UUIDs + packet format (R11-specific)
 │   ├── RingBluetoothManager.swift  # CoreBluetooth manager + RX parser
 │   ├── RingMetric.swift        # metric enum + units
-│   └── DemoDataFeed.swift      # simulated readings (test without the ring)
+│   └── RingDataSource.swift    # source protocol (+ AnyRingDataSource box)
 ├── Networking/
 │   └── ApiClient.swift         # batched upload with offline queue
 ├── Models/
@@ -82,7 +79,7 @@ ColmiRingApp/
     ├── ConnectionCard.swift    # BLE status, RSSI, battery
     ├── MetricCard.swift        # latest-value card
     ├── SyncLogView.swift       # pending count, last upload, Sync now
-    └── SettingsSheet.swift     # backend URL, device key, demo toggle
+    └── SettingsSheet.swift     # backend URL, device key
 ```
 
 Readings never block on network: if the upload fails they are persisted to

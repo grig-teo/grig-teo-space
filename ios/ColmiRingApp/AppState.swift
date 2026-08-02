@@ -4,7 +4,7 @@ import SwiftUI
 /**
  The single observable root held by `ColmiRingApp` as a `@StateObject`.
 
- Bundles the long-lived `AppLifecycleManager` (BLE, demo, API, timers) and
+ Bundles the long-lived `AppLifecycleManager` (BLE, API, timers) and
  `AppSettings`, and re-publishes the values the UI needs. Views observe this
  instead of creating their own `@StateObject`s, so collection survives view
  re-creation and app backgrounding.
@@ -26,12 +26,11 @@ final class AppState: ObservableObject {
     /// push the Tip history page. HealthView clears it after navigating.
     @Published var deepLinkTips = false
 
-    /// Convenience passthroughs so views can bind directly. The BLE/demo
-    /// sources are boxed once into stable `AnyRingDataSource` instances so
-    /// SwiftUI's `@ObservedObject` keeps a consistent observation identity
-    /// across re-renders (re-boxing every body pass would break observation).
+    /// Convenience passthrough so views can bind directly. The BLE source is
+    /// boxed once into a stable `AnyRingDataSource` instance so SwiftUI's
+    /// `@ObservedObject` keeps a consistent observation identity across
+    /// re-renders (re-boxing every body pass would break observation).
     let bleBox: AnyRingDataSource
-    let demoBox: AnyRingDataSource
     var api: ApiClient { lifecycle.api }
     var latestByMetric: [RingMetric: Double] { lifecycle.latestByMetric }
 
@@ -41,6 +40,5 @@ final class AppState: ObservableObject {
         let lifecycle = AppLifecycleManager()
         self.lifecycle = lifecycle
         self.bleBox = AnyRingDataSource(lifecycle.ble)
-        self.demoBox = AnyRingDataSource(lifecycle.demo)
     }
 }

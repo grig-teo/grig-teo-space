@@ -2,14 +2,12 @@ import SwiftUI
 
 /**
  Shows Bluetooth connection status, RSSI, battery, and connect/disconnect
- controls. Observes type-erased source boxes (`AnyRingDataSource`) so the
- underlying source can be a real `RingBluetoothManager`, a `DemoDataFeed`, or
- a `MockRingClient` (in previews) without changing the view.
+ controls. Observes a type-erased source box (`AnyRingDataSource`) so the
+ underlying source can be a real `RingBluetoothManager` or a `MockRingClient`
+ (in previews) without changing the view.
  */
 struct ConnectionCard: View {
     @ObservedObject var ble: AnyRingDataSource
-    @ObservedObject var demo: AnyRingDataSource
-    @Binding var demoMode: Bool
 
     private var statusText: String { ble.state.rawValue.capitalized }
     private var statusColor: Color {
@@ -25,43 +23,34 @@ struct ConnectionCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Circle().fill(statusColor).frame(width: 10, height: 10)
-                Text(demoMode ? "Demo data feed" : "Ring: \(statusText)")
+                Text("Ring: \(statusText)")
                     .font(.headline)
                 Spacer()
             }
 
-            if !demoMode {
-                if let name = ble.deviceName {
-                    LabeledRow(label: "Device", value: name)
-                }
-                if let rssi = ble.rssi {
-                    LabeledRow(label: "Signal", value: "\(rssi) dBm")
-                }
-                if let battery = ble.batteryLevel {
-                    LabeledRow(label: "Battery", value: "\(battery)%")
-                }
-                if let last = ble.lastReadingAt {
-                    LabeledRow(label: "Last reading", value: last.formatted(date: .omitted, time: .shortened))
-                }
-                if let error = ble.lastError {
-                    Text(error).font(.caption).foregroundColor(.red)
-                }
+            if let name = ble.deviceName {
+                LabeledRow(label: "Device", value: name)
+            }
+            if let rssi = ble.rssi {
+                LabeledRow(label: "Signal", value: "\(rssi) dBm")
+            }
+            if let battery = ble.batteryLevel {
+                LabeledRow(label: "Battery", value: "\(battery)%")
+            }
+            if let last = ble.lastReadingAt {
+                LabeledRow(label: "Last reading", value: last.formatted(date: .omitted, time: .shortened))
+            }
+            if let error = ble.lastError {
+                Text(error).font(.caption).foregroundColor(.red)
             }
 
             HStack(spacing: 12) {
-                if demoMode {
-                    Button("Stop demo") {
-                        demo.disconnect(); demoMode = false
-                    }
+                Button("Connect") { ble.connect() }
                     .buttonStyle(.borderedProminent)
-                } else {
-                    Button("Connect") { ble.connect() }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(ble.state == .connecting || ble.state == .scanning)
-                    Button("Disconnect") { ble.disconnect() }
-                        .buttonStyle(.bordered)
-                        .disabled(ble.state == .disconnected)
-                }
+                    .disabled(ble.state == .connecting || ble.state == .scanning)
+                Button("Disconnect") { ble.disconnect() }
+                    .buttonStyle(.bordered)
+                    .disabled(ble.state == .disconnected)
             }
         }
         .padding()

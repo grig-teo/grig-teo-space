@@ -12,7 +12,7 @@ import Combine
  This is a faithful scaffold of that flow. The actual parsing of RX notify
  payloads into metric values is stubbed (`parseNotifyPayload`) because the
  exact byte layout must be confirmed by sniffing the real R11 (see
- ColmiProtocol.swift). Until then, use Demo mode to exercise the pipeline.
+ ColmiProtocol.swift).
  */
 final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
     /// Connection phases. Aliased to the shared `RingConnectionState` so this
