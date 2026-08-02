@@ -48,6 +48,9 @@ protocol RingDataSource: ObservableObject {
     /// Restart a scan that has run fruitlessly for too long (no-op for
     /// sources that don't scan).
     func refreshScanIfStale(olderThan maxAge: TimeInterval)
+    /// Pull every history log the ring offers (activity, stress, HRV,
+    /// SpO2, sleep) plus battery and clock, staggered (no-op for mocks).
+    func startFullSync()
     /// Request a fresh real-time reading once connected.
     func requestRealtimeReading(command: ColmiProtocol.Command)
 }

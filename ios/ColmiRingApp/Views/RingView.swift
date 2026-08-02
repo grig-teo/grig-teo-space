@@ -17,7 +17,21 @@ struct RingView: View {
                 SyncLogView(api: lifecycle.api)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Latest readings").font(.headline).padding(.horizontal)
+                    HStack {
+                        Text("Latest readings").font(.headline)
+                        Spacer()
+                        Button {
+                            lifecycle.requestFullSync()
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.accentColor)
+                        }
+                        .disabled(lifecycle.ble.state != .connected)
+                        .opacity(lifecycle.ble.state == .connected ? 1 : 0.4)
+                        .accessibilityLabel("Read all data from the ring now")
+                    }
+                    .padding(.horizontal)
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                         ForEach(RingMetric.allCases, id: \.self) { metric in
                             MetricCard(metric: metric, value: latestByMetric[metric])

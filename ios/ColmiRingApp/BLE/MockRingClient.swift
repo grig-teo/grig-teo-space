@@ -93,6 +93,9 @@ final class MockRingClient: ObservableObject, RingDataSource {
     /// The mock never scans, so a stale-scan refresh is a no-op.
     func refreshScanIfStale(olderThan maxAge: TimeInterval) {}
 
+    /// The mock has no history logs to pull.
+    func startFullSync() {}
+
     /// Pop the next canned fixture onto `readings`. When the queue is
     /// exhausted, it cycles back to the start so previews never run dry.
     func requestRealtimeReading(command: ColmiProtocol.Command) {

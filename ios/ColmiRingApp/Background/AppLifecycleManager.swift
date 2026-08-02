@@ -25,6 +25,10 @@ final class AppLifecycleManager: ObservableObject {
     /// against battery on both phone and ring.
     let pollInterval: TimeInterval = 90.0
 
+    /// Full-history re-sync cadence: every 20 minutes pull all logs
+    /// (activity, stress, HRV, SpO2, sleep) and stream them to the server.
+    let fullSyncInterval: TimeInterval = 20 * 60
+
     let ble: any RingDataSource
     let api = ApiClient.shared
     let settings = AppSettings.shared
@@ -39,6 +43,8 @@ final class AppLifecycleManager: ObservableObject {
     private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
     /// Tracks link transitions so the upload flush fires once per connect.
     private var wasConnected = false
+    /// Last full-history sync; ticks re-run it every `fullSyncInterval`.
+    private var lastFullSyncAt: Date?
 
     /// Production wiring: the real BLE manager.
     init() {
@@ -126,20 +132,37 @@ final class AppLifecycleManager: ObservableObject {
             }
             return
         }
-        // Fresh link: push any queued readings to the backend right away.
+        // Fresh link: the BLE manager full-syncs on connect, so mark the
+        // timer here and push any queued readings to the backend.
         if !wasConnected {
             wasConnected = true
+            lastFullSyncAt = Date()
             api.flushAll()
         }
-        // Round-robin through the poll commands: rotate the realtime stream
-        // (HR → SpO2 → stress → HRV) and refresh activity/battery between.
+        // Every `fullSyncInterval`, re-pull all history (activity, stress,
+        // HRV, SpO2, sleep) so the server stays complete, not just live.
+        if lastFullSyncAt == nil || Date().timeIntervalSince(lastFullSyncAt!) > fullSyncInterval {
+            requestFullSync()
+        }
+        // Round-robin through the poll commands: steps lead every other
+        // tick so activity stays near-realtime; the realtime stream rotates
+        // (HR → SpO2 → stress → HRV) with battery checks between.
         let cycle: [ColmiProtocol.Command] = [
-            .realtimeHeartRate, .steps, .realtimeSpo2,
-            .battery, .realtimeStress, .steps, .realtimeHrv, .battery,
+            .steps, .realtimeHeartRate, .steps, .realtimeSpo2,
+            .battery, .steps, .realtimeStress, .steps, .realtimeHrv, .battery,
         ]
         let command = cycle[pollStep % cycle.count]
         pollStep += 1
         ble.requestRealtimeReading(command: command)
+    }
+
+    /// Pull all history from the ring now (button or 20-minute timer) and
+    /// push anything queued to the backend.
+    func requestFullSync() {
+        guard ble.state == .connected else { return }
+        lastFullSyncAt = Date()
+        ble.startFullSync()
+        api.flushAll()
     }
 
     // MARK: - Scene phase

@@ -51,6 +51,7 @@ final class AnyRingDataSource: ObservableObject, RingDataSource {
     func refreshScanIfStale(olderThan maxAge: TimeInterval) {
         source.refreshScanIfStale(olderThan: maxAge)
     }
+    func startFullSync() { source.startFullSync() }
     func requestRealtimeReading(command: ColmiProtocol.Command) {
         source.requestRealtimeReading(command: command)
     }
