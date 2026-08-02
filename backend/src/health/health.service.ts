@@ -284,14 +284,16 @@ export class HealthService {
     }
     // Upsert on (metric, recorded_at): the ring's history sync resends the
     // same 15-minute slots with fresher values — replace, never duplicate.
-    const values = rows.map(({ metric, value, unit, recordedAt, source, raw }) => ({
-      metric,
-      value,
-      unit,
-      recordedAt,
-      source,
-      raw,
-    }));
+    const values: Partial<HealthReading>[] = rows.map(
+      ({ metric, value, unit, recordedAt, source, raw }) => ({
+        metric,
+        value,
+        unit,
+        recordedAt,
+        source,
+        raw,
+      }),
+    );
     await this.readingRepo
       .createQueryBuilder()
       .insert()
