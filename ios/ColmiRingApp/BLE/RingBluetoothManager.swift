@@ -89,9 +89,20 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
             state = .disconnected
             return
         }
-        // If we already hold a peripheral (e.g. restored), try reconnecting
-        // directly instead of scanning again.
-        if let peripheral, peripheral.state != .connected {
+        // If we already hold a peripheral (e.g. restored), attach to it
+        // instead of scanning again.
+        if let peripheral {
+            if peripheral.state == .connected {
+                // CoreBluetooth does NOT fire didConnect for an already
+                // connected peripheral, so discovery must run here —
+                // otherwise there are no channels and every write no-ops.
+                state = .connected
+                peripheral.delegate = self
+                if txCharacteristic == nil || rxCharacteristic == nil {
+                    discoverRingServices(on: peripheral)
+                }
+                return
+            }
             state = .connecting
             central?.connect(peripheral, options: [
                 CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
@@ -109,11 +120,16 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
             peripheral = known
             known.delegate = self
             deviceName = known.name
-            state = .connecting
-            central?.connect(known, options: [
-                CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
-                CBConnectPeripheralOptionNotifyOnConnectionKey: true,
-            ])
+            if known.state == .connected {
+                state = .connected
+                discoverRingServices(on: known)
+            } else {
+                state = .connecting
+                central?.connect(known, options: [
+                    CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
+                    CBConnectPeripheralOptionNotifyOnConnectionKey: true,
+                ])
+            }
             return
         }
         state = .scanning
@@ -157,6 +173,16 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
               Date().timeIntervalSince(since) > maxAge else { return }
         disconnect()
         connect()
+    }
+
+    /// Discover the ring's services on an already-up link (state restoration
+    /// or system-held connection — paths where didConnect never fires).
+    private func discoverRingServices(on peripheral: CBPeripheral) {
+        peripheral.discoverServices([
+            ColmiProtocol.serviceUUID,
+            ColmiProtocol.batteryServiceUUID,
+            ColmiProtocol.bigDataServiceUUID,
+        ])
     }
 
     func disconnect() {
@@ -329,11 +355,7 @@ extension RingBluetoothManager: CBCentralManagerDelegate {
                     // The link survived but this process's characteristics
                     // did not — without rediscovery every write no-ops and
                     // the page shows "Connected" with no data at all.
-                    peripheral.discoverServices([
-                        ColmiProtocol.serviceUUID,
-                        ColmiProtocol.batteryServiceUUID,
-                        ColmiProtocol.bigDataServiceUUID,
-                    ])
+                    discoverRingServices(on: peripheral)
                 } else {
                     state = .disconnected
                 }
@@ -383,11 +405,7 @@ extension RingBluetoothManager: CBCentralManagerDelegate {
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         state = .connected
-        peripheral.discoverServices([
-            ColmiProtocol.serviceUUID,
-            ColmiProtocol.batteryServiceUUID,
-            ColmiProtocol.bigDataServiceUUID,
-        ])
+        discoverRingServices(on: peripheral)
     }
 
     func centralManager(_ central: CBCentralManager,
