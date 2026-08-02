@@ -59,8 +59,9 @@ targets:
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         # Custom URL scheme so the home-screen widget can deep link into the
-        # app (grigteo://tips opens the Tip history page). Registered on the
-        # host app; the widget uses Link/widgetURL with this scheme.
+        # app (grigteo://ring opens the Ring page, grigteo://tips the Tip
+        # history page). Registered on the host app; the widget uses
+        # Link/widgetURL with this scheme.
         CFBundleURLTypes:
           - CFBundleURLName: space.grig-teo.colmi-ring
             CFBundleURLSchemes:

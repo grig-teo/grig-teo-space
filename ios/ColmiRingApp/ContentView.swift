@@ -49,6 +49,11 @@ struct ContentView: View {
             // the Tip page and clears the flag itself.
             if open { selectedTab = 1 }
         }
+        .onChange(of: appState.deepLinkRing) { open in
+            // Widget deep link: switch to the Health tab; HealthView pushes
+            // the Ring page and clears the flag itself.
+            if open { selectedTab = 1 }
+        }
         .sheet(item: $profileClient.sharedItem) { shared in
             ShareSheet(items: [shared.url])
         }

@@ -78,6 +78,9 @@ struct HealthView: View {
             .navigationDestination(isPresented: $appState.deepLinkTips) {
                 TipHistoryView()
             }
+            .navigationDestination(isPresented: $appState.deepLinkRing) {
+                RingView(appState: appState)
+            }
         }
     }
 }

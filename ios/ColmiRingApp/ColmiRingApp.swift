@@ -34,10 +34,15 @@ struct ColmiRingApp: App {
                 appLock.scenePhaseDidChange(phase)
             }
             .onOpenURL { url in
-                // Deep link from the home-screen widget: grigteo://tips
-                // opens the Health tab and pushes the Tip history page.
-                if url.host == "tips" {
+                // Deep links from the home-screen widget: grigteo://ring
+                // opens the Ring page; grigteo://tips opens Tip history.
+                switch url.host {
+                case "ring":
+                    appState.deepLinkRing = true
+                case "tips":
                     appState.deepLinkTips = true
+                default:
+                    break
                 }
             }
         }

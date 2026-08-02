@@ -27,6 +27,10 @@ final class AppState: ObservableObject {
     /// push the Tip history page. HealthView clears it after navigating.
     @Published var deepLinkTips = false
 
+    /// Set by a widget deep link (grigteo://ring) to ask the Health tab to
+    /// push the Ring page. HealthView clears it after navigating.
+    @Published var deepLinkRing = false
+
     /// Convenience passthrough so views can bind directly. The BLE source is
     /// boxed once into a stable `AnyRingDataSource` instance so SwiftUI's
     /// `@ObservedObject` keeps a consistent observation identity across

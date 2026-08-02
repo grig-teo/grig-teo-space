@@ -6,11 +6,11 @@ import WidgetKit
  *  the last-updated time, and a refresh button (top-right).
  *
  *  Tapping anywhere on the widget (outside the refresh button) opens the host
- *  app on the Tip history page via the `grigteo://tips` deep link.
+ *  app on the Ring page via the `grigteo://ring` deep link.
  *
  *  Two layouts: `.systemSmall` (compact) and `.systemMedium` (full). */
 struct HealthWidgetView: View {
-    static let deepLink = URL(string: "grigteo://tips")!
+    static let deepLink = URL(string: "grigteo://ring")!
 
     let payload: WidgetPayload?
     let updatedAt: Date
