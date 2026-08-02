@@ -34,8 +34,16 @@ enum ColmiProtocol {
     static let batteryServiceUUID = CBUUID(string: "180F")
     static let batteryLevelUUID = CBUUID(string: "2A19")
 
-    /// Device-name substring to filter scan results (case-insensitive).
-    static let nameFilter = "R11"
+    /// Device-name substrings to filter scan results (case-insensitive).
+    /// COLMI models advertise differently — the R10 shows up as "R10…" or
+    /// "A201…", the R11 as "R11…" — so match any known variant.
+    static let nameFilters = ["COLMI", "R10", "R11", "A201"]
+
+    /// Case-insensitive advertised-name match against `nameFilters`.
+    static func matchesName(_ name: String) -> Bool {
+        let upper = name.uppercased()
+        return nameFilters.contains { upper.contains($0) }
+    }
 
     // MARK: - Packet format
 

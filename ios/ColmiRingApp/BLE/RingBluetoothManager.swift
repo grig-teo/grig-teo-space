@@ -38,6 +38,8 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
     private var txCharacteristic: CBCharacteristic?
     private var rxCharacteristic: CBCharacteristic?
     private var batteryCharacteristic: CBCharacteristic?
+    /// Pending fallback that restarts the scan without a service filter.
+    private var scanFallback: DispatchWorkItem?
 
     override init() {
         super.init()
@@ -76,9 +78,26 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
             withServices: [ColmiProtocol.serviceUUID],
             options: [CBCentralManagerScanOptionAllowDuplicatesKey: false],
         )
+        // Some COLMI models (e.g. the R10) don't put the custom service UUID
+        // in their advertisement, so a service-filtered scan never sees them.
+        // After a grace period, fall back to an unfiltered scan — the name
+        // filter in didDiscover still rejects non-COLMI devices. (Unfiltered
+        // scans only run in the foreground; pairing is a foreground flow.)
+        let fallback = DispatchWorkItem { [weak self] in
+            guard let self, self.state == .scanning, self.peripheral == nil else { return }
+            self.central?.stopScan()
+            self.central?.scanForPeripherals(
+                withServices: nil,
+                options: [CBCentralManagerScanOptionAllowDuplicatesKey: false],
+            )
+        }
+        scanFallback = fallback
+        DispatchQueue.main.asyncAfter(deadline: .now() + 12, execute: fallback)
     }
 
     func disconnect() {
+        scanFallback?.cancel()
+        scanFallback = nil
         if state == .scanning { central?.stopScan() }
         if let peripheral { central?.cancelPeripheralConnection(peripheral) }
         state = .disconnected
@@ -110,7 +129,7 @@ extension RingBluetoothManager: CBCentralManagerDelegate {
     /// keeps working without user interaction.
     func centralManager(_ central: CBCentralManager, willRestoreState dict: [String: Any]) {
         if let peripherals = dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral] {
-            for peripheral in peripherals where peripheral.name?.uppercased().contains(ColmiProtocol.nameFilter) == true {
+            for peripheral in peripherals where peripheral.name.map(ColmiProtocol.matchesName) == true {
                 self.peripheral = peripheral
                 peripheral.delegate = self
                 self.deviceName = peripheral.name
@@ -142,9 +161,11 @@ extension RingBluetoothManager: CBCentralManagerDelegate {
                         didDiscover peripheral: CBPeripheral,
                         advertisementData: [String: Any],
                         rssi RSSI: NSNumber) {
-        // Prefer the name filter, fall back to advertising the service.
+        // Match by advertised name (COLMI R10/R11 variants).
         let name = peripheral.name ?? (advertisementData[CBAdvertisementDataLocalNameKey] as? String) ?? ""
-        guard name.uppercased().contains(ColmiProtocol.nameFilter) else { return }
+        guard ColmiProtocol.matchesName(name) else { return }
+        scanFallback?.cancel()
+        scanFallback = nil
         central.stopScan()
         self.peripheral = peripheral
         self.peripheral?.delegate = self

@@ -136,3 +136,13 @@ targets:
     configFiles:
       Debug: Shared.xcconfig
       Release: Shared.xcconfig
+schemes:
+  ColmiRingApp:
+    build:
+      targets:
+        ColmiRingApp: all
+        ColmiRingAppTests: [test]
+        HealthWidget: [build]
+    test:
+      targets:
+        - ColmiRingAppTests
