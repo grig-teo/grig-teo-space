@@ -6,13 +6,9 @@ import Combine
  CoreBluetooth manager for the COLMI ring.
 
  Real device flow:
-   scan → connect → discover ColmiProtocol.serviceUUID → subscribe to RX (notify)
-   → write a realtime command to TX → parse notified RX bytes into readings.
-
- This is a faithful scaffold of that flow. The actual parsing of RX notify
- payloads into metric values is stubbed (`parseNotifyPayload`) because the
- exact byte layout must be confirmed by sniffing the real R11 (see
- ColmiProtocol.swift).
+   scan → connect → discover ColmiProtocol.serviceUUID → subscribe to RX
+   (notify) → write command packets to TX → parse notified RX frames into
+   readings. Wire format lives in ColmiProtocol.swift (R02/R06/R10 family).
  */
 final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
     /// Connection phases. Aliased to the shared `RingConnectionState` so this
@@ -30,6 +26,10 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
     @Published private(set) var lastReadingAt: Date?
     @Published var lastError: String?
 
+    /// Last raw packets exchanged with the ring (newest last, capped), shown
+    /// on the Ring page so collected data is visible before it is uploaded.
+    @Published private(set) var traffic: [String] = []
+
     /** New readings are published here; the API client drains them. */
     let readings = PassthroughSubject<HealthReading, Never>()
 
@@ -42,6 +42,10 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
     private var scanFallback: DispatchWorkItem?
     /// Guards the one-shot full sync that runs after characteristics are up.
     private var didRunInitialSync = false
+    /// Multi-packet steps response state.
+    private let stepsParser = StepsParser()
+    /// Realtime stream currently active on the ring (HR or SpO2).
+    private var activeRealTime: ColmiProtocol.RealTimeKind?
 
     override init() {
         super.init()
@@ -105,41 +109,73 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
         state = .disconnected
     }
 
-    /// Request a real-time reading once connected (heart rate by default).
+    /// Poll the ring with a logical command (see `ColmiProtocol.Command`).
+    /// Realtime commands manage the ring's streaming state: starting a
+    /// different kind stops the current stream first; repeating the same
+    /// kind sends a "continue" keep-alive.
     func requestRealtimeReading(command: ColmiProtocol.Command = .realtimeHeartRate) {
-        guard let peripheral, let txCharacteristic else { return }
-        let packet = ColmiProtocol.buildPacket(command: command)
-        peripheral.writeValue(packet, for: txCharacteristic, type: .withResponse)
+        switch command {
+        case .setTime:
+            write(ColmiProtocol.setTimePacket())
+        case .battery:
+            write(ColmiProtocol.batteryPacket())
+        case .steps:
+            stepsParser.reset()
+            write(ColmiProtocol.stepsPacket(dayOffset: 0))
+        case .realtimeHeartRate:
+            startRealTime(kind: .heartRate)
+        case .realtimeSpo2:
+            startRealTime(kind: .spo2)
+        }
+    }
+
+    /// Start (or keep alive) a realtime stream, switching kinds if needed.
+    private func startRealTime(kind: ColmiProtocol.RealTimeKind) {
+        if activeRealTime == kind {
+            write(ColmiProtocol.realTimePacket(kind: kind, action: .continue))
+        } else {
+            if let previous = activeRealTime {
+                write(ColmiProtocol.stopRealTimePacket(kind: previous))
+            }
+            write(ColmiProtocol.realTimePacket(kind: kind, action: .start))
+            activeRealTime = kind
+        }
     }
 
     /**
-     Fire every read command the ring supports, back to back. Runs once per
-     connection (after characteristics are discovered) so a fresh link pulls
-     all data immediately instead of waiting for the 90s round-robin.
-     Responses the parser doesn't understand yet (e.g. history frames) are
-     ignored by `ColmiProtocol.parse`.
+     Fire every read the ring supports, in order. Runs once per connection
+     (after characteristics are discovered) so a fresh link pulls all data
+     immediately instead of waiting for the 90s round-robin: set the ring
+     clock (logs are timestamped by it), battery, today's steps, then start
+     the realtime heart-rate stream.
      */
     func startFullSync() {
-        if let batteryCharacteristic, let peripheral {
-            peripheral.readValue(for: batteryCharacteristic)
-        }
         let commands: [ColmiProtocol.Command] = [
-            .realtimeHeartRate, .realtimeSpo2, .battery, .historyFetch,
+            .setTime, .battery, .steps, .realtimeHeartRate,
         ]
         for command in commands {
             requestRealtimeReading(command: command)
         }
     }
 
-    // MARK: - RX parsing (delegates to ColmiProtocol — R11-specific, must be verified)
+    // MARK: - Packet I/O
 
-    /**
-     Parse a notified RX payload into a reading. Delegates to the pure
-     `ColmiProtocol.parse` so the byte layout is tested in one place and the
-     real R11 retune is a single, reviewable change.
-     */
-    private func parseNotifyPayload(_ data: Data) -> HealthReading? {
-        ColmiProtocol.parse(data)
+    private func write(_ packet: Data) {
+        guard let peripheral, let txCharacteristic else { return }
+        logTraffic("→", packet)
+        peripheral.writeValue(packet, for: txCharacteristic, type: .withResponse)
+    }
+
+    private func emit(_ reading: HealthReading) {
+        lastReadingAt = Date()
+        readings.send(reading)
+    }
+
+    private func logTraffic(_ direction: String, _ data: Data) {
+        traffic.append("\(direction) \(ColmiProtocol.hex(data))")
+        if traffic.count > 30 {
+            traffic.removeFirst(traffic.count - 30)
+        }
     }
 }
 
@@ -213,6 +249,8 @@ extension RingBluetoothManager: CBCentralManagerDelegate {
                         error: Error?) {
         state = .disconnected
         didRunInitialSync = false
+        activeRealTime = nil
+        stepsParser.reset()
         if let error { lastError = error.localizedDescription }
     }
 }
@@ -257,11 +295,29 @@ extension RingBluetoothManager: CBPeripheralDelegate {
         guard let data = characteristic.value else { return }
         if characteristic.uuid == ColmiProtocol.batteryLevelUUID {
             batteryLevel = Int(data.first ?? 0)
-        } else if characteristic.uuid == ColmiProtocol.rxCharacteristicUUID {
-            if let reading = parseNotifyPayload(data) {
-                lastReadingAt = Date()
-                readings.send(reading)
+            return
+        }
+        guard characteristic.uuid == ColmiProtocol.rxCharacteristicUUID else { return }
+
+        logTraffic("←", data)
+        let bytes = [UInt8](data)
+        guard let opcode = bytes.first, let kind = ColmiProtocol.Opcode(rawValue: opcode) else { return }
+        switch kind {
+        case .battery:
+            if let info = ColmiProtocol.parseBattery(bytes) {
+                batteryLevel = info.level
             }
+        case .startRealTime:
+            if let reading = ColmiProtocol.parseRealTime(bytes) {
+                emit(reading)
+            }
+        case .getSteps:
+            if let slotReadings = stepsParser.parse(bytes) {
+                slotReadings.forEach(emit)
+            }
+        default:
+            // setTime ack, HR-log frames, etc. — not parsed yet.
+            break
         }
     }
 }

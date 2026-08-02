@@ -24,6 +24,9 @@ final class MockRingClient: ObservableObject, RingDataSource {
     @Published private(set) var lastReadingAt: Date?
     @Published var lastError: String?
 
+    /// Mock exchanges no real packets, so the traffic log stays empty.
+    let traffic: [String] = []
+
     let readings = PassthroughSubject<HealthReading, Never>()
 
     /// Canned readings popped in order by `requestRealtimeReading`.

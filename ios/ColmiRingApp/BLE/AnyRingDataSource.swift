@@ -23,6 +23,7 @@ final class AnyRingDataSource: ObservableObject, RingDataSource {
     var batteryLevel: Int? { source.batteryLevel }
     var lastReadingAt: Date? { source.lastReadingAt }
     var lastError: String? { source.lastError }
+    var traffic: [String] { source.traffic }
 
     let readings: PassthroughSubject<HealthReading, Never> = .init()
 

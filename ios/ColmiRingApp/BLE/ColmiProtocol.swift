@@ -2,26 +2,21 @@ import Foundation
 import CoreBluetooth
 
 /**
- The COLMI R11's exact Bluetooth protocol is not publicly documented.
+ COLMI R02-family (R02 / R06 / R10) BLE protocol.
 
- This file bundles **all** GATT UUIDs and packet-building logic in one place,
- based on the reverse-engineered COLMI R02 family (the closest documented
- sibling — see github.com/tahnok/colmi_r02_client and Gadgetbridge PR #3896).
- COLMI rings commonly use a Nordic-UART-style custom service rather than the
- standard Heart Rate Service (0x180D), which is why generic fitness apps can't
- read their data.
+ Reverse-engineered by the colmi_r02_client project
+ (github.com/tahnok/colmi_r02_client; command reference:
+ colmi.puxtril.com/commands). The COLMI R10 is fully compatible with this
+ family. The ring speaks a Nordic-UART-style custom service — the standard
+ Heart Rate Service is NOT used.
 
- ── HOW TO VERIFY / RETUNE FOR THE REAL R11 ──────────────────────────────────
- 1. Install **nRF Connect for Mobile** on your phone.
- 2. Pair the ring through the official COLMI / QRing app and perform a reading.
- 3. In nRF Connect, connect to the ring and watch which characteristics get
-    notified/written while the official app reads HR / SpO2.
- 4. Update the UUIDs and command opcodes below to match what you observed.
- Everything that could differ between the R02 and the R11 lives in this file.
+ Packet format (both directions, always 16 bytes):
+   byte 0      : opcode
+   bytes 1..14 : payload ("sub data")
+   byte 15     : checksum = sum(bytes 0..14) & 0xFF
  */
-
 enum ColmiProtocol {
-    // MARK: - GATT UUIDs (R02-family defaults — verify with nRF Connect)
+    // MARK: - GATT UUIDs (verified for the R02/R06/R10 family)
 
     /// Nordic-UART-style custom service used by the COLMI ring.
     static let serviceUUID = CBUUID(string: "6E40FFF0-B5A3-F393-E0A9-E50E24DCCA9E")
@@ -30,14 +25,15 @@ enum ColmiProtocol {
     /// Notify source (ring → app).
     static let rxCharacteristicUUID = CBUUID(string: "6E400003-B5A3-F393-E0A9-E50E24DCCA9E")
 
-    /// Battery level uses the standard Battery Service.
+    /// Battery level also exists on the standard Battery Service on some
+    /// firmware; the canonical way is the battery opcode below.
     static let batteryServiceUUID = CBUUID(string: "180F")
     static let batteryLevelUUID = CBUUID(string: "2A19")
 
     /// Device-name substrings to filter scan results (case-insensitive).
-    /// COLMI models advertise differently — the R10 shows up as "R10…" or
-    /// "A201…", the R11 as "R11…" — so match any known variant.
-    static let nameFilters = ["COLMI", "R10", "R11", "A201"]
+    /// COLMI models advertise differently — "R02_XXXX", "R10…", "A201…" —
+    /// so match any known variant.
+    static let nameFilters = ["COLMI", "R02", "R06", "R10", "R11", "A201"]
 
     /// Case-insensitive advertised-name match against `nameFilters`.
     static func matchesName(_ name: String) -> Bool {
@@ -45,64 +41,171 @@ enum ColmiProtocol {
         return nameFilters.contains { upper.contains($0) }
     }
 
-    // MARK: - Packet format
+    // MARK: - Wire opcodes (byte 0)
 
-    /** COLMI rings use a fixed 16-byte packet.
-     Bytes 0..2 : header prefix (0x00, 0x00 — placeholder for the real ring's sync bytes)
-     Byte  3    : command type / opcode
-     Bytes 4..14: payload
-     Byte  15   : checksum = sum of the previous 15 bytes mod 255
-
-     The exact header and opcodes must be confirmed by sniffing the real ring.
-     The values below are R02-family derived and structured for easy editing.
-     */
-    static let packetLength = 16
-
-    /// Command opcodes (R02-derived — confirm against the R11).
-    enum Command: UInt8 {
-        case realtimeHeartRate = 0x06
-        case realtimeSpo2 = 0x57
-        case historyFetch = 0x17
-        case battery = 0x04
+    enum Opcode: UInt8 {
+        case setTime = 1
+        case battery = 3
+        case readHeartRateLog = 21      // 0x15
+        case keepAliveRealTimeHR = 30   // 0x1E
+        case getSteps = 67              // 0x43
+        case startRealTime = 105        // 0x69
+        case stopRealTime = 106         // 0x6A
     }
 
-    /// Builds a 16-byte request packet for the given command.
-    static func buildPacket(command: Command, payload: [UInt8] = []) -> Data {
-        var packet = [UInt8](repeating: 0x00, count: packetLength)
-        packet[2] = command.rawValue
-        for (index, byte) in payload.prefix(packetLength - 4).enumerated() {
-            packet[3 + index] = byte
+    /// Logical poll commands the app uses; mapped to wire packets by the
+    /// BLE manager (a realtime command is a start/continue/stop sequence,
+    /// not a single opcode).
+    enum Command {
+        case setTime
+        case battery
+        case steps
+        case realtimeHeartRate
+        case realtimeSpo2
+    }
+
+    /// Realtime stream kinds (payload byte 1 of start/stop real-time).
+    enum RealTimeKind: UInt8 {
+        case heartRate = 1
+        case spo2 = 3
+    }
+
+    /// Realtime stream actions (payload byte 2 of start real-time).
+    enum RealTimeAction: UInt8 {
+        case start = 1
+        case pause = 2
+        case `continue` = 3
+        case stop = 4
+    }
+
+    static let packetLength = 16
+
+    /// Builds a 16-byte packet: opcode at byte 0, payload from byte 1, and
+    /// the checksum (sum of the first 15 bytes & 0xFF) in the last byte.
+    static func buildPacket(_ opcode: Opcode, subData: [UInt8] = []) -> Data {
+        var packet = [UInt8](repeating: 0, count: packetLength)
+        packet[0] = opcode.rawValue
+        for (index, byte) in subData.prefix(packetLength - 2).enumerated() {
+            packet[1 + index] = byte
         }
-        let checksum = packet.prefix(packetLength - 1).reduce(0, &+)
-        packet[packetLength - 1] = UInt8(checksum % 255)
+        let sum = packet.prefix(packetLength - 1).reduce(0 as UInt16) { $0 + UInt16($1) }
+        packet[packetLength - 1] = UInt8(sum & 0xFF)
         return Data(packet)
     }
 
-    /**
-     Parse a notified RX payload into a reading. Pure (no I/O, no state) so it
-     can be unit-tested directly with byte fixtures.
+    // MARK: - Request packets
 
-     The exact byte offsets are derived from the R02 family and MUST be
-     confirmed for the R11 using nRF Connect. Heuristic: byte 0 = command echo,
-     byte 1 = value. Returns nil when the payload can't be interpreted.
+    /// Set the ring's internal clock (UTC, BCD). The ring timestamps its
+    /// HR/step logs with this clock, so it must be sent after every connect.
+    static func setTimePacket(_ date: Date = Date()) -> Data {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        let c = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
+        func bcd(_ value: Int) -> UInt8 { UInt8(((value / 10) << 4) | (value % 10)) }
+        return buildPacket(.setTime, subData: [
+            bcd((c.year ?? 2000) % 100), bcd(c.month ?? 1), bcd(c.day ?? 1),
+            bcd(c.hour ?? 0), bcd(c.minute ?? 0), bcd(c.second ?? 0),
+            1, // language: 1 = English (0 = Chinese)
+        ])
+    }
 
-     Keep this as the single source of truth for parsing — `RingBluetoothManager`
-     delegates here so tests pin one implementation. When the real R11 frame
-     layout is sniffed, update *this* function and the matching tests together.
-     */
-    static func parse(_ data: Data) -> HealthReading? {
-        guard data.count >= 2 else { return nil }
-        let commandByte = data[0]
-        let value = Double(data[1])
+    static func batteryPacket() -> Data { buildPacket(.battery) }
+
+    /// Steps/calories/distance for a day (0 = today), answered with one
+    /// packet per 15-minute slot. Trailing bytes are protocol constants.
+    static func stepsPacket(dayOffset: UInt8 = 0) -> Data {
+        buildPacket(.getSteps, subData: [dayOffset, 0x0f, 0x00, 0x5f, 0x01])
+    }
+
+    static func realTimePacket(kind: RealTimeKind, action: RealTimeAction) -> Data {
+        buildPacket(.startRealTime, subData: [kind.rawValue, action.rawValue])
+    }
+
+    static func stopRealTimePacket(kind: RealTimeKind) -> Data {
+        buildPacket(.stopRealTime, subData: [kind.rawValue, 0, 0])
+    }
+
+    // MARK: - Response parsing
+
+    /// Realtime stream frame (opcode 105): byte 1 = kind, byte 2 = error
+    /// code (0 = ok), byte 3 = value. Value 0 means the sensor is still
+    /// settling — not a real reading.
+    static func parseRealTime(_ bytes: [UInt8]) -> HealthReading? {
+        guard bytes.count >= 4, bytes[2] == 0, bytes[3] > 0 else { return nil }
         let metric: RingMetric
-        switch commandByte {
-        case Command.realtimeHeartRate.rawValue:
-            metric = .heartRate
-        case Command.realtimeSpo2.rawValue:
-            metric = .spo2
-        default:
+        switch RealTimeKind(rawValue: bytes[1]) {
+        case .heartRate: metric = .heartRate
+        case .spo2: metric = .spo2
+        default: return nil
+        }
+        return HealthReading(metric: metric, value: Double(bytes[3]))
+    }
+
+    /// Battery frame (opcode 3): byte 1 = level %, byte 2 = charging flag.
+    static func parseBattery(_ bytes: [UInt8]) -> (level: Int, charging: Bool)? {
+        guard bytes.count >= 3 else { return nil }
+        return (Int(bytes[1]), bytes[2] != 0)
+    }
+
+    /// Hex dump for the on-screen traffic log.
+    static func hex(_ data: Data) -> String {
+        data.map { String(format: "%02X", $0) }.joined(separator: " ")
+    }
+}
+
+/**
+ Stateful parser for the multi-packet steps response (opcode 67).
+
+ The first packet (byte 1 = 0xF0) is a header announcing the calorie format;
+ byte 1 = 0xFF means "no data for that day". Each following packet carries
+ one 15-minute slot: BCD date, slot index, calories, steps, distance (m).
+ */
+final class StepsParser {
+    private var newCalorieProtocol = false
+    private var index = 0
+
+    func reset() {
+        newCalorieProtocol = false
+        index = 0
+    }
+
+    /// Parses one packet. Returns readings for a slot, `[]` on "no data",
+    /// or nil for header/continuation packets.
+    func parse(_ bytes: [UInt8]) -> [HealthReading]? {
+        guard bytes.count >= ColmiProtocol.packetLength else { return nil }
+        if index == 0 && bytes[1] == 255 {
+            reset()
+            return []
+        }
+        if index == 0 && bytes[1] == 240 {
+            newCalorieProtocol = bytes[3] == 1
+            index += 1
             return nil
         }
-        return HealthReading(metric: metric, value: value)
+        func bcd(_ byte: UInt8) -> Int { Int(byte >> 4) * 10 + Int(byte & 15) }
+        var components = DateComponents()
+        components.year = bcd(bytes[1]) + 2000
+        components.month = bcd(bytes[2])
+        components.day = bcd(bytes[3])
+        let slot = Int(bytes[4])
+        components.hour = slot / 4
+        components.minute = (slot % 4) * 15
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        let timestamp = calendar.date(from: components) ?? Date()
+
+        var calories = Int(bytes[7]) | (Int(bytes[8]) << 8)
+        if newCalorieProtocol { calories *= 10 }
+        let steps = Int(bytes[9]) | (Int(bytes[10]) << 8)
+        let distanceMeters = Int(bytes[11]) | (Int(bytes[12]) << 8)
+
+        // bytes[5]/[6] = packet index/count; the last packet resets the state.
+        if bytes[5] == bytes[6] &- 1 { reset() } else { index += 1 }
+
+        return [
+            HealthReading(metric: .steps, value: Double(steps), recordedAt: timestamp),
+            HealthReading(metric: .calories, value: Double(calories), recordedAt: timestamp),
+            HealthReading(metric: .distanceKm, value: Double(distanceMeters) / 1000, recordedAt: timestamp),
+        ]
     }
 }

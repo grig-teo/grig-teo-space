@@ -37,6 +37,10 @@ protocol RingDataSource: ObservableObject {
     /// New readings are published here; the API client drains them.
     var readings: PassthroughSubject<HealthReading, Never> { get }
 
+    /// Last raw packets exchanged with the ring (debug display; empty for
+    /// mock sources).
+    var traffic: [String] { get }
+
     /// Begin scanning/connecting (or, for mock sources, start emitting).
     func connect()
     /// Stop scanning and release the connection (or stop emitting).

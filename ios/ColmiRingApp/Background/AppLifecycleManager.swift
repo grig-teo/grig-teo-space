@@ -111,8 +111,9 @@ final class AppLifecycleManager: ObservableObject {
             wasConnected = true
             api.flushAll()
         }
-        // Round-robin through the realtime-readable metrics.
-        let cycle: [ColmiProtocol.Command] = [.realtimeHeartRate, .realtimeSpo2, .battery]
+        // Round-robin through the poll commands: alternate the realtime
+        // stream (HR ↔ SpO2) and refresh steps/battery in between.
+        let cycle: [ColmiProtocol.Command] = [.realtimeHeartRate, .steps, .realtimeSpo2, .battery]
         let command = cycle[pollStep % cycle.count]
         pollStep += 1
         ble.requestRealtimeReading(command: command)
