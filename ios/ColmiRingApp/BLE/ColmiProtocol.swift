@@ -201,8 +201,9 @@ enum ColmiProtocol {
     }
 
     /// Live activity push (opcode 115, subtype 0x12): today's totals —
-    /// steps uint24 **big-endian** at bytes 2..4, calories (÷10) at 5..7,
-    /// distance (m) at 8..10. Displayed in the UI only; NOT emitted as
+    /// steps uint24 **big-endian** at bytes 2..4, calories uint16
+    /// little-endian deci-kcal (÷10) at bytes 5..6, distance (m) uint24
+    /// big-endian at bytes 8..10. Displayed in the UI only; NOT emitted as
     /// readings, since the per-slot history (opcode 67) feeds the series
     /// and totals would double-count.
     static func parseLiveActivity(_ bytes: [UInt8]) -> (steps: Int, calories: Int, distanceMeters: Int)? {
@@ -210,7 +211,8 @@ enum ColmiProtocol {
         func uint24BE(_ hi: Int) -> Int {
             (Int(bytes[hi]) << 16) | (Int(bytes[hi + 1]) << 8) | Int(bytes[hi + 2])
         }
-        return (uint24BE(2), uint24BE(5) / 10, uint24BE(8))
+        let caloriesRaw = Int(bytes[5]) | (Int(bytes[6]) << 8)
+        return (uint24BE(2), caloriesRaw / 10, uint24BE(8))
     }
 
     /// Temperature push (opcode 115, subtype 0x05). The frame layout is not
@@ -279,8 +281,11 @@ final class StepsParser {
         calendar.timeZone = TimeZone(identifier: "UTC")!
         let timestamp = calendar.date(from: components) ?? Date()
 
-        var calories = Int(bytes[7]) | (Int(bytes[8]) << 8)
-        if newCalorieProtocol { calories *= 10 }
+        let caloriesRaw = Int(bytes[7]) | (Int(bytes[8]) << 8)
+        // New-calorie-protocol rings (R10) report centi-kcal — observed on
+        // device: raw 143 for a 23-step slot = 1.43 kcal. Older firmware
+        // reports plain kcal (Gadgetbridge behavior).
+        let calories = newCalorieProtocol ? Double(caloriesRaw) / 100 : Double(caloriesRaw)
         let steps = Int(bytes[9]) | (Int(bytes[10]) << 8)
         let distanceMeters = Int(bytes[11]) | (Int(bytes[12]) << 8)
 
@@ -289,7 +294,7 @@ final class StepsParser {
 
         return [
             HealthReading(metric: .steps, value: Double(steps), recordedAt: timestamp),
-            HealthReading(metric: .calories, value: Double(calories), recordedAt: timestamp),
+            HealthReading(metric: .calories, value: calories, recordedAt: timestamp),
             HealthReading(metric: .distanceKm, value: Double(distanceMeters) / 1000, recordedAt: timestamp),
         ]
     }

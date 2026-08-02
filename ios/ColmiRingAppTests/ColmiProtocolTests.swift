@@ -139,7 +139,7 @@ struct ColmiProtocolTests {
         slot[1] = 0x26; slot[2] = 0x07; slot[3] = 0x15   // BCD date
         slot[4] = 16                                     // time index → 04:00
         slot[5] = 0; slot[6] = 1                         // index 0 of 1 → last
-        slot[7] = 100; slot[8] = 0                       // calories 100 (×10 new protocol)
+        slot[7] = 100; slot[8] = 0                       // calories raw 100 → 1.0 kcal (centi-kcal)
         slot[9] = 44; slot[10] = 1                       // steps 300
         slot[11] = 244; slot[12] = 1                     // distance 500 m
         let readings = parser.parse(slot)
@@ -148,7 +148,7 @@ struct ColmiProtocolTests {
         let steps = readings?.first { $0.metric == "steps" }
         #expect(steps?.value == 300)
         let calories = readings?.first { $0.metric == "calories" }
-        #expect(calories?.value == 1000)
+        #expect(calories?.value == 1.0)
         let distance = readings?.first { $0.metric == "distance_km" }
         #expect(distance?.value == 0.5)
 
@@ -260,7 +260,7 @@ struct ColmiHistoryParserTests {
         var bytes = [UInt8](repeating: 0, count: 16)
         bytes[0] = 0x73; bytes[1] = 0x12
         bytes[2] = 0x12; bytes[3] = 0x34; bytes[4] = 0x56  // steps 0x123456 (big-endian)
-        bytes[5] = 0x00; bytes[6] = 0x03; bytes[7] = 0xE8  // calories 1000 → 100
+        bytes[5] = 0xE8; bytes[6] = 0x03                   // calories LE16 1000 → 100
         bytes[8] = 0x00; bytes[9] = 0x27; bytes[10] = 0x10 // distance 10000 m
         let live = ColmiProtocol.parseLiveActivity(bytes)
         #expect(live?.steps == 0x123456)
@@ -274,11 +274,11 @@ struct ColmiHistoryParserTests {
         var bytes = [UInt8](repeating: 0, count: 16)
         bytes[0] = 0x73; bytes[1] = 0x12
         bytes[4] = 0x2B
-        bytes[7] = 0x0A  // 10 raw → 1 kcal
+        bytes[5] = 0x39  // 57 deci-kcal → 5 kcal
         bytes[10] = 0x26 // 38 m
         let live = ColmiProtocol.parseLiveActivity(bytes)
         #expect(live?.steps == 43)
-        #expect(live?.calories == 1)
+        #expect(live?.calories == 5)
         #expect(live?.distanceMeters == 38)
     }
 
