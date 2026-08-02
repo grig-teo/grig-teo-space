@@ -2,13 +2,14 @@ import SwiftUI
 
 /**
  Profile tab: shows the profile photo, a small "CV" pill (alongside the site
- link) that opens a language menu to download the CV, and today's stress graph
- by hour.
+ link) that opens a language menu to download the CV, today's stress graph
+ by hour, and the latest health tip under it (tap opens the full history).
  */
 struct ProfileView: View {
     @ObservedObject var client: ProfileClient
     @ObservedObject var settings: AppSettings
     @StateObject private var stressClient = StressSeriesClient.shared
+    @StateObject private var tipClient = TipClient.shared
 
     var body: some View {
         NavigationStack {
@@ -16,6 +17,7 @@ struct ProfileView: View {
                 VStack(spacing: 24) {
                     header
                     StressChartView(client: stressClient)
+                    tipCard
                     if let error = client.lastError {
                         Text(error)
                             .font(.caption)
@@ -28,6 +30,42 @@ struct ProfileView: View {
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
         }
+    }
+
+    /// The latest hourly health tip, under the stress graph. Tap opens the
+    /// full tip history.
+    private var tipCard: some View {
+        NavigationLink {
+            TipHistoryView()
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "lightbulb.fill")
+                        .foregroundColor(.yellow)
+                    Text("Today's tip")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                if let tip = tipClient.tips.first {
+                    Text(tip.content)
+                        .font(.subheadline)
+                        .lineLimit(3)
+                } else {
+                    Text("Tips are generated hourly from your ring data.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+            .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
+        }
+        .buttonStyle(.plain)
+        .task { if tipClient.tips.isEmpty { await tipClient.reload() } }
     }
 
     private var header: some View {
