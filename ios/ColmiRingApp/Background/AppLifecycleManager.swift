@@ -36,6 +36,9 @@ final class AppLifecycleManager: ObservableObject {
     /// Latest value per metric, for the UI cards.
     @Published private(set) var latestByMetric: [RingMetric: Double] = [:]
     @Published private(set) var isCollecting = false
+    /// True while a manual full sync is pulling data from the ring; drives
+    /// the spinning refresh icon and the wave placeholders on the cards.
+    @Published private(set) var isSyncing = false
 
     private var pollTimer: Timer?
     private var bag = Set<AnyCancellable>()
@@ -45,6 +48,8 @@ final class AppLifecycleManager: ObservableObject {
     private var wasConnected = false
     /// Last full-history sync; ticks re-run it every `fullSyncInterval`.
     private var lastFullSyncAt: Date?
+    /// When the current manual sync started (for spinner bookkeeping).
+    private var syncStartedAt: Date?
 
     /// Production wiring: the real BLE manager.
     init() {
@@ -74,6 +79,13 @@ final class AppLifecycleManager: ObservableObject {
     }
 
     private func handle(_ reading: HealthReading) {
+        // First reading arriving once the sync had time to work → stop the
+        // spinner. (History readings carry slot timestamps, so compare
+        // against arrival time, not the reading's own timestamp.)
+        if isSyncing, let started = syncStartedAt,
+           Date().timeIntervalSince(started) > 4 {
+            isSyncing = false
+        }
         guard let metric = RingMetric(rawValue: reading.metric) else { return }
         // Activity metrics arrive as 15-minute increments — the card should
         // show today's running total, not the last slot's slice.
@@ -157,12 +169,19 @@ final class AppLifecycleManager: ObservableObject {
     }
 
     /// Pull all history from the ring now (button or 20-minute timer) and
-    /// push anything queued to the backend.
+    /// push anything queued to the backend. Spins `isSyncing` until the
+    /// first fresh reading arrives (or a safety timeout).
     func requestFullSync() {
         guard ble.state == .connected else { return }
         lastFullSyncAt = Date()
+        syncStartedAt = Date()
+        isSyncing = true
         ble.startFullSync()
         api.flushAll()
+        // Safety: never spin forever, even if the ring stays silent.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60) { [weak self] in
+            self?.isSyncing = false
+        }
     }
 
     // MARK: - Scene phase

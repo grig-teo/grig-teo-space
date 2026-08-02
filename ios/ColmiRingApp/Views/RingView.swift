@@ -26,15 +26,26 @@ struct RingView: View {
                             Image(systemName: "arrow.clockwise")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Color.accentColor)
+                                .rotationEffect(.degrees(lifecycle.isSyncing ? 360 : 0))
+                                .animation(
+                                    lifecycle.isSyncing
+                                        ? .linear(duration: 1).repeatForever(autoreverses: false)
+                                        : .default,
+                                    value: lifecycle.isSyncing,
+                                )
                         }
-                        .disabled(lifecycle.ble.state != .connected)
+                        .disabled(lifecycle.ble.state != .connected || lifecycle.isSyncing)
                         .opacity(lifecycle.ble.state == .connected ? 1 : 0.4)
                         .accessibilityLabel("Read all data from the ring now")
                     }
                     .padding(.horizontal)
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                         ForEach(RingMetric.allCases, id: \.self) { metric in
-                            MetricCard(metric: metric, value: latestByMetric[metric])
+                            MetricCard(
+                                metric: metric,
+                                value: latestByMetric[metric],
+                                loading: lifecycle.isSyncing,
+                            )
                         }
                     }
                     .padding(.horizontal)

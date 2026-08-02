@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Combine
 
 /**
  The single observable root held by `ColmiRingApp` as a `@StateObject`.
@@ -34,11 +35,19 @@ final class AppState: ObservableObject {
     var api: ApiClient { lifecycle.api }
     var latestByMetric: [RingMetric: Double] { lifecycle.latestByMetric }
 
+    private var bag = Set<AnyCancellable>()
+
     init() {
         let settings = AppSettings.shared
         self.settings = settings
         let lifecycle = AppLifecycleManager()
         self.lifecycle = lifecycle
         self.bleBox = AnyRingDataSource(lifecycle.ble)
+        // Forward lifecycle changes (readings, sync state) so observing
+        // views re-render — without this the cards and battery stay stale.
+        lifecycle.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &bag)
     }
 }
