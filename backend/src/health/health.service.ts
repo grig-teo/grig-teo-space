@@ -284,19 +284,20 @@ export class HealthService {
     }
     // Upsert on (metric, recorded_at): the ring's history sync resends the
     // same 15-minute slots with fresher values — replace, never duplicate.
-    const values = rows.map(({ metric, value, unit, recordedAt, source, raw }) => ({
+    const values = rows.map(({ metric, value, unit, recordedAt, source }) => ({
       metric,
       value,
       unit,
       recordedAt,
       source,
-      raw,
+      // Literal null keeps TypeORM's DeepPartial typing happy across versions.
+      raw: null as null,
     }));
     await this.readingRepo
       .createQueryBuilder()
       .insert()
       .into(HealthReading)
-      .values(values as HealthReading[])
+      .values(values)
       .orUpdate(['value', 'unit', 'raw', 'source'], ['metric', 'recorded_at'])
       .execute();
     return { inserted: rows.length };
