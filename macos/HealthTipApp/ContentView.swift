@@ -51,7 +51,7 @@ struct ContentView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
-            .frame(maxHeight: .infinity, alignment: .topLeading)
+            .frame(alignment: .topLeading)
 
             if let tip {
                 Text("Generated \(TipFetcher.clockTime(fromISO: tip.generatedAt))")
