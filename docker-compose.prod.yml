@@ -35,6 +35,9 @@ services:
   backend:
     build: ./backend
     restart: unless-stopped
+    extra_hosts:
+      # Reach the host-bound Ollama (politrack_ollama on 127.0.0.1:11434).
+      - 'host.docker.internal:host-gateway'
     ports:
       - '127.0.0.1:3021:3001'
     environment:
@@ -62,6 +65,8 @@ services:
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       GLM_API_KEY: ${GLM_API_KEY:-}
       GLM_MODEL: ${GLM_MODEL:-glm-5.2}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:14b-instruct-q5_K_M}
       LEMNISCATE_WEBHOOK_SECRET: ${LEMNISCATE_WEBHOOK_SECRET:-}
       DEV_TELEGRAM_BOT_TOKEN: ${DEV_TELEGRAM_BOT_TOKEN:-}
       DEV_TELEGRAM_CHAT_ID: ${DEV_TELEGRAM_CHAT_ID:-}

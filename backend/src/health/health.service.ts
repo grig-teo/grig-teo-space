@@ -794,18 +794,25 @@ export class HealthService {
   }
 
   /**
-   * Calls GLM for the hourly tip. Mirrors the fetch in DocumentsService so the
-   * key/endpoint live in one place; extracted here to keep getHourlyTip short.
+   * Tip generation: try the local Ollama first (free, on-VPS — currently
+   * `politrack_ollama` with qwen2.5-14b-instruct), fall back to GLM (paid
+   * Zhipu) when Ollama is unreachable or errors.
    */
   private async glmComplete(system: string, user: string): Promise<string> {
-    const apiKey = process.env.GLM_API_KEY?.trim();
-    if (!apiKey) {
-      throw new ServiceUnavailableException('Health tip AI is not configured');
-    }
     const messages: GlmMessage[] = [
       { role: 'system', content: system },
       { role: 'user', content: user },
     ];
+    try {
+      return await this.ollamaComplete(messages);
+    } catch {
+      // Ollama down or errored — fall through to the paid provider.
+    }
+
+    const apiKey = process.env.GLM_API_KEY?.trim();
+    if (!apiKey) {
+      throw new ServiceUnavailableException('Health tip AI is not configured');
+    }
     const model = process.env.GLM_MODEL?.trim() || 'glm-5.2';
     const response = await fetch(TIP_ENDPOINT, {
       method: 'POST',
@@ -829,6 +836,35 @@ export class HealthService {
     const text = payload.choices?.[0]?.message?.content?.trim();
     if (!text) {
       throw new InternalServerErrorException('Empty AI response');
+    }
+    return text;
+  }
+
+  /**
+   * Calls the on-VPS Ollama through its OpenAI-compatible endpoint. The
+   * backend container reaches the host-bound Ollama via host.docker.internal
+   * (extra_hosts host-gateway in docker-compose.prod.yml).
+   */
+  private async ollamaComplete(messages: GlmMessage[]): Promise<string> {
+    const base = (process.env.OLLAMA_BASE_URL?.trim() || 'http://host.docker.internal:11434')
+      .replace(/\/+$/, '');
+    const model = process.env.OLLAMA_MODEL?.trim() || 'qwen2.5:14b-instruct-q5_K_M';
+    const response = await fetch(`${base}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, messages, temperature: 0.4, max_tokens: 512, stream: false }),
+      signal: AbortSignal.timeout(120_000),
+    });
+    if (!response.ok) {
+      const raw = await response.text();
+      throw new BadGatewayException(`Ollama API error: ${response.status} ${raw.slice(0, 200)}`);
+    }
+    const payload = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const text = payload.choices?.[0]?.message?.content?.trim();
+    if (!text) {
+      throw new InternalServerErrorException('Empty Ollama response');
     }
     return text;
   }
