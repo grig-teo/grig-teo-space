@@ -405,9 +405,18 @@ export class HealthService {
     }
 
     const context = this.buildTipContext(readings, now);
-    const tip = await this.glmComplete(TIP_SYSTEM_PROMPT, context);
-    await this.saveTipIfNew(tip, now);
-    return { tip, generatedAt: now.toISOString() };
+    try {
+      const tip = await this.glmComplete(TIP_SYSTEM_PROMPT, context);
+      await this.saveTipIfNew(tip, now);
+      return { tip, generatedAt: now.toISOString() };
+    } catch (error) {
+      // GLM outage/quota exhaustion: serve the last good tip instead of
+      // failing every consumer. Its generatedAt still shows the true age.
+      if (cached) {
+        return { tip: cached.content, generatedAt: cached.generatedAt.toISOString() };
+      }
+      throw error;
+    }
   }
 
   /** Most recently persisted tip, or null if none exists. */
