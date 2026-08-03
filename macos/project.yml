@@ -1,0 +1,62 @@
+name: HealthTip
+options:
+  bundleIdPrefix: space.grig-teo
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    DEVELOPMENT_TEAM: "99LK64WRBG"
+    CODE_SIGN_STYLE: Automatic
+targets:
+  HealthTip:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: HealthTipApp
+      - path: Shared
+    dependencies:
+      - target: TipWidget
+        embed: true
+    info:
+      path: HealthTipApp/Info.plist
+      properties:
+        CFBundleDisplayName: Health Tip
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        LSMinimumSystemVersion: "14.0"
+        # Backend URL + device key baked in from Shared.xcconfig (gitignored).
+        BACKEND_URL: $(APP_BACKEND_SCHEME)://$(APP_BACKEND_HOST)
+        DEVICE_API_KEY: $(APP_DEVICE_KEY)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: space.grig-teo.health-tip
+    configFiles:
+      Debug: Shared.xcconfig
+      Release: Shared.xcconfig
+  TipWidget:
+    type: app-extension
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: TipWidget
+      - path: Shared
+    info:
+      path: TipWidget/Info.plist
+      properties:
+        CFBundleDisplayName: Health Tip Widget
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        BACKEND_URL: $(APP_BACKEND_SCHEME)://$(APP_BACKEND_HOST)
+        DEVICE_API_KEY: $(APP_DEVICE_KEY)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: space.grig-teo.health-tip.Widget
+        SKIP_INSTALL: NO
+    configFiles:
+      Debug: Shared.xcconfig
+      Release: Shared.xcconfig
