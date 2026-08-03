@@ -54,6 +54,13 @@ struct ContentView: View {
             // the Ring page and clears the flag itself.
             if open { selectedTab = 1 }
         }
+        .onChange(of: appState.deepLinkMedia) { open in
+            // Profile page "See more": jump to the Media tab.
+            if open {
+                selectedTab = 2
+                appState.deepLinkMedia = false
+            }
+        }
         .sheet(item: $profileClient.sharedItem) { shared in
             ShareSheet(items: [shared.url])
         }

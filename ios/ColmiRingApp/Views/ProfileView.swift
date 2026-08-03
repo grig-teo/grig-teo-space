@@ -3,13 +3,16 @@ import SwiftUI
 /**
  Profile tab: shows the profile photo, a small "CV" pill (alongside the site
  link) that opens a language menu to download the CV, today's stress graph
- by hour, and the latest health tip under it (tap opens the full history).
+ by hour, the latest health tip under it (tap opens the full history), and
+ the three newest media items with a "See more" jump to the Media tab.
  */
 struct ProfileView: View {
     @ObservedObject var client: ProfileClient
     @ObservedObject var settings: AppSettings
     @StateObject private var stressClient = StressSeriesClient.shared
     @StateObject private var tipClient = TipClient.shared
+    @StateObject private var mediaLibrary = MediaLibraryWrapper.shared
+    @State private var latestMedia: [MediaLibraryWrapper.AssetSnapshot] = []
 
     var body: some View {
         NavigationStack {
@@ -18,6 +21,7 @@ struct ProfileView: View {
                     header
                     StressChartView(client: stressClient)
                     tipCard
+                    mediaSection
                     if let error = client.lastError {
                         Text(error)
                             .font(.caption)
@@ -29,6 +33,47 @@ struct ProfileView: View {
             }
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
+        }
+        .task {
+            latestMedia = Array(mediaLibrary.allSnapshots().prefix(3))
+        }
+    }
+
+    /// The three newest photos/videos from the library. Tap one to open it;
+    /// "See more" jumps to the Media tab.
+    @ViewBuilder
+    private var mediaSection: some View {
+        if !latestMedia.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Latest media")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                HStack(spacing: 3) {
+                    ForEach(latestMedia) { snapshot in
+                        NavigationLink {
+                            MediaViewerView(snapshot: snapshot)
+                        } label: {
+                            MediaThumbnailCell(
+                                snapshot: snapshot,
+                                uploaded: MediaSyncer.shared.isUploaded(snapshot.id),
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                Button {
+                    AppState.shared.deepLinkMedia = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("See more")
+                        Image(systemName: "chevron.right")
+                            .font(.caption2)
+                    }
+                    .font(.subheadline)
+                    .foregroundColor(.accentColor)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
     }
 

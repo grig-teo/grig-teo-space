@@ -31,6 +31,10 @@ final class AppState: ObservableObject {
     /// push the Ring page. HealthView clears it after navigating.
     @Published var deepLinkRing = false
 
+    /// Set by the Profile page's "See more" media button to switch to the
+    /// Media tab. ContentView clears it after switching.
+    @Published var deepLinkMedia = false
+
     /// Convenience passthrough so views can bind directly. The BLE source is
     /// boxed once into a stable `AnyRingDataSource` instance so SwiftUI's
     /// `@ObservedObject` keeps a consistent observation identity across
