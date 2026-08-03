@@ -1,7 +1,11 @@
 # HealthTip — minimal macOS app + widget
 
 A tiny macOS app and Notification Center widget that show the latest hourly
-AI health tip from the grig-teo.space backend (`/api/health/tips`).
+AI health tip from the grig-teo.space backend (`/api/health/tips`). While
+the app is running it polls every 15 minutes and posts a **macOS
+notification** whenever a new tip appears on the server (first launch asks
+for notification permission; the tip current at install time is recorded
+silently so it doesn't fire once for no reason).
 
 ## Build
 
