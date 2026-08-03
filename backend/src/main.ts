@@ -18,6 +18,9 @@ async function bootstrap() {
   // (/api/webhooks/lemniscate) needs the exact bytes, pre-parse.
   app.use(
     json({
+      // Blog bodies are BlockNote JSON in three locales; a full content
+      // save easily exceeds Express's 100 kB default.
+      limit: '10mb',
       verify: (req, _res, buf) => {
         (req as Request & { rawBody?: Buffer }).rawBody = buf;
       },
