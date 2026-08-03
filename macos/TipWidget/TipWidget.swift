@@ -49,18 +49,18 @@ struct TipWidgetView: View {
                 Image(systemName: "lightbulb.fill")
                     .foregroundStyle(.yellow)
                 Text("Health tip")
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                 Spacer()
                 if let generatedAt = entry.generatedAt {
                     Text(generatedAt)
-                        .font(.caption)
+                        .font(.callout)
                         .foregroundStyle(.secondary)
                 }
             }
             Text(entry.text)
-                .font(.callout)
-                .lineLimit(6)
+                .font(.title3)
+                .lineLimit(5)
                 .frame(maxHeight: .infinity, alignment: .topLeading)
         }
         .padding(12)
