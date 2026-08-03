@@ -20,7 +20,7 @@ struct ContentView: View {
                 Image(systemName: "lightbulb.fill")
                     .foregroundStyle(.yellow)
                 Text("Latest health tip")
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button {
@@ -40,7 +40,7 @@ struct ContentView: View {
             Group {
                 if let tip {
                     Text(tip.content)
-                        .font(.body)
+                        .font(.title3)
                         .fixedSize(horizontal: false, vertical: true)
                 } else if failed {
                     Text("Couldn't load the tip. Check the connection and try again.")
@@ -55,7 +55,7 @@ struct ContentView: View {
 
             if let tip {
                 Text("Generated \(TipFetcher.clockTime(fromISO: tip.generatedAt))")
-                    .font(.caption2)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
             }
         }
