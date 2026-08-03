@@ -10,9 +10,9 @@ pipeline. Four deployable surfaces share one backend and one database:
 - A public Next.js site + admin dashboard (`frontend/`).
 - A NestJS API on Postgres/TypeORM with MinIO object storage (`backend/`).
 - A Telegram (Telegraf) bot that reads/writes the health endpoints (`telegram/`).
-- A SwiftUI iOS app (`ColmiRingApp`) for the COLMI R11 smart ring — ring
-  metrics, scanned health documents with an AI doctor chat, and a photo/video
-  media backup.
+- A SwiftUI iOS app (`ColmiRingApp`) for the COLMI R10 (A201) smart ring — ring
+  metrics over the reverse-engineered R02-family BLE protocol, scanned health
+  documents with an AI doctor chat, and a photo/video media backup.
 
 Main branch is `main`. Remote is GitHub (`github.com:grig-teo/grig-teo-space.git`).
 
