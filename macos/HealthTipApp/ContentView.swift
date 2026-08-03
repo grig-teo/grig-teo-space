@@ -2,12 +2,17 @@ import SwiftUI
 
 /**
  The whole app: the latest hourly AI health tip, a timestamp, and a refresh
- button. Loads on appear and every time the window regains focus.
+ button. Loads on appear and every 15 minutes; when the server has a NEW
+ tip, a macOS notification is posted (see TipNotifier).
  */
 struct ContentView: View {
     @State private var tip: Tip?
     @State private var isLoading = false
     @State private var failed = false
+
+    /// Poll cadence — the backend generates a tip hourly, so 15 min catches
+    /// each new one with at most a quarter-hour delay.
+    private let pollTimer = Timer.publish(every: 15 * 60, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -55,14 +60,22 @@ struct ContentView: View {
             }
         }
         .padding(16)
-        .task { await load() }
+        .task {
+            TipNotifier.shared.start()
+            await load()
+        }
+        .onReceive(pollTimer) { _ in
+            Task { await load() }
+        }
     }
 
     private func load() async {
         isLoading = true
         failed = false
         do {
-            tip = try await TipFetcher.latest()
+            let latest = try await TipFetcher.latest()
+            tip = latest
+            TipNotifier.shared.notifyIfNew(latest)
         } catch {
             failed = true
         }
