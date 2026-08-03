@@ -841,12 +841,12 @@ export class HealthService {
   }
 
   /**
-   * Calls the on-VPS Ollama through its OpenAI-compatible endpoint. The
-   * backend container reaches the host-bound Ollama via host.docker.internal
-   * (extra_hosts host-gateway in docker-compose.prod.yml).
+   * Calls the compose-local Ollama service through its OpenAI-compatible
+   * endpoint (it shares politrack_ollama's model store, so qwen2.5-14b is
+   * already pulled — free, on-VPS, no API key).
    */
   private async ollamaComplete(messages: GlmMessage[]): Promise<string> {
-    const base = (process.env.OLLAMA_BASE_URL?.trim() || 'http://host.docker.internal:11434')
+    const base = (process.env.OLLAMA_BASE_URL?.trim() || 'http://ollama:11434')
       .replace(/\/+$/, '');
     const model = process.env.OLLAMA_MODEL?.trim() || 'qwen2.5:14b-instruct-q5_K_M';
     const response = await fetch(`${base}/v1/chat/completions`, {

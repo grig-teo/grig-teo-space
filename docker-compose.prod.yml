@@ -65,7 +65,7 @@ services:
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       GLM_API_KEY: ${GLM_API_KEY:-}
       GLM_MODEL: ${GLM_MODEL:-glm-5.2}
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:14b-instruct-q5_K_M}
       LEMNISCATE_WEBHOOK_SECRET: ${LEMNISCATE_WEBHOOK_SECRET:-}
       DEV_TELEGRAM_BOT_TOKEN: ${DEV_TELEGRAM_BOT_TOKEN:-}
@@ -113,6 +113,18 @@ services:
       backend:
         condition: service_healthy
 
+  # Local LLM for health-tip generation. Shares politrack_ollama's model
+  # store (qwen2.5-14b / qwen3-14b already pulled) — no downloads, no GPU
+  # needed, only the backend talks to it over the compose network.
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - politrack_ollama_models:/root/.ollama
+
 volumes:
   postgres_data:
   minio_data:
+  politrack_ollama_models:
+    external: true
+    name: politrack_politrack_ollama_data
