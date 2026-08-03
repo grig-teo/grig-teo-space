@@ -37,6 +37,8 @@ protocol RingDataSource: ObservableObject {
     var batteryLevel: Int? { get }
     /// When the most recent reading was parsed.
     var lastReadingAt: Date? { get }
+    /// Readable form of the most recent reading ("Heart Rate: 78 bpm").
+    var lastReadingText: String? { get }
     /// When the ring last sent any frame — the silence watchdog uses this
     /// to detect a wedged link that still reports "connected".
     var lastActivityAt: Date? { get }

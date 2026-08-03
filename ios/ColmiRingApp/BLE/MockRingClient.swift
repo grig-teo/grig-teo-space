@@ -22,6 +22,7 @@ final class MockRingClient: ObservableObject, RingDataSource {
     @Published private(set) var rssi: Int?
     @Published private(set) var batteryLevel: Int?
     @Published private(set) var lastReadingAt: Date?
+    @Published private(set) var lastReadingText: String?
     @Published private(set) var lastActivityAt: Date?
     @Published var lastError: String?
 
@@ -108,6 +109,7 @@ final class MockRingClient: ObservableObject, RingDataSource {
         let reading = fixtureQueue[currentIndex]
         currentIndex += 1
         lastReadingAt = Date()
+        lastReadingText = "\(reading.metric): \(Int(reading.value))"
         readings.send(reading)
     }
 

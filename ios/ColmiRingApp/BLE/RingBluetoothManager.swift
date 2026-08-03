@@ -25,6 +25,8 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
     @Published private(set) var batteryLevel: Int?
     @Published private(set) var lastReadingAt: Date?
     @Published private(set) var lastActivityAt: Date?
+    /// Readable form of the most recent reading ("Heart Rate: 78 bpm").
+    @Published private(set) var lastReadingText: String?
     @Published var lastError: String?
 
     /// Last raw packets exchanged with the ring (newest last, capped), shown
@@ -367,6 +369,7 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
 
     private func emit(_ reading: HealthReading) {
         lastReadingAt = Date()
+        lastReadingText = describe(reading)
         readings.send(reading)
     }
 

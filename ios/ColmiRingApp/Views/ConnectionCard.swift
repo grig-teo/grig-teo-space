@@ -35,8 +35,14 @@ struct ConnectionCard: View {
             if let rssi = ble.rssi {
                 LabeledRow(label: "Signal", value: "\(rssi) dBm")
             }
-            if let last = ble.lastReadingAt {
-                LabeledRow(label: "Last reading", value: last.formatted(date: .omitted, time: .shortened))
+            if ble.state == .connected {
+                // The latest value read from the ring + when; "—" until the
+                // first one arrives (instead of hiding the row).
+                let parts = [
+                    ble.lastReadingText,
+                    ble.lastReadingAt?.formatted(date: .omitted, time: .shortened),
+                ].compactMap { $0 }
+                LabeledRow(label: "Last reading", value: parts.isEmpty ? "—" : parts.joined(separator: " · "))
             }
             if let error = ble.lastError {
                 Text(error).font(.caption).foregroundColor(.red)
