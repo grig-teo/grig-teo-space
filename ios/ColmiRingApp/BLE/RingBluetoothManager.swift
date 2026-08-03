@@ -85,6 +85,8 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
 
     func connect() {
         lastError = nil
+        reconnectWork?.cancel()
+        reconnectWork = nil
         guard central?.state == .poweredOn else {
             state = .disconnected
             return
@@ -110,6 +112,7 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
                 CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
                 CBConnectPeripheralOptionNotifyOnConnectionKey: true,
             ])
+            armConnectWatchdog()
             return
         }
         // If iOS holds a system-level connection to the ring (e.g. another
@@ -132,6 +135,7 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
                     CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
                     CBConnectPeripheralOptionNotifyOnConnectionKey: true,
                 ])
+                armConnectWatchdog()
             }
             return
         }
@@ -204,8 +208,36 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
 
     /// Pending watchdog that forces a reconnect when service discovery hangs.
     private var discoveryWatchdog: DispatchWorkItem?
+    /// Pending watchdog that aborts a connection attempt that never lands.
+    private var connectWatchdog: DispatchWorkItem?
+    /// Pending quick reconnect after an unexpected link drop.
+    private var reconnectWork: DispatchWorkItem?
+    /// Distinguishes user-initiated disconnects from link failures.
+    private var intentionalDisconnect = false
+
+    /// Abort a connection attempt that doesn't land within 20 s — iOS has
+    /// no connect timeout, so a sleeping/out-of-range ring would hang the
+    /// state machine at "connecting" forever.
+    private func armConnectWatchdog() {
+        connectWatchdog?.cancel()
+        let watchdog = DispatchWorkItem { [weak self] in
+            guard let self, self.state == .connecting, let peripheral = self.peripheral else { return }
+            self.logTraffic("· Connect timed out — retrying")
+            self.central?.cancelPeripheralConnection(peripheral)
+            self.peripheral = nil
+            self.state = .disconnected
+            self.connect()
+        }
+        connectWatchdog = watchdog
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20, execute: watchdog)
+    }
 
     func disconnect() {
+        intentionalDisconnect = true
+        reconnectWork?.cancel()
+        reconnectWork = nil
+        connectWatchdog?.cancel()
+        connectWatchdog = nil
         scanFallback?.cancel()
         scanFallback = nil
         scanHint?.cancel()
@@ -446,9 +478,12 @@ extension RingBluetoothManager: CBCentralManagerDelegate {
         self.rssi = RSSI.intValue
         self.state = .connecting
         central.connect(peripheral)
+        armConnectWatchdog()
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        connectWatchdog?.cancel()
+        connectWatchdog = nil
         state = .connected
         discoverRingServices(on: peripheral)
     }
@@ -456,14 +491,23 @@ extension RingBluetoothManager: CBCentralManagerDelegate {
     func centralManager(_ central: CBCentralManager,
                         didFailToConnect peripheral: CBPeripheral,
                         error: Error?) {
+        connectWatchdog?.cancel()
+        connectWatchdog = nil
         state = .failed
         lastError = error?.localizedDescription ?? "Failed to connect"
         logTraffic("· Connect failed: \(lastError ?? "?")")
+        // Retry quickly — the poll timer would take up to 90 s otherwise.
+        let work = DispatchWorkItem { [weak self] in self?.connect() }
+        reconnectWork?.cancel()
+        reconnectWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: work)
     }
 
     func centralManager(_ central: CBCentralManager,
                         didDisconnectPeripheral peripheral: CBPeripheral,
                         error: Error?) {
+        connectWatchdog?.cancel()
+        connectWatchdog = nil
         state = .disconnected
         didRunInitialSync = false
         activeRealTime = nil
@@ -475,6 +519,16 @@ extension RingBluetoothManager: CBCentralManagerDelegate {
             lastError = error.localizedDescription
             logTraffic("· Link dropped: \(error.localizedDescription)")
         }
+        // Unexpected drop (timeout, out of range): reconnect quickly. The
+        // pending connect also registers with iOS, so the app gets woken in
+        // the background when the ring advertises again.
+        if !intentionalDisconnect {
+            let work = DispatchWorkItem { [weak self] in self?.connect() }
+            reconnectWork?.cancel()
+            reconnectWork = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: work)
+        }
+        intentionalDisconnect = false
     }
 }
 
