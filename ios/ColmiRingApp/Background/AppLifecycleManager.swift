@@ -56,6 +56,7 @@ final class AppLifecycleManager: ObservableObject {
     /// Production wiring: the real BLE manager.
     init() {
         self.ble = RingBluetoothManager()
+        restoreCache()
         wireUp()
         ble.connect()
         startPolling()
@@ -109,6 +110,7 @@ final class AppLifecycleManager: ObservableObject {
         } else {
             latestByMetric[metric] = reading.value
         }
+        persistCache()
     }
 
     /// Metrics whose readings are per-slot increments summed into a daily total.
@@ -119,6 +121,48 @@ final class AppLifecycleManager: ObservableObject {
     /// the last few accepted readings — skin temperature jitters several
     /// degrees beat to beat, and the raw latest value reads as "wrong".
     private var temperatureWindow: [Double] = []
+
+    // MARK: - Card value cache
+    // The Latest readings cards persist to UserDefaults so an app restart
+    // shows the last known values until fresh ring data replaces them.
+
+    private static let cacheKey = "latestReadingsCache.v1"
+
+    private static var todayKey: String {
+        String(Date().formatted(.iso8601.year().month().day()).prefix(10))
+    }
+
+    /// Restores cached card values. Activity totals survive only if the
+    /// cache is from today — yesterday's totals would read as today's.
+    private func restoreCache() {
+        guard let cache = UserDefaults.standard.dictionary(forKey: Self.cacheKey) else { return }
+        if let latest = cache["latest"] as? [String: Double] {
+            latestByMetric = Dictionary(uniqueKeysWithValues: latest.compactMap { key, value in
+                RingMetric(rawValue: key).map { ($0, value) }
+            })
+        }
+        if cache["totalsDay"] as? String == Self.todayKey,
+           let totals = cache["totals"] as? [String: Double] {
+            activityTotalsDay = cache["totalsDay"] as? String
+            activityTotals = Dictionary(uniqueKeysWithValues: totals.compactMap { key, value in
+                RingMetric(rawValue: key).map { ($0, value) }
+            })
+        } else {
+            for metric in Self.activityMetrics {
+                latestByMetric.removeValue(forKey: metric)
+            }
+        }
+    }
+
+    private func persistCache() {
+        let latest = Dictionary(uniqueKeysWithValues: latestByMetric.map { ($0.key.rawValue, $0.value) })
+        let totals = Dictionary(uniqueKeysWithValues: activityTotals.map { ($0.key.rawValue, $0.value) })
+        UserDefaults.standard.set([
+            "latest": latest,
+            "totalsDay": activityTotalsDay ?? "",
+            "totals": totals,
+        ], forKey: Self.cacheKey)
+    }
 
     // MARK: - Polling
 
