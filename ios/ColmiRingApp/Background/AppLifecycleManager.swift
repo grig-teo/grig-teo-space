@@ -97,8 +97,12 @@ final class AppLifecycleManager: ObservableObject {
             if day != activityTotalsDay {
                 activityTotalsDay = day
                 activityTotals = [:]
+                activitySlotValues = [:]
             }
-            let total = (activityTotals[metric] ?? 0) + reading.value
+            let slotKey = ISO8601DateFormatter.shared.string(from: reading.recordedAt)
+            let previous = activitySlotValues[metric]?[slotKey] ?? 0
+            activitySlotValues[metric, default: [:]][slotKey] = reading.value
+            let total = (activityTotals[metric] ?? 0) + (reading.value - previous)
             activityTotals[metric] = total
             latestByMetric[metric] = total
         } else if metric == .bodyTemperature {
@@ -117,6 +121,10 @@ final class AppLifecycleManager: ObservableObject {
     private static let activityMetrics: Set<RingMetric> = [.steps, .calories, .distanceKm]
     private var activityTotalsDay: String?
     private var activityTotals: [RingMetric: Double] = [:]
+    /// Last value counted per slot (metric → slot timestamp → value). The
+    /// ring resends all slots on every sync — only a slot's *delta* may
+    /// move the total, otherwise each re-sync inflates the day.
+    private var activitySlotValues: [RingMetric: [String: Double]] = [:]
     /// Rolling window for body temperature: the card shows the average of
     /// the last few accepted readings — skin temperature jitters several
     /// degrees beat to beat, and the raw latest value reads as "wrong".
@@ -126,7 +134,7 @@ final class AppLifecycleManager: ObservableObject {
     // The Latest readings cards persist to UserDefaults so an app restart
     // shows the last known values until fresh ring data replaces them.
 
-    private static let cacheKey = "latestReadingsCache.v1"
+    private static let cacheKey = "latestReadingsCache.v2"
 
     private static var todayKey: String {
         String(Date().formatted(.iso8601.year().month().day()).prefix(10))
@@ -147,6 +155,11 @@ final class AppLifecycleManager: ObservableObject {
             activityTotals = Dictionary(uniqueKeysWithValues: totals.compactMap { key, value in
                 RingMetric(rawValue: key).map { ($0, value) }
             })
+            if let slots = cache["slotValues"] as? [String: [String: Double]] {
+                activitySlotValues = Dictionary(uniqueKeysWithValues: slots.compactMap { key, value in
+                    RingMetric(rawValue: key).map { ($0, value) }
+                })
+            }
         } else {
             for metric in Self.activityMetrics {
                 latestByMetric.removeValue(forKey: metric)
@@ -157,10 +170,12 @@ final class AppLifecycleManager: ObservableObject {
     private func persistCache() {
         let latest = Dictionary(uniqueKeysWithValues: latestByMetric.map { ($0.key.rawValue, $0.value) })
         let totals = Dictionary(uniqueKeysWithValues: activityTotals.map { ($0.key.rawValue, $0.value) })
+        let slots = Dictionary(uniqueKeysWithValues: activitySlotValues.map { ($0.key.rawValue, $0.value) })
         UserDefaults.standard.set([
             "latest": latest,
             "totalsDay": activityTotalsDay ?? "",
             "totals": totals,
+            "slotValues": slots,
         ], forKey: Self.cacheKey)
     }
 
