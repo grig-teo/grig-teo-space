@@ -605,9 +605,17 @@ extension RingBluetoothManager: CBPeripheralDelegate {
             if bytes.count >= 2, bytes[1] == ColmiProtocol.RealTimeKind.healthCheck.rawValue {
                 // HealthCheck: per-beat HR + skin temperature + RR interval.
                 if let check = ColmiProtocol.parseHealthCheck(bytes) {
-                    emit(HealthReading(metric: .bodyTemperature, value: check.bodyTempC))
-                    emit(HealthReading(metric: .heartRate, value: Double(check.heartRate)))
-                    logTraffic("← Check: \(check.heartRate) bpm · \(String(format: "%.1f", check.bodyTempC)) °C · RR \(check.rrMs) ms")
+                    // Temperature is only meaningful when the ring is worn:
+                    // require a detected pulse and a plausible skin range
+                    // (off-finger readings drop toward ambient air).
+                    let skinC = check.bodyTempC - 4.0
+                    if check.heartRate > 0, (28...38).contains(skinC) {
+                        emit(HealthReading(metric: .bodyTemperature, value: check.bodyTempC))
+                        logTraffic("← Check: \(check.heartRate) bpm · \(String(format: "%.1f", check.bodyTempC)) °C · RR \(check.rrMs) ms")
+                    }
+                    if check.heartRate > 0 {
+                        emit(HealthReading(metric: .heartRate, value: Double(check.heartRate)))
+                    }
                 }
             } else if let reading = ColmiProtocol.parseRealTime(bytes) {
                 emit(reading)

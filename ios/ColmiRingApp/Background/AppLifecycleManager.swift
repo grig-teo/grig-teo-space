@@ -100,6 +100,12 @@ final class AppLifecycleManager: ObservableObject {
             let total = (activityTotals[metric] ?? 0) + reading.value
             activityTotals[metric] = total
             latestByMetric[metric] = total
+        } else if metric == .bodyTemperature {
+            temperatureWindow.append(reading.value)
+            if temperatureWindow.count > 5 {
+                temperatureWindow.removeFirst(temperatureWindow.count - 5)
+            }
+            latestByMetric[metric] = temperatureWindow.reduce(0, +) / Double(temperatureWindow.count)
         } else {
             latestByMetric[metric] = reading.value
         }
@@ -109,6 +115,10 @@ final class AppLifecycleManager: ObservableObject {
     private static let activityMetrics: Set<RingMetric> = [.steps, .calories, .distanceKm]
     private var activityTotalsDay: String?
     private var activityTotals: [RingMetric: Double] = [:]
+    /// Rolling window for body temperature: the card shows the average of
+    /// the last few accepted readings — skin temperature jitters several
+    /// degrees beat to beat, and the raw latest value reads as "wrong".
+    private var temperatureWindow: [Double] = []
 
     // MARK: - Polling
 
