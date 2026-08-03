@@ -77,8 +77,8 @@ struct ProfileView: View {
         }
     }
 
-    /// The latest hourly health tip, under the stress graph. Tap opens the
-    /// full tip history.
+    /// The latest hourly health tip (with its generation time), under the
+    /// stress graph. Tap opens the full tip history.
     private var tipCard: some View {
         NavigationLink {
             TipHistoryView()
@@ -87,10 +87,15 @@ struct ProfileView: View {
                 HStack {
                     Image(systemName: "lightbulb.fill")
                         .foregroundColor(.yellow)
-                    Text("Today's tip")
+                    Text("Latest tip")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Spacer()
+                    if let tip = tipClient.tips.first {
+                        Text(tipDate(tip.generatedAt))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                     Image(systemName: "chevron.right")
                         .font(.caption2)
                         .foregroundColor(.secondary)
@@ -111,6 +116,14 @@ struct ProfileView: View {
         }
         .buttonStyle(.plain)
         .task { if tipClient.tips.isEmpty { await tipClient.reload() } }
+    }
+
+    /// "Aug 3, 2026 at 4:47 PM" for the tip card's timestamp.
+    private func tipDate(_ iso: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let date = formatter.date(from: iso) ?? Date()
+        return date.formatted(date: .abbreviated, time: .shortened)
     }
 
     private var header: some View {
