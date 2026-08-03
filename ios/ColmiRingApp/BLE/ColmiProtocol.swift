@@ -255,8 +255,9 @@ enum ColmiProtocol {
                    (0x8055 = 32.85 °C; 0 while the sensor warms up)
        bytes 6–7 : RR interval, uint16 little-endian, ms
 
-     QRing's "body temperature" is the skin value plus a ~+4 °C core
-     compensation — applied here so the card matches.
+     QRing's "body temperature" is the skin value plus a core compensation
+     (~+2 °C by comparison with QRing's display) — applied here so the card
+     matches. (An earlier +4 read as false fevers.)
      */
     static func parseHealthCheck(_ bytes: [UInt8]) -> (heartRate: Int, bodyTempC: Double, rrMs: Int)? {
         guard bytes.count >= 8, bytes[2] == 0 else { return nil }
@@ -264,7 +265,7 @@ enum ColmiProtocol {
         guard skinMilliC > 0 else { return nil } // sensor still warming up
         return (
             heartRate: Int(bytes[3]),
-            bodyTempC: Double(skinMilliC) / 1000 + 4.0,
+            bodyTempC: Double(skinMilliC) / 1000 + 2.0,
             rrMs: Int(bytes[6]) | (Int(bytes[7]) << 8),
         )
     }

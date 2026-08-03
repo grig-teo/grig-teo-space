@@ -325,10 +325,10 @@ struct ColmiTemperatureTests {
 struct ColmiHealthCheckTests {
     @Test
     func parsesHealthCheckFrame() {
-        // Real R10 frame: HR 82, skin 32.853 °C (+4 compensation), RR 654 ms.
+        // Real R10 frame: HR 82, skin 32.853 °C (+2 compensation), RR 654 ms.
         let check = ColmiProtocol.parseHealthCheck([0x69, 0x05, 0x00, 0x52, 0x80, 0x55, 0x8E, 0x02])
         #expect(check?.heartRate == 82)
-        #expect(check != nil && abs(check!.bodyTempC - 36.853) < 0.001)
+        #expect(check != nil && abs(check!.bodyTempC - 34.853) < 0.001)
         #expect(check?.rrMs == 654)
     }
 
