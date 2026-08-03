@@ -60,6 +60,7 @@ struct ContentView: View {
             }
         }
         .padding(16)
+        .frame(width: 340) // window width fixed; height follows the tip text
         .task {
             TipNotifier.shared.start()
             await load()
