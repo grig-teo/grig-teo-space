@@ -65,6 +65,7 @@ struct TipWidgetView: View {
         }
         .padding(12)
         .widgetURL(URL(string: "healthtip://open"))
+        .containerBackground(.fill.tertiary, for: .widget)
     }
 }
 
