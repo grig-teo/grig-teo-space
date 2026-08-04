@@ -26,6 +26,7 @@ rsync -avz --delete \
   --exclude 'frontend/.next' \
   --exclude 'backend/dist' \
   --exclude 'backend/.venv' \
+  --exclude 'ios/build' \
   --exclude '.env' \
   --exclude '.env.production' \
   --exclude 'backups/' \
@@ -139,7 +140,11 @@ if [ -n "\$(docker compose --env-file .env.production -f ${COMPOSE_FILE} ps -q d
   fi
 fi
 
-docker compose --env-file .env.production -f ${COMPOSE_FILE} up -d --build --remove-orphans
+# Build explicitly instead of `up --build`: twice already `up -d --build`
+# reused fully-cached layers and left containers running stale code while
+# reporting success — the explicit build reliably invalidates the layers.
+docker compose --env-file .env.production -f ${COMPOSE_FILE} build
+docker compose --env-file .env.production -f ${COMPOSE_FILE} up -d --remove-orphans
 docker compose --env-file .env.production -f ${COMPOSE_FILE} ps
 
 mkdir -p /var/www/certbot
