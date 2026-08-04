@@ -358,16 +358,23 @@ export class DocumentsService {
 
   private async pageCountsFor(ids: string[]): Promise<Record<string, number>> {
     if (ids.length === 0) return {};
+    // Note: Postgres lowercases the alias, so the raw key is "document_id"
+    // (the column name), not "documentId". Bracket access is safe for both.
     const rows = await this.pageRepo
       .createQueryBuilder('p')
       .select('p.document_id', 'documentId')
-      .addSelect('COUNT(*)::int', 'count')
+      .addSelect('COUNT(*)', 'count')
       .where('p.document_id IN (:...ids)', { ids })
       .groupBy('p.document_id')
-      .getRawMany<{ documentid: string; count: number }>();
+      .getRawMany<{ documentId: string; count: string }>();
     const map: Record<string, number> = {};
     for (const row of rows) {
-      map[row.documentid] = row.count;
+      // TypeORM's getRawMany may return the alias or the column name depending
+      // on the driver; bracket access handles both.
+      const id = (row as Record<string, string>).documentId ?? (row as Record<string, string>).document_id ?? '';
+      if (id) {
+        map[id] = Number(row.count);
+      }
     }
     return map;
   }

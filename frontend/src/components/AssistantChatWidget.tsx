@@ -96,12 +96,12 @@ export function AssistantChatWidget({ locale }: Props) {
         return;
       }
       const data = (await res.json()) as {
-        messages?: Array<{ role?: 'user' | 'assistant'; content?: string }>;
+        messages?: Array<{ role?: 'user' | 'assistant'; content?: string; createdAt?: string }>;
       };
       const history = (data.messages ?? [])
         .filter((item) => item.role === 'user' || item.role === 'assistant')
         .map((item) => ({
-          id: crypto.randomUUID(),
+          id: `${item.role}-${item.createdAt ?? ''}`,
           role: item.role as 'user' | 'assistant',
           content: item.content?.trim() ?? '',
         }))

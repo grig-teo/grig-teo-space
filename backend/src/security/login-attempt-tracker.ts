@@ -27,6 +27,9 @@ export class LoginAttemptTracker {
   static readonly BAN_DURATION_MS = 15 * 60 * 1000;
 
   private records = new Map<string, AttemptRecord>();
+  /** Evict fully-expired records every N calls so the map doesn't grow unbounded. */
+  private sweepCounter = 0;
+  private static readonly SWEEP_EVERY = 50;
 
   /** Returns the remaining ban time in ms, or 0 if the IP is not banned. */
   getBanRemainingMs(ip: string): number {
@@ -48,10 +51,25 @@ export class LoginAttemptTracker {
       record.bannedUntil = Date.now() + LoginAttemptTracker.BAN_DURATION_MS;
     }
     this.records.set(ip, record);
+    this.maybeSweep();
   }
 
   /** Clear the failure counter for an IP (call on successful authentication). */
   recordSuccess(ip: string): void {
     this.records.delete(ip);
+  }
+
+  /** Evict records whose bans have fully expired, keeping the map bounded. */
+  private maybeSweep(): void {
+    this.sweepCounter += 1;
+    if (this.sweepCounter < LoginAttemptTracker.SWEEP_EVERY) return;
+    this.sweepCounter = 0;
+
+    const now = Date.now();
+    for (const [ip, record] of this.records) {
+      if (record.bannedUntil !== undefined && record.bannedUntil <= now) {
+        this.records.delete(ip);
+      }
+    }
   }
 }

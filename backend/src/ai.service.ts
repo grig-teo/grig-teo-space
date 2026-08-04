@@ -88,6 +88,11 @@ export class AiService {
       .map((doc, index) => `[${index + 1}] ${doc.type}:${doc.id} "${doc.title}"\n${doc.content}`)
       .join('\n\n');
 
+    // Load recent conversation history so follow-up questions work (e.g.
+    // "what about the second one?"). The current user message is excluded
+    // — it appears separately as the final message below.
+    const history: DeepseekMessage[] = await this.recentHistory(normalizedSessionId);
+
     const messages: DeepseekMessage[] = [
       {
         role: 'system',
@@ -98,6 +103,7 @@ export class AiService {
           'If the answer is not present in context, clearly say that you do not know based on available data. ' +
           'Keep responses concise, factual, and avoid inventing details.',
       },
+      ...history,
       {
         role: 'user',
         content: `Locale: ${locale}\n\nContext:\n${context || 'No context found.'}\n\nQuestion:\n${message}`,
@@ -324,6 +330,18 @@ export class AiService {
     } catch {
       return raw;
     }
+  }
+
+  private async recentHistory(sessionId: string): Promise<DeepseekMessage[]> {
+    const rows = await this.chatRepo.find({
+      where: { sessionId },
+      order: { createdAt: 'DESC' },
+      take: 8,
+    });
+    return rows
+      .reverse()
+      .slice(0, -1)
+      .map((r) => ({ role: r.role, content: r.content }));
   }
 
   private collectBlockText(block: BlockNoteBlock, lines: string[]): void {

@@ -53,13 +53,13 @@ final class ApiClient: ObservableObject {
         self.pendingCount = 0
     }
 
-    /// Picks the appropriate URLSession based on app state. Background uploads
-    /// use a background config so they survive termination.
+    /// Health readings are small JSON payloads — always use the foreground
+    /// session. The background task guard in AppLifecycleManager keeps the app
+    /// alive long enough for the flush to complete. (Background URLSession
+    /// does not support data(for:), so switching to it here caused every
+    /// background upload to silently fail.)
     private var session: URLSession {
-        if UIApplication.shared.applicationState == .background {
-            return BackgroundUploadSession.shared.urlSession
-        }
-        return URLSession.shared
+        URLSession.shared
     }
 
     /// Subscribe to a readings stream and forward to the backend.

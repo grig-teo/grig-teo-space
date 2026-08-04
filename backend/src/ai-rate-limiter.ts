@@ -20,6 +20,9 @@ export class AiRateLimiter {
   static readonly ROLLING_WINDOW_MS = 24 * 60 * 60 * 1000;
 
   private hits = new Map<string, number[]>();
+  /** Full-map sweep every N calls to evict stale IP entries. */
+  private sweepCounter = 0;
+  private static readonly SWEEP_EVERY = 100;
 
   /**
    * Record one question from `ip` and throw a 429 if the IP has exceeded its
@@ -49,8 +52,15 @@ export class AiRateLimiter {
     }
 
     recent.push(now);
-    this.hits.set(ip, recent);
 
+    // If all timestamps expired, evict the IP from the map entirely.
+    if (recent.length === 1) {
+      this.hits.set(ip, [now]);
+    } else {
+      this.hits.set(ip, recent);
+    }
+
+    this.maybeSweep();
     return AiRateLimiter.MAX_QUESTIONS - recent.length;
   }
 
@@ -59,6 +69,27 @@ export class AiRateLimiter {
     const now = Date.now();
     const cutoff = now - AiRateLimiter.ROLLING_WINDOW_MS;
     const recent = (this.hits.get(ip) ?? []).filter((t) => t > cutoff);
+    // Evict dead IP keys: if all timestamps expired there is nothing left.
+    if (recent.length === 0 && this.hits.has(ip)) {
+      this.hits.delete(ip);
+    }
     return Math.max(0, AiRateLimiter.MAX_QUESTIONS - recent.length);
+  }
+
+  /** Occasionally sweep the whole map to evict IPs whose timestamps have all expired. */
+  private maybeSweep(): void {
+    this.sweepCounter += 1;
+    if (this.sweepCounter < AiRateLimiter.SWEEP_EVERY) return;
+    this.sweepCounter = 0;
+
+    const cutoff = Date.now() - AiRateLimiter.ROLLING_WINDOW_MS;
+    for (const [ip, timestamps] of this.hits) {
+      const alive = timestamps.filter((t) => t > cutoff);
+      if (alive.length === 0) {
+        this.hits.delete(ip);
+      } else if (alive.length < timestamps.length) {
+        this.hits.set(ip, alive);
+      }
+    }
   }
 }

@@ -5,7 +5,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, MoreThan, Not, Repository } from 'typeorm';
+import { In, LessThan, MoreThan, Not, Repository } from 'typeorm';
 import { ContentKey, SiteContent } from '../entities/site-content.entity';
 import {
   HealthMetric,
@@ -292,20 +292,19 @@ export class HealthService {
     const deduped = [...byKey.values()];
     // Upsert on (metric, recorded_at): the ring's history sync resends the
     // same 15-minute slots with fresher values — replace, never duplicate.
-    const values = deduped.map(({ metric, value, unit, recordedAt, source }) => ({
+    const values = deduped.map(({ metric, value, unit, recordedAt, source, raw }) => ({
       metric,
       value,
       unit,
       recordedAt,
       source,
-      // Literal null keeps TypeORM's DeepPartial typing happy across versions.
-      raw: null as null,
+      raw: (raw ?? null) as any,
     }));
     await this.readingRepo
       .createQueryBuilder()
       .insert()
       .into(HealthReading)
-      .values(values)
+      .values(values as any)
       .orUpdate(['value', 'unit', 'raw', 'source'], ['metric', 'recorded_at'])
       .execute();
     return { inserted: rows.length };
@@ -578,7 +577,7 @@ export class HealthService {
 
   async getOverview(days: number): Promise<HealthOverview> {
     const { from, to } = this.window(days);
-    const [readings, notes, alerts] = await Promise.all([
+    const [readings, notes] = await Promise.all([
       this.readingRepo.find({
         where: { recordedAt: MoreThan(from) },
         order: { recordedAt: 'ASC' },
@@ -588,13 +587,8 @@ export class HealthService {
         order: { recordedAt: 'DESC' },
         take: 200,
       }),
-      this.detectAlerts(
-        await this.readingRepo.find({
-          where: { recordedAt: MoreThan(from) },
-          order: { recordedAt: 'ASC' },
-        }),
-      ),
     ]);
+    const alerts = this.detectAlerts(readings);
 
     const grouped = this.groupByMetric(readings);
     const metrics = HEALTH_METRICS.map((metric) => {
@@ -917,9 +911,11 @@ export class HealthService {
     const readings = await this.readingRepo.delete({
       recordedAt: LessThan(cutoff),
     });
+    // Keep user-entered notes (manual + Telegram bot) — only prune
+    // ring-sourced auto-notes (if any) so user content is never lost.
     const notes = await this.noteRepo.delete({
       recordedAt: LessThan(cutoff),
-      source: Not('manual'),
+      source: Not(In(['manual', 'telegram'] as HealthNoteSource[])),
     });
     return {
       readings: readings.affected ?? 0,

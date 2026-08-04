@@ -184,8 +184,18 @@ final class MediaSyncer: ObservableObject {
     /// Sets `lastError`/`currentAssetName` for UI feedback.
     private func uploadOne(snapshot: MediaLibraryWrapper.AssetSnapshot) async -> AssetResult {
         currentAssetName = snapshot.id
+        let (fileURL, _): (URL, Int64)
         do {
-            let (fileURL, _) = try await library.exportFile(for: snapshot.id)
+            (fileURL, _) = try await library.exportFile(for: snapshot.id)
+        } catch {
+            return AssetResult(assetLocalId: snapshot.id, success: false, error: error.localizedDescription, serverId: nil)
+        }
+        // Clean up the exported source file no matter what happens after this.
+        defer { try? FileManager.default.removeItem(at: fileURL) }
+
+        let bodyFile: URL
+        let request: URLRequest
+        do {
             let descriptor = MediaClient.UploadDescriptor(
                 assetLocalId: snapshot.id,
                 kind: snapshot.kind.rawValue,
@@ -196,11 +206,15 @@ final class MediaSyncer: ObservableObject {
                 durationMs: snapshot.durationMs,
                 recordedAt: snapshot.creationDate
             )
-            let (request, bodyFile) = try client.makeUploadRequest(fileURL: fileURL, descriptor: descriptor)
-            try? FileManager.default.removeItem(at: fileURL) // source copy no longer needed
+            (request, bodyFile) = try client.makeUploadRequest(fileURL: fileURL, descriptor: descriptor)
+        } catch {
+            return AssetResult(assetLocalId: snapshot.id, success: false, error: error.localizedDescription, serverId: nil)
+        }
+        // Clean up the multipart body file no matter what happens after this.
+        defer { try? FileManager.default.removeItem(at: bodyFile) }
 
+        do {
             let (data, response) = try await URLSession.shared.upload(for: request, fromFile: bodyFile)
-            try? FileManager.default.removeItem(at: bodyFile)
             guard let http = response as? HTTPURLResponse else {
                 return AssetResult(assetLocalId: snapshot.id, success: false, error: "No HTTP response", serverId: nil)
             }
