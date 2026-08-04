@@ -51,11 +51,13 @@ const ACCENT = 'rgb(var(--color-accent))'; // matches --color-accent
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
+  // 24-hour clock in the viewer's current timezone (travels with them).
   return d.toLocaleString(undefined, {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   });
 }
 

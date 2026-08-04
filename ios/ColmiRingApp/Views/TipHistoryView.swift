@@ -157,6 +157,6 @@ struct TipHistoryView: View {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let date = f.date(from: iso) ?? Date()
-        return date.formatted(date: .abbreviated, time: .shortened)
+        return date.dateTime24(dateStyle: .abbreviated)
     }
 }

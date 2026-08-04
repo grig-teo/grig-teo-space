@@ -66,7 +66,7 @@ export function formatAlerts(alerts: NonNullable<HealthSummary['alerts']>): stri
   for (const a of alerts) {
     const icon = a.level === 'critical' ? '🚨' : '⚠️';
     lines.push(`${icon} ${a.message}`);
-    lines.push(`   ${a.value} @ ${new Date(a.recordedAt).toLocaleString()}`);
+    lines.push(`   ${a.value} @ ${new Date(a.recordedAt).toLocaleString('en-GB', { timeZone: 'UTC', hour12: false })} UTC`);
     lines.push('');
   }
   return lines.join('\n').trimEnd();
@@ -78,9 +78,11 @@ export function formatAlerts(alerts: NonNullable<HealthSummary['alerts']>): stri
  * stray characters.
  */
 export function formatTip(tip: string, generatedAt: string): string {
-  const time = new Date(generatedAt).toLocaleTimeString([], {
+  const time = new Date(generatedAt).toLocaleTimeString('en-GB', {
+    timeZone: 'UTC',
+    hour12: false,
     hour: '2-digit',
     minute: '2-digit',
   });
-  return `💡 Health tip — ${time}\n\n${tip}`;
+  return `💡 Health tip — ${time} UTC\n\n${tip}`;
 }

@@ -727,7 +727,7 @@ extension RingBluetoothManager: CBPeripheralDelegate {
                 let deep = session.stageMinutes[3, default: 0]
                 let rem = session.stageMinutes[4, default: 0]
                 let light = session.stageMinutes[2, default: 0]
-                let span = "\(session.start.formatted(date: .omitted, time: .shortened)) → \(session.end.formatted(date: .omitted, time: .shortened))"
+                let span = "\(session.start.time24) → \(session.end.time24)"
                 let duration = readings.first.map(describe) ?? "Sleep"
                 logTraffic("← Sleep \(span) — \(duration), deep \(deep)m, REM \(rem)m, light \(light)m")
             }
@@ -743,7 +743,7 @@ extension RingBluetoothManager: CBPeripheralDelegate {
     /// One line for a 15-minute activity slot, e.g.
     /// "Activity 04:00 — 300 steps · 1000 kcal · 0.50 km".
     private func describeSlot(_ readings: [HealthReading]) -> String {
-        let time = readings.first?.recordedAt.formatted(date: .omitted, time: .shortened) ?? ""
+        let time = readings.first?.recordedAt.time24 ?? ""
         let parts = readings.map(describe).joined(separator: " · ")
         return "Activity \(time) — \(parts)"
     }

@@ -40,7 +40,7 @@ struct ConnectionCard: View {
                 // first one arrives (instead of hiding the row).
                 let parts = [
                     ble.lastReadingText,
-                    ble.lastReadingAt?.formatted(date: .omitted, time: .shortened),
+                    ble.lastReadingAt?.time24,
                 ].compactMap { $0 }
                 LabeledRow(label: "Last reading", value: parts.isEmpty ? "—" : parts.joined(separator: " · "))
             }

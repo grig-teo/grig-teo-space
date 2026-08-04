@@ -518,11 +518,12 @@ export class HealthService {
   ): Promise<HourlySeries> {
     const safeMetric = HEALTH_METRICS.includes(metric) ? metric : 'stress';
     const span = Math.max(1, Math.min(days, 365));
-    // Start at local midnight of the current day, not a rolling 24h window —
+    // Start at UTC midnight of the current day, not a rolling 24h window —
     // a rolling window would average yesterday's readings into today's hour
-    // buckets, so the "today" graph would show data from yesterday.
+    // buckets, so the "today" graph would show data from yesterday. All day
+    // math in the health pipeline is UTC; clients localize for display.
     const from = new Date();
-    from.setHours(0, 0, 0, 0);
+    from.setUTCHours(0, 0, 0, 0);
     from.setDate(from.getDate() - (span - 1));
 
     const readings = await this.readingRepo.find({
@@ -539,7 +540,7 @@ export class HealthService {
     let unit: string | null = null;
     for (const r of readings) {
       if (unit === null) unit = r.unit ?? DEFAULT_UNITS[safeMetric];
-      const hour = r.recordedAt.getHours();
+      const hour = r.recordedAt.getUTCHours();
       sums[hour] += r.value;
       counts[hour] += 1;
       latestAtMs[hour] = Math.max(latestAtMs[hour], r.recordedAt.getTime());
@@ -777,7 +778,7 @@ export class HealthService {
     const windowStart = new Date(now.getTime() - TIP_WINDOW_HOURS * 3_600_000);
     const grouped = this.groupByMetric(allRecent);
     const lines: string[] = [
-      `Current time: ${now.toLocaleString()}`,
+      `Current time: ${now.toLocaleString('en-GB', { timeZone: 'UTC', hour12: false })} UTC`,
       `Metrics (last ${TIP_WINDOW_HOURS}h average, with latest as fallback):`,
     ];
     for (const metric of HEALTH_METRICS) {

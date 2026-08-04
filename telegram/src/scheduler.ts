@@ -31,6 +31,7 @@ export class Scheduler {
   ) {
     this.alertIntervalMs =
       Math.max(1, Number(process.env.ALERT_POLL_MINUTES ?? 15)) * 60 * 1000;
+    // DIGEST_HOUR is interpreted as UTC — all health-pipeline day math is UTC.
     this.digestHour = Math.min(23, Math.max(0, Number(process.env.DIGEST_HOUR ?? 9)));
   }
 
@@ -43,7 +44,7 @@ export class Scheduler {
       }, 60 * 1000),
     );
     this.log(
-      `Scheduler started: alerts every ${this.alertIntervalMs / 60000}m, digest at ${this.digestHour}:00, hourly tip at :00`,
+      `Scheduler started: alerts every ${this.alertIntervalMs / 60000}m, digest at ${this.digestHour}:00 UTC, hourly tip at :00`,
     );
   }
 
@@ -85,7 +86,7 @@ export class Scheduler {
   private async maybeSendDigest(): Promise<void> {
     const now = new Date();
     const today = now.toISOString().slice(0, 10);
-    if (now.getHours() !== this.digestHour || today === this.lastDigestDate) return;
+    if (now.getUTCHours() !== this.digestHour || today === this.lastDigestDate) return;
     this.lastDigestDate = today;
     await this.sendDigestNow(1, 'today');
   }
@@ -98,7 +99,7 @@ export class Scheduler {
   private async maybeSendTip(): Promise<void> {
     const now = new Date();
     if (now.getMinutes() !== 0) return;
-    const hourKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}`;
+    const hourKey = now.toISOString().slice(0, 13);
     if (hourKey === this.lastTipHour) return;
     this.lastTipHour = hourKey;
 

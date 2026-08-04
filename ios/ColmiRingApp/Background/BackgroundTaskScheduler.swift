@@ -85,16 +85,21 @@ final class BackgroundTaskScheduler {
         scheduleFlush()
 
         // If iOS reclaims time, stop cleanly.
-        task.expirationHandler = { task.setTaskCompleted(success: false) }
+        task.expirationHandler = {
+            AppState.shared.lifecycle.stopPolling()
+            task.setTaskCompleted(success: false)
+        }
 
-        // Drain the queue. `flushAll` runs on the main actor; give it a few
-        // seconds, then complete the task.
         let lifecycle = AppState.shared.lifecycle
-        lifecycle.api.flushAll()
+        // Not just drain the queue: reconnect the ring and collect a cycle
+        // first, so this (more frequent) wakeup also refreshes the data —
+        // the heavier poll task fires far less often in practice.
+        lifecycle.startPolling()
 
-        // Mark success once the flush has a chance to run. We don't await the
-        // full network round-trip here — the next flush will retry leftovers.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 25) {
+            lifecycle.stopPolling()
+            lifecycle.api.flushAll()
+            // The next flush retries whatever failed to upload.
             task.setTaskCompleted(success: true)
         }
     }

@@ -118,12 +118,12 @@ struct ProfileView: View {
         .task { if tipClient.tips.isEmpty { await tipClient.reload() } }
     }
 
-    /// "Aug 3, 2026 at 4:47 PM" for the tip card's timestamp.
+    /// "Aug 3, 2026, 16:47" for the tip card's timestamp (24-hour clock).
     private func tipDate(_ iso: String) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let date = formatter.date(from: iso) ?? Date()
-        return date.formatted(date: .abbreviated, time: .shortened)
+        return date.dateTime24(dateStyle: .abbreviated)
     }
 
     private var header: some View {

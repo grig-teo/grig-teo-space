@@ -28,7 +28,7 @@ function AlertStrip({ overview }: { overview: HealthOverview }) {
         {overview.alerts.map((a, i) => (
           <li key={i}>
             {a.level === 'critical' ? '🚨' : '⚠️'} {a.message} — {a.value} @{' '}
-            {new Date(a.recordedAt).toLocaleString()}
+            {new Date(a.recordedAt).toLocaleString(undefined, { hour12: false })}
           </li>
         ))}
       </ul>
@@ -45,7 +45,7 @@ function NotesTimeline({ overview }: { overview: HealthOverview }) {
         {overview.notes.map((note) => (
           <li key={note.id} className="flex gap-3 border-b border-border/50 pb-2 last:border-0">
             <span className="font-mono text-xs text-muted">
-              {new Date(note.recordedAt).toLocaleString()}
+              {new Date(note.recordedAt).toLocaleString(undefined, { hour12: false })}
             </span>
             <span className="font-mono text-xs text-foreground">{note.content}</span>
             {note.source === 'telegram' && (

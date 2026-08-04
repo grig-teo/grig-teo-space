@@ -38,7 +38,7 @@ private struct SmallLayout: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top) {
-                Text("Updated \(updatedAt.formatted(.dateTime.hour().minute()))")
+                Text("Updated \(updatedAt.time24)")
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Spacer()
@@ -67,7 +67,7 @@ private struct MediumLayout: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
-                Text("Updated \(updatedAt.formatted(.dateTime.hour().minute()))")
+                Text("Updated \(updatedAt.time24)")
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Spacer()
