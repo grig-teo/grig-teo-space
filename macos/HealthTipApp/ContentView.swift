@@ -2,17 +2,12 @@ import SwiftUI
 
 /**
  The whole app: the latest hourly AI health tip, a timestamp, and a refresh
- button. Loads on appear and every 15 minutes; when the server has a NEW
- tip, a macOS notification is posted (see TipNotifier).
+ button. Polling + notifications live in the AppDelegate (see AppDelegate /
+ TipStore) so they keep working with the window closed; this view just
+ observes the shared store.
  */
 struct ContentView: View {
-    @State private var tip: Tip?
-    @State private var isLoading = false
-    @State private var failed = false
-
-    /// Poll cadence — the backend generates a tip hourly, so 15 min catches
-    /// each new one with at most a quarter-hour delay.
-    private let pollTimer = Timer.publish(every: 15 * 60, on: .main, in: .common).autoconnect()
+    @StateObject private var store = TipStore.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -24,25 +19,27 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button {
-                    Task { await load() }
+                    Task { await store.poll() }
                 } label: {
                     Image(systemName: "arrow.clockwise")
-                        .rotationEffect(.degrees(isLoading ? 360 : 0))
+                        .rotationEffect(.degrees(store.isLoading ? 360 : 0))
                         .animation(
-                            isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default,
-                            value: isLoading,
+                            store.isLoading
+                                ? .linear(duration: 1).repeatForever(autoreverses: false)
+                                : .default,
+                            value: store.isLoading,
                         )
                 }
                 .buttonStyle(.plain)
-                .disabled(isLoading)
+                .disabled(store.isLoading)
             }
 
             Group {
-                if let tip {
+                if let tip = store.latest {
                     Text(tip.content)
                         .font(.title3)
                         .fixedSize(horizontal: false, vertical: true)
-                } else if failed {
+                } else if store.failed {
                     Text("Couldn't load the tip. Check the connection and try again.")
                         .font(.body)
                         .foregroundStyle(.secondary)
@@ -53,7 +50,7 @@ struct ContentView: View {
             }
             .frame(alignment: .topLeading)
 
-            if let tip {
+            if let tip = store.latest {
                 Text("Generated \(TipFetcher.clockTime(fromISO: tip.generatedAt))")
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -62,24 +59,9 @@ struct ContentView: View {
         .padding(16)
         .frame(width: 340) // window width fixed; height follows the tip text
         .task {
-            TipNotifier.shared.start()
-            await load()
+            if store.latest == nil {
+                await store.poll()
+            }
         }
-        .onReceive(pollTimer) { _ in
-            Task { await load() }
-        }
-    }
-
-    private func load() async {
-        isLoading = true
-        failed = false
-        do {
-            let latest = try await TipFetcher.latest()
-            tip = latest
-            TipNotifier.shared.notifyIfNew(latest)
-        } catch {
-            failed = true
-        }
-        isLoading = false
     }
 }
