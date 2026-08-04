@@ -197,16 +197,16 @@ const ANOMALY_RULES: Array<{
 const MAX_READINGS_PER_REQUEST = 2000;
 const MAX_SERIES_POINTS = 1000;
 
-// --- Hourly tip (GLM) -----------------------------------------------------
+// --- Hourly tip (DeepSeek) --------------------------------------------------
 
 /** How recent the latest reading must be to generate a tip at all. */
 const TIP_STALENESS_HOURS = 3;
-/** Window of readings fed to GLM as the "right now" context. */
+/** Window of readings fed to the LLM as the "right now" context. */
 const TIP_WINDOW_HOURS = 1;
 /** A generated tip is reused (served to every consumer) for this long before
- *  a fresh one is generated. Caps GLM calls + history rows at one per hour. */
+ *  a fresh one is generated. Caps LLM calls + history rows at one per hour. */
 const TIP_CACHE_MS = 60 * 60 * 1000;
-const TIP_ENDPOINT = 'https://api.z.ai/api/coding/paas/v4/chat/completions';
+const DEEPSEEK_ENDPOINT = 'https://api.deepseek.com/chat/completions';
 
 const TIP_SYSTEM_PROMPT =
   'You are a friendly, practical health coach for the owner of a smart ring. ' +
@@ -376,12 +376,12 @@ export class HealthService {
   }
 
   /**
-   * Generates a single actionable GLM health tip from the last hour of ring
+   * Generates a single actionable AI health tip from the last hour of ring
    * readings. Returns null (with skippedReason) when data is stale or absent
    * so the Telegram bot can stay silent instead of advising on old numbers.
    *
    * Caching: once a tip is generated it is reused for TIP_CACHE_MS (1 hour)
-   * across every consumer — widget, Telegram bot, iOS app. A GLM call (and a
+   * across every consumer — widget, Telegram bot, iOS app. An LLM call (and a
    * new history row) happens only when the cache expires, so the cadence is
    * strictly one tip per hour regardless of how often the endpoint is hit.
    */
@@ -406,11 +406,11 @@ export class HealthService {
 
     const context = this.buildTipContext(readings, now);
     try {
-      const tip = await this.glmComplete(TIP_SYSTEM_PROMPT, context);
+      const tip = await this.aiComplete(TIP_SYSTEM_PROMPT, context);
       await this.saveTipIfNew(tip, now);
       return { tip, generatedAt: now.toISOString() };
     } catch (error) {
-      // GLM outage/quota exhaustion: serve the last good tip instead of
+      // LLM outage/quota exhaustion: serve the last good tip instead of
       // failing every consumer. Its generatedAt still shows the true age.
       if (cached) {
         return { tip: cached.content, generatedAt: cached.generatedAt.toISOString() };
@@ -562,7 +562,7 @@ export class HealthService {
   /**
    * Combined payload for the iOS home-screen widget: today's summary plus the
    * hourly tip, in a single request. The summary always renders; the tip is
-   * best-effort so a GLM failure (502/503/500) never blocks the status.
+   * best-effort so an LLM failure (502/503/500) never blocks the status.
    */
   async getWidgetPayload(): Promise<{ summary: HealthSummary; tip: HourlyTipResult }> {
     const summary = await this.getSummary(1);
@@ -769,7 +769,7 @@ export class HealthService {
   }
 
   /**
-   * Builds the compact metrics block fed to GLM: the per-metric average over
+   * Builds the compact metrics block fed to the LLM: the per-metric average over
    * the last hour, falling back to the most recent value within the staleness
    * window when the hour itself has no readings for that metric.
    */
@@ -794,41 +794,44 @@ export class HealthService {
   }
 
   /**
-   * Tip generation: try the local Ollama first (free, on-VPS — currently
-   * `politrack_ollama` with qwen2.5-14b-instruct), fall back to GLM (paid
-   * Zhipu) when Ollama is unreachable or errors.
+   * Tip generation: DeepSeek (paid, primary), falling back to the local
+   * Ollama (free, on-VPS — currently `politrack_ollama` with qwen2.5-14b)
+   * when DeepSeek is unconfigured, unreachable, or errors.
    */
-  private async glmComplete(system: string, user: string): Promise<string> {
+  private async aiComplete(system: string, user: string): Promise<string> {
     const messages: GlmMessage[] = [
       { role: 'system', content: system },
       { role: 'user', content: user },
     ];
     try {
-      return await this.ollamaComplete(messages);
+      return await this.deepseekComplete(messages);
     } catch {
-      // Ollama down or errored — fall through to the paid provider.
+      // DeepSeek down or errored — fall through to the local model.
     }
+    return this.ollamaComplete(messages);
+  }
 
-    const apiKey = process.env.GLM_API_KEY?.trim();
+  /** Calls the DeepSeek chat-completions API (OpenAI-compatible). */
+  private async deepseekComplete(messages: GlmMessage[]): Promise<string> {
+    const apiKey = process.env.DEEPSEEK_API_KEY?.trim();
     if (!apiKey) {
       throw new ServiceUnavailableException('Health tip AI is not configured');
     }
-    const model = process.env.GLM_MODEL?.trim() || 'glm-5.2';
-    const response = await fetch(TIP_ENDPOINT, {
+    const model = process.env.DEEPSEEK_MODEL?.trim() || 'deepseek-chat';
+    const response = await fetch(DEEPSEEK_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
-      // GLM-5.2 is a reasoning model: it emits reasoning_content + content,
-      // and the reasoning eats most of the token budget. A small max_tokens
-      // leaves nothing for the actual answer (content comes back empty), so
-      // we give it headroom well beyond what a 60-word tip needs.
+      // Reasoning models spend much of the token budget on reasoning_content
+      // before emitting content: a small max_tokens leaves the actual answer
+      // empty, so give it headroom well beyond what a 60-word tip needs.
       body: JSON.stringify({ model, messages, temperature: 0.4, max_tokens: 2048 }),
     });
     if (!response.ok) {
       const raw = await response.text();
-      throw new BadGatewayException(`GLM API error: ${response.status} ${raw.slice(0, 300)}`);
+      throw new BadGatewayException(`DeepSeek API error: ${response.status} ${raw.slice(0, 300)}`);
     }
     const payload = (await response.json()) as {
       choices?: Array<{ message?: { content?: string } }>;

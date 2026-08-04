@@ -7,7 +7,7 @@ import {
 } from 'typeorm';
 
 /**
- * Persisted GLM health tip. Each hourly generation (and each on-demand call)
+ * Persisted AI health tip. Each hourly generation (and each on-demand call)
  * stores one row so the iOS Tip page can show history. Duplicate-consecutive
  * tips are skipped at write time (see HealthService.saveTipIfNew).
  */
@@ -20,7 +20,7 @@ export class HealthTip {
   @Column({ type: 'text' })
   content!: string;
 
-  /** When GLM generated the tip (not when the row was inserted). */
+  /** When the LLM generated the tip (not when the row was inserted). */
   @Column({ name: 'generated_at', type: 'timestamptz' })
   generatedAt!: Date;
 

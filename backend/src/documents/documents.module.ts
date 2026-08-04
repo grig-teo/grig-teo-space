@@ -12,7 +12,7 @@ import { DocumentsService } from './documents.service';
 
 @Module({
   // HealthModule is imported so DocumentsService (the AI doctor) can read the
-  // user's ring metrics + body stats and feed them as context to GLM.
+  // user's ring metrics + body stats and feed them as context to the LLM.
   imports: [
     TypeOrmModule.forFeature([HealthDocument, HealthDocumentPage, HealthDocChatMessage]),
     StorageModule,

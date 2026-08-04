@@ -2,7 +2,7 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
-/** Displays the health status (stress + sleep recovery), the latest GLM tip,
+/** Displays the health status (stress + sleep recovery), the latest AI tip,
  *  the last-updated time, and a refresh button (top-right).
  *
  *  Tapping anywhere on the widget (outside the refresh button) opens the host

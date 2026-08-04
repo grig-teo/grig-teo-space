@@ -40,7 +40,7 @@ both onto `main`.
 
 ```
 frontend/      Next.js (App Router) public site + /admin/dashboard
-backend/       NestJS API — Postgres (TypeORM), MinIO, GLM AI chat
+backend/       NestJS API — Postgres (TypeORM), MinIO, DeepSeek AI chat
 telegram/      Telegraf bot — notes/mood/digest (text-only, no media)
 ios/           SwiftUI ColmiRingApp — XcodeGen-generated from project.yml
 deploy/        VPS deploy script + nginx configs

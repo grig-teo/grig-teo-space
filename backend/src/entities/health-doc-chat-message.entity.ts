@@ -11,7 +11,7 @@ export type HealthDocChatRole = 'user' | 'assistant';
 /**
  * Chat messages for the records "AI doctor" assistant. Separate from the
  * public website's `ai_chat_messages` table — different context, model
- * (GLM-5.2), and audience (the owner only).
+ * (DeepSeek), and audience (the owner only).
  */
 @Entity('health_doc_chat_message')
 @Index('idx_health_doc_chat_session_created', ['sessionId', 'createdAt'])

@@ -1,12 +1,12 @@
 import SwiftUI
 
 /**
- Renders a markdown string with block + inline support, tuned for the GLM
+ Renders a markdown string with block + inline support, tuned for the AI
  "AI doctor" answers (bullet lists, numbered lists, code blocks, **bold**,
  headings, paragraphs). Uses Apple's `AttributedString(markdown:)` for inline
  formatting within each block — no third-party dependency.
 
- The previous inline-only renderer left GLM's bullet lists as literal
+ The previous inline-only renderer left the model's bullet lists as literal
  `- text` lines; this one parses them into real bulleted VStacks.
  */
 struct MarkdownText: View {

@@ -245,7 +245,7 @@ final class DocumentsClient: ObservableObject {
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            // Surface server error message (e.g. GLM balance) to the UI.
+            // Surface server error message (e.g. LLM balance) to the UI.
             if let err = try? JSONDecoder().decode(ChatResponse.self, from: data), let msg = err.error {
                 throw NSError(domain: "DocumentsClient", code: (response as? HTTPURLResponse)?.statusCode ?? 0, userInfo: [NSLocalizedDescriptionKey: msg])
             }

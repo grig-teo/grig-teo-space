@@ -64,7 +64,7 @@ export type DocumentListResult = {
   hasMore: boolean;
 };
 
-// --- GLM chat types ------------------------------------------------------
+// --- AI chat types ------------------------------------------------------
 
 type GlmMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -82,7 +82,7 @@ const MAX_PAGE_SIZE = 50;
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_HISTORY_MESSAGES = 50;
 const MAX_CONTEXT_CHARS = 24000;
-const GLM_ENDPOINT = 'https://api.z.ai/api/coding/paas/v4/chat/completions';
+const DEEPSEEK_ENDPOINT = 'https://api.deepseek.com/chat/completions';
 
 const DOCTOR_SYSTEM_PROMPT =
   'You are a knowledgeable medical doctor assisting the owner of these health records. ' +
@@ -261,7 +261,7 @@ export class DocumentsService {
     };
   }
 
-  // --- AI doctor chat (GLM over Z.ai) ------------------------------------
+  // --- AI doctor chat (DeepSeek) ------------------------------------
 
   async getChatHistory(sessionId: string): Promise<SavedChatMessage[]> {
     const normalized = this.normalizeSessionId(sessionId);
@@ -281,7 +281,7 @@ export class DocumentsService {
     const normalizedSessionId = this.normalizeSessionId(sessionId);
     await this.saveChatMessage(normalizedSessionId, 'user', message);
 
-    const apiKey = process.env.GLM_API_KEY?.trim();
+    const apiKey = process.env.DEEPSEEK_API_KEY?.trim();
     if (!apiKey) {
       throw new ServiceUnavailableException('Records AI chat is not configured');
     }
@@ -295,8 +295,8 @@ export class DocumentsService {
       ...history,
     ];
 
-    const model = process.env.GLM_MODEL?.trim() || 'glm-5.2';
-    const response = await fetch(GLM_ENDPOINT, {
+    const model = process.env.DEEPSEEK_MODEL?.trim() || 'deepseek-chat';
+    const response = await fetch(DEEPSEEK_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -307,14 +307,14 @@ export class DocumentsService {
         messages,
         temperature: 0.3,
         // Generous ceiling so structured medical answers (bullets, ranges,
-        // explanations) aren't cut off mid-sentence. GLM-5.2 supports this.
+        // explanations) aren't cut off mid-sentence.
         max_tokens: 4096,
       }),
     });
 
     if (!response.ok) {
       const raw = await response.text();
-      throw new BadGatewayException(`GLM API error: ${response.status} ${raw.slice(0, 300)}`);
+      throw new BadGatewayException(`DeepSeek API error: ${response.status} ${raw.slice(0, 300)}`);
     }
 
     const payload = (await response.json()) as {

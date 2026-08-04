@@ -1,7 +1,7 @@
 import SwiftUI
 
 /**
- Shows persisted GLM health tips as one scrollable list where a single tip is
+ Shows persisted AI health tips as one scrollable list where a single tip is
  in focus: it renders as an elevated card with the full text, while every
  other tip is a normal compact row (two-line preview). The latest tip starts
  in focus; tapping any row focuses that tip in place — the list order never

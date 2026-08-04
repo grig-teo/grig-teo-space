@@ -8,7 +8,7 @@ type Logger = (message: string) => void;
  * Periodic background jobs:
  *  - Alerts: poll the summary every N minutes and forward any new anomaly.
  *  - Digest: once a day (at DIGEST_HOUR) send a recap to the configured chat.
- *  - Hourly tip: at the top of each hour, fetch a one-sentence GLM health tip
+ *  - Hourly tip: at the top of each hour, fetch a one-sentence AI health tip
  *    based on the last hour of ring data and forward it.
  *
  * Uses setInterval + a "last sent" memory to avoid duplicate alerts.
@@ -91,7 +91,7 @@ export class Scheduler {
   }
 
   /**
-   * Fires once at the top of each hour. Fetches a GLM health tip from the
+   * Fires once at the top of each hour. Fetches an AI health tip from the
    * backend and forwards it as plain text. Stays silent when the backend
    * reports no fresh data, and skips if the tip is identical to last hour's.
    */

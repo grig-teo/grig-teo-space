@@ -73,7 +73,7 @@ export function formatAlerts(alerts: NonNullable<HealthSummary['alerts']>): stri
 }
 
 /**
- * Formats the hourly GLM tip. Plain text (no Markdown) because the tip comes
+ * Formats the hourly AI tip. Plain text (no Markdown) because the tip comes
  * straight from the model — sending it as plain text avoids parse errors from
  * stray characters.
  */

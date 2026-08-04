@@ -2,7 +2,7 @@ import SwiftUI
 
 /**
  AI doctor chat: ask questions about your scanned health documents.
- Talks to /api/health-docs/chat (GLM-5.2 on the backend). The answers are
+ Talks to /api/health-docs/chat (DeepSeek on the backend). The answers are
  grounded in the OCR text of your uploaded documents.
  */
 struct RecordsChatView: View {
@@ -123,7 +123,7 @@ struct ChatBubble: View {
         HStack {
             if isUser { Spacer() }
             // Assistant answers contain markdown (bold, bullets, line breaks)
-            // from the GLM doctor; user messages are plain text.
+            // from the AI doctor; user messages are plain text.
             Group {
                 if isUser {
                     Text(text)

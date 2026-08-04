@@ -1,7 +1,7 @@
 import Foundation
 
 /**
- Fetches persisted health-tip history from `/api/health/tips`. Each hourly GLM
+ Fetches persisted health-tip history from `/api/health/tips`. Each hourly AI
  tip is stored on the backend, so this returns a paginated list the Tip page
  renders. */
 @MainActor

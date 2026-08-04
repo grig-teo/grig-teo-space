@@ -3,7 +3,7 @@ import WidgetKit
 import SwiftUI
 
 /** Home-screen widget showing the latest stress index, sleep recovery, and the
- *  hourly GLM health tip. Fetches the combined payload from the backend in the
+ *  hourly AI health tip. Fetches the combined payload from the backend in the
  *  timeline provider; the host app triggers a reload via WidgetCenter after
  *  each readings flush, and the in-widget refresh button lets the user force a
  *  reload on demand.
