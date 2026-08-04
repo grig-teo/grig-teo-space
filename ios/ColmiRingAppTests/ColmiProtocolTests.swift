@@ -292,25 +292,14 @@ struct ColmiHistoryParserTests {
 }
 
 @MainActor
-struct ColmiTemperatureTests {
+struct ColmiHealthCheckTests {
     @Test
-    func parsesCentiCelsiusFrames() {
-        // 36.7 °C = 3670 centi-°C = 0x0E56 → LE bytes 56 0E
-        let value = ColmiProtocol.parseTemperature([0x73, 0x05, 0x56, 0x0E])
-        #expect(value == 36.7)
-    }
-
-    @Test
-    func parsesWholeCelsiusByte() {
-        let value = ColmiProtocol.parseTemperature([0x73, 0x05, 36, 0x00])
-        #expect(value == 36)
-    }
-
-    @Test
-    func rejectsGarbageFrames() {
-        #expect(ColmiProtocol.parseTemperature([0x73, 0x05]) == nil)
-        #expect(ColmiProtocol.parseTemperature([0x73, 0x05, 0xFF, 0xFF]) == nil)
-        #expect(ColmiProtocol.parseTemperature([0x73, 0x05, 10, 0x00]) == nil)
+    func parsesHealthCheckFrame() {
+        // Real R10 frame: HR 82, RR 654 ms (temperature field present but
+        // intentionally not surfaced).
+        let check = ColmiProtocol.parseHealthCheck([0x69, 0x05, 0x00, 0x52, 0x80, 0x55, 0x8E, 0x02])
+        #expect(check?.heartRate == 82)
+        #expect(check?.rrMs == 654)
     }
 
     @Test
@@ -318,18 +307,6 @@ struct ColmiTemperatureTests {
         #expect(ColmiProtocol.parseCapabilities([0x01, 0x01]) == true)
         #expect(ColmiProtocol.parseCapabilities([0x01, 0x00]) == false)
         #expect(ColmiProtocol.parseCapabilities([0x01]) == nil)
-    }
-}
-
-@MainActor
-struct ColmiHealthCheckTests {
-    @Test
-    func parsesHealthCheckFrame() {
-        // Real R10 frame: HR 82, skin 32.853 °C (+2 compensation), RR 654 ms.
-        let check = ColmiProtocol.parseHealthCheck([0x69, 0x05, 0x00, 0x52, 0x80, 0x55, 0x8E, 0x02])
-        #expect(check?.heartRate == 82)
-        #expect(check != nil && abs(check!.bodyTempC - 34.853) < 0.001)
-        #expect(check?.rrMs == 654)
     }
 
     @Test

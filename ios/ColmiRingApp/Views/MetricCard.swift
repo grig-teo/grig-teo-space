@@ -36,7 +36,7 @@ struct MetricCard: View {
 
     private func format(_ v: Double) -> String {
         switch metric {
-        case .sleepDurationH, .bodyTemperature:
+        case .sleepDurationH:
             return String(format: "%.1f", v)
         case .distanceKm:
             return String(format: "%.2f", v)

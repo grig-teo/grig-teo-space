@@ -152,7 +152,6 @@ const DEFAULT_UNITS: Record<HealthMetric, string> = {
   hrv: 'ms',
   sleep_duration_h: 'h',
   sleep_quality: '%',
-  body_temperature: '°C',
 };
 
 export const METRIC_LABELS: Record<HealthMetric, string> = {
@@ -165,7 +164,6 @@ export const METRIC_LABELS: Record<HealthMetric, string> = {
   hrv: 'Heart Rate Variability',
   sleep_duration_h: 'Sleep Duration',
   sleep_quality: 'Sleep Quality',
-  body_temperature: 'Body Temperature',
 };
 
 // Anomaly thresholds. A reading outside these bounds in the recent window
@@ -213,7 +211,7 @@ const TIP_ENDPOINT = 'https://api.z.ai/api/coding/paas/v4/chat/completions';
 const TIP_SYSTEM_PROMPT =
   'You are a friendly, practical health coach for the owner of a smart ring. ' +
   'You receive their latest ring metrics (heart rate, SpO2, steps, calories, ' +
-  'distance, stress, HRV, sleep, body temperature) from the past hour.\n\n' +
+  'distance, stress, HRV, sleep) from the past hour.\n\n' +
   'Give exactly ONE short, actionable thing they can do right now to improve ' +
   'their wellbeing, and weave the specific numbers your advice is based on ' +
   'into the tip — e.g. "Your heart rate averaged 82 bpm and you only walked ' +

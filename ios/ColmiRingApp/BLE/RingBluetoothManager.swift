@@ -382,7 +382,7 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
         switch metric {
         case .distanceKm:
             value = String(format: "%.2f", reading.value)
-        case .sleepDurationH, .bodyTemperature:
+        case .sleepDurationH:
             value = String(format: "%.1f", reading.value)
         case .sleepQuality:
             value = "\(Int(reading.value))"
@@ -606,19 +606,11 @@ extension RingBluetoothManager: CBPeripheralDelegate {
             }
         case .startRealTime:
             if bytes.count >= 2, bytes[1] == ColmiProtocol.RealTimeKind.healthCheck.rawValue {
-                // HealthCheck: per-beat HR + skin temperature + RR interval.
-                if let check = ColmiProtocol.parseHealthCheck(bytes) {
-                    // Temperature is only meaningful when the ring is worn:
-                    // require a detected pulse and a plausible skin range
-                    // (off-finger readings drop toward ambient air).
-                    let skinC = check.bodyTempC - 4.0
-                    if check.heartRate > 0, (28...38).contains(skinC) {
-                        emit(HealthReading(metric: .bodyTemperature, value: check.bodyTempC))
-                        logTraffic("← Check: \(check.heartRate) bpm · \(String(format: "%.1f", check.bodyTempC)) °C · RR \(check.rrMs) ms")
-                    }
-                    if check.heartRate > 0 {
-                        emit(HealthReading(metric: .heartRate, value: Double(check.heartRate)))
-                    }
+                // HealthCheck: per-beat HR + RR interval (skin temperature
+                // is parsed but deliberately not collected or displayed).
+                if let check = ColmiProtocol.parseHealthCheck(bytes), check.heartRate > 0 {
+                    emit(HealthReading(metric: .heartRate, value: Double(check.heartRate)))
+                    logTraffic("← Check: \(check.heartRate) bpm · RR \(check.rrMs) ms")
                 }
             } else if let reading = ColmiProtocol.parseRealTime(bytes) {
                 emit(reading)
@@ -650,17 +642,6 @@ extension RingBluetoothManager: CBPeripheralDelegate {
                     )
                     logTraffic("← Live counter: \(live.steps) steps · \(live.distanceMeters) m")
                 }
-            case ColmiProtocol.NotificationType.temperature.rawValue:
-                if let celsius = ColmiProtocol.parseTemperature(bytes) {
-                    let reading = HealthReading(metric: .bodyTemperature, value: celsius)
-                    emit(reading)
-                    logTraffic("← \(describe(reading))")
-                } else {
-                    // Temperature frame in an unknown layout — log raw so
-                    // the encoding can be pinned.
-                    let hex = bytes.map { String(format: "%02X", $0) }.joined(separator: " ")
-                    logTraffic("← Temp frame: \(hex)")
-                }
             case ColmiProtocol.NotificationType.batteryLevel.rawValue:
                 guard bytes.count >= 3 else { break }
                 batteryLevel = Int(bytes[2])
@@ -686,12 +667,7 @@ extension RingBluetoothManager: CBPeripheralDelegate {
             let hex = bytes.map { String(format: "%02X", $0) }.joined(separator: " ")
             logTraffic("← Sleep frame: \(hex)")
         case .setTime:
-            if let supportsTemperature = ColmiProtocol.parseCapabilities(bytes) {
-                let hex = bytes.map { String(format: "%02X", $0) }.joined(separator: " ")
-                logTraffic("← Ring time set · temperature sensor: \(supportsTemperature ? "yes" : "no") · caps \(hex)")
-            } else {
-                logTraffic("← Ring time set")
-            }
+            logTraffic("← Ring time set")
         case .bigDataV2:
             handleBigData(data)
         default:

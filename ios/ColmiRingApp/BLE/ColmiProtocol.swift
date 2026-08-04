@@ -77,7 +77,6 @@ enum ColmiProtocol {
         case newHeartRateData = 0x01
         case newSpo2Data = 0x03
         case newStepsData = 0x04
-        case temperature = 0x05
         case batteryLevel = 0x0C
         case liveActivity = 0x12
         case newSleepData = 0x27
@@ -222,25 +221,8 @@ enum ColmiProtocol {
         return (uint24BE(2), uint24BE(8) / 10, uint24BE(11))
     }
 
-    /// Temperature push (opcode 115, subtype 0x05). The frame layout is not
-    /// documented; QRing reports values like 36.7 °C. Try the plausible
-    /// encodings in order: uint16 LE centi-°C at bytes 2..3 (2500–4500),
-    /// then a whole-°C byte at byte 2 (25–45). Returns nil when neither
-    /// fits so garbage frames stay out of the series.
-    static func parseTemperature(_ bytes: [UInt8]) -> Double? {
-        guard bytes.count >= 4 else { return nil }
-        let centi = Int(bytes[2]) | (Int(bytes[3]) << 8)
-        if (2500...4500).contains(centi) {
-            return Double(centi) / 100
-        }
-        if (25...45).contains(Int(bytes[2])) {
-            return Double(bytes[2])
-        }
-        return nil
-    }
-
-    /// Capability flags from the set-time response (opcode 1):
-    /// byte 1 = temperature sensor present.
+    /// Capability check from the set-time response (opcode 1): byte 1 flags
+    /// a temperature sensor. Diagnostic only — temperature is not collected.
     static func parseCapabilities(_ bytes: [UInt8]) -> Bool? {
         guard bytes.count >= 2 else { return nil }
         return bytes[1] == 1
@@ -251,21 +233,17 @@ enum ColmiProtocol {
 
        byte 2    : error code (0 = ok)
        byte 3    : heart rate, bpm
-       bytes 4–5 : skin temperature, uint16 BIG-endian, milli-°C
-                   (0x8055 = 32.85 °C; 0 while the sensor warms up)
+       bytes 4–5 : skin temperature, uint16 big-endian, milli-°C
+                   (parsed out of interest; not surfaced — skin readings
+                   swing too much to present as body temperature)
        bytes 6–7 : RR interval, uint16 little-endian, ms
-
-     QRing's "body temperature" is the skin value plus a core compensation
-     (~+2 °C by comparison with QRing's display) — applied here so the card
-     matches. (An earlier +4 read as false fevers.)
      */
-    static func parseHealthCheck(_ bytes: [UInt8]) -> (heartRate: Int, bodyTempC: Double, rrMs: Int)? {
+    static func parseHealthCheck(_ bytes: [UInt8]) -> (heartRate: Int, rrMs: Int)? {
         guard bytes.count >= 8, bytes[2] == 0 else { return nil }
         let skinMilliC = (Int(bytes[4]) << 8) | Int(bytes[5])
         guard skinMilliC > 0 else { return nil } // sensor still warming up
         return (
             heartRate: Int(bytes[3]),
-            bodyTempC: Double(skinMilliC) / 1000 + 2.0,
             rrMs: Int(bytes[6]) | (Int(bytes[7]) << 8),
         )
     }

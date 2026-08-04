@@ -15,8 +15,7 @@ export type HealthMetric =
   | 'stress'
   | 'hrv'
   | 'sleep_duration_h'
-  | 'sleep_quality'
-  | 'body_temperature';
+  | 'sleep_quality';
 
 export type HealthSource = 'ring' | 'manual' | 'demo';
 
@@ -30,7 +29,6 @@ export const HEALTH_METRICS: readonly HealthMetric[] = [
   'hrv',
   'sleep_duration_h',
   'sleep_quality',
-  'body_temperature',
 ] as const;
 
 export const HEALTH_SOURCES: readonly HealthSource[] = [

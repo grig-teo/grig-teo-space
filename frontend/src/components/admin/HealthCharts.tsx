@@ -23,7 +23,6 @@ const METRIC_LABELS: Record<HealthMetric, string> = {
   hrv: 'Heart Rate Variability',
   sleep_duration_h: 'Sleep Duration',
   sleep_quality: 'Sleep Quality',
-  body_temperature: 'Body Temperature',
 };
 
 const METRIC_UNIT: Record<HealthMetric, string> = {
@@ -36,7 +35,6 @@ const METRIC_UNIT: Record<HealthMetric, string> = {
   hrv: 'ms',
   sleep_duration_h: 'h',
   sleep_quality: '%',
-  body_temperature: '°C',
 };
 
 // Metrics rendered as a continuous line vs. a daily bar.
@@ -46,7 +44,6 @@ const LINE_METRICS: HealthMetric[] = [
   'hrv',
   'stress',
   'sleep_quality',
-  'body_temperature',
 ];
 const BAR_METRICS: HealthMetric[] = ['steps', 'calories', 'distance_km', 'sleep_duration_h'];
 
