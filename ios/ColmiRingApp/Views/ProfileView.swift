@@ -123,7 +123,7 @@ struct ProfileView: View {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let date = formatter.date(from: iso) ?? Date()
-        return date.dateTime24(dateStyle: .abbreviated)
+        return date.dateTime24(dateStyle: .medium)
     }
 
     private var header: some View {

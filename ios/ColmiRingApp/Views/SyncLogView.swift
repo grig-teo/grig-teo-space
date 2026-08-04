@@ -17,7 +17,7 @@ struct SyncLogView: View {
                 HStack {
                     Text("Last upload").foregroundColor(.secondary)
                     Spacer()
-                    Text(last.dateTime24(dateStyle: .abbreviated)).fontWeight(.medium)
+                    Text(last.dateTime24(dateStyle: .medium)).fontWeight(.medium)
                 }
             }
             if let error = api.lastError {

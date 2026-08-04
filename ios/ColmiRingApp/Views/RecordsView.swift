@@ -189,6 +189,6 @@ struct RecordRow: View {
     }
 
     private var formattedDate: String {
-        ISO8601DateFormatter.shared.date(from: item.recordedAt)?.dateTime24(dateStyle: .abbreviated) ?? item.recordedAt
+        ISO8601DateFormatter.shared.date(from: item.recordedAt)?.dateTime24(dateStyle: .medium) ?? item.recordedAt
     }
 }
