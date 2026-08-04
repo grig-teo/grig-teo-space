@@ -36,6 +36,12 @@ async function bootstrap() {
     }
     next(err);
   });
+  // API payloads (admin dashboard, live charts) must never be cached by the
+  // browser — without an explicit header, GETs can be heuristically cached.
+  app.use('/api', (_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
   // Trust the proxy chain (nginx → backend) so `req.ip` / `@Ip()` resolves to
   // the real client address from X-Forwarded-For / X-Real-IP instead of the
   // Docker bridge IP. Needed for per-IP rate limiting on the AI chat.
