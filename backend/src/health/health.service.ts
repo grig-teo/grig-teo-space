@@ -1,5 +1,6 @@
 import {
   BadGatewayException,
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   ServiceUnavailableException,
@@ -276,9 +277,13 @@ export class HealthService {
 
   async addReadings(readings: IncomingReading[]): Promise<{ inserted: number }> {
     if (readings.length > MAX_READINGS_PER_REQUEST) {
-      throw new RangeError(`Too many readings (max ${MAX_READINGS_PER_REQUEST})`);
+      throw new BadRequestException(`Too many readings (max ${MAX_READINGS_PER_REQUEST})`);
     }
-    const rows = readings.map((reading) => this.toReadingEntity(reading));
+    // Skip invalid rows instead of failing the whole batch — one unknown
+    // metric (e.g. from an older app build) must not block the rest.
+    const rows = readings
+      .map((reading) => this.toReadingEntityOrNull(reading))
+      .filter((row): row is HealthReading => row !== null);
     if (rows.length === 0) {
       return { inserted: 0 };
     }
@@ -307,7 +312,7 @@ export class HealthService {
       .values(values as any)
       .orUpdate(['value', 'unit', 'raw', 'source'], ['metric', 'recorded_at'])
       .execute();
-    return { inserted: rows.length };
+    return { inserted: deduped.length };
   }
 
   async addNote(note: IncomingNote): Promise<HealthNote> {
@@ -323,15 +328,22 @@ export class HealthService {
     });
   }
 
-  private toReadingEntity(reading: IncomingReading): HealthReading {
+  /** Maps an incoming reading to a row, or returns null when it's invalid
+   *  (unknown metric, non-finite value) — callers skip nulls so one bad
+   *  reading never kills a batch. */
+  private toReadingEntityOrNull(reading: IncomingReading): HealthReading | null {
     if (!HEALTH_METRICS.includes(reading.metric)) {
-      throw new RangeError(`Unknown metric: ${reading.metric}`);
+      return null;
+    }
+    const value = Number(reading.value);
+    if (!Number.isFinite(value)) {
+      return null;
     }
     const recordedAt = this.parseDate(reading.recordedAt) ?? new Date();
     return {
       id: undefined as unknown as string,
       metric: reading.metric,
-      value: Number(reading.value),
+      value,
       unit: reading.unit?.trim() || DEFAULT_UNITS[reading.metric],
       recordedAt,
       source: reading.source ?? 'ring',
@@ -365,7 +377,7 @@ export class HealthService {
     const alerts = this.detectAlerts(readings);
 
     return {
-      windowDays: days,
+      windowDays: this.clampWindow(days),
       from: from.toISOString(),
       to: to.toISOString(),
       metrics,
@@ -429,8 +441,8 @@ export class HealthService {
 
   /** Returns paginated tip history (newest first). */
   async listTips(limit = 20, offset = 0): Promise<TipListPage> {
-    const safeLimit = Math.min(Math.max(1, limit), 100);
-    const safeOffset = Math.max(0, offset);
+    const safeLimit = Number.isFinite(limit) ? Math.min(Math.max(1, limit), 100) : 20;
+    const safeOffset = Number.isFinite(offset) ? Math.max(0, offset) : 0;
     const [rows, total] = await this.tipRepo.findAndCount({
       order: { generatedAt: 'DESC' },
       take: safeLimit,
@@ -523,7 +535,7 @@ export class HealthService {
     // math in the health pipeline is UTC; clients localize for display.
     const from = new Date();
     from.setUTCHours(0, 0, 0, 0);
-    from.setDate(from.getDate() - (span - 1));
+    from.setUTCDate(from.getUTCDate() - (span - 1));
 
     const readings = await this.readingRepo.find({
       where: { recordedAt: MoreThan(from), metric: safeMetric },

@@ -61,8 +61,18 @@ function formatTime(iso: string): string {
   });
 }
 
-function formatDay(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
+/** Local calendar day key (YYYY-MM-DD) — toISOString would give UTC. */
+function localDayKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function formatDay(dayKey: string): string {
+  // Parse as LOCAL midnight (a bare 'YYYY-MM-DD' parses as UTC and shifts
+  // the label by a day behind UTC).
+  return new Date(`${dayKey}T00:00:00`).toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
   });
@@ -74,7 +84,7 @@ function toDailyTotals(
 ): { label: string; value: number }[] {
   const byDay = new Map<string, number>();
   for (const point of series) {
-    const day = new Date(point.recordedAt).toISOString().slice(0, 10);
+    const day = localDayKey(new Date(point.recordedAt));
     byDay.set(day, (byDay.get(day) ?? 0) + point.value);
   }
   return [...byDay.entries()]

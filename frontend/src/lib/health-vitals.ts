@@ -7,11 +7,17 @@ export type HealthVitals = {
   stress?: number;
 };
 
-/** Sums the step readings recorded on the current UTC day. */
+/** Sums the step readings recorded on the current LOCAL day (toISOString
+ *  would reset the count at UTC midnight, hours off the visitor's day). */
 function sumTodaySteps(series: { recordedAt: string; value: number }[]): number {
-  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const total = series
-    .filter((point) => point.recordedAt.slice(0, 10) === today)
+    .filter((point) => {
+      const d = new Date(point.recordedAt);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return key === today;
+    })
     .reduce((sum, point) => sum + point.value, 0);
   return Math.round(total);
 }

@@ -130,8 +130,10 @@ export function Hero({
         const res = await fetch('/api/health/public', { cache: 'no-store' });
         if (!res.ok) return;
         const data = (await res.json()) as PublicHealthPayload;
-        if (!cancelled && data.enabled) {
-          setVitals(computeVitals(data));
+        if (!cancelled) {
+          // If public health was disabled between polls, clear the figures
+          // instead of leaving stale values on screen.
+          setVitals(data.enabled ? computeVitals(data) : {});
         }
       } catch {
         // Keep the last good values on network errors.
