@@ -248,11 +248,13 @@ struct ColmiHistoryParserTests {
         var frame: [UInt8] = [0xBC, 0x2A, 49, 0, 0, 0, 0] // length 49, daysAgo = 0 (today)
         for _ in 0..<24 { frame.append(95); frame.append(99) }
         let readings = parser.parse(frame)
-        #expect(readings.count == 24)
+        // Hours in the future are dropped, so only today's elapsed hours remain.
+        let hoursElapsed = Calendar.current.component(.hour, from: Date()) + 1
+        #expect(readings.count == hoursElapsed)
         #expect(readings.first?.metric == "spo2")
         #expect(readings.first?.value == 97)
         let dayStart = Calendar.current.startOfDay(for: Date())
-        #expect(readings.last?.recordedAt == dayStart.addingTimeInterval(23 * 3600))
+        #expect(readings.last?.recordedAt == dayStart.addingTimeInterval(TimeInterval((hoursElapsed - 1) * 3600)))
     }
 
     @Test

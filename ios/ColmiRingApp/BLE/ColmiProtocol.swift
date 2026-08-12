@@ -342,9 +342,15 @@ final class IntervalLogParser {
             minutesBefore = 12 * 30 + (packetNr - 2) * 13 * 30
         }
         var readings: [HealthReading] = []
+        let now = Date()
         for index in startIndex..<(bytes.count - 1) where bytes[index] != 0 {
             let minuteOfDay = minutesBefore + (index - startIndex) * 30
-            let timestamp = dayStart.addingTimeInterval(TimeInterval(minuteOfDay * 60))
+            var timestamp = dayStart.addingTimeInterval(TimeInterval(minuteOfDay * 60))
+            // The frames carry no date — just minutes into the ring's day.
+            // Slots landing in the future belong to yesterday's buffer.
+            if timestamp > now {
+                timestamp = timestamp.addingTimeInterval(-24 * 3600)
+            }
             readings.append(HealthReading(metric: metric, value: Double(bytes[index]), recordedAt: timestamp))
         }
         return (readings, packetNr >= 4)
@@ -449,6 +455,9 @@ final class Spo2LogParser {
                 index += 2
                 if minValue > 0 && maxValue > 0 {
                     let timestamp = dayBase.addingTimeInterval(TimeInterval(hour * 3600))
+                    // Hours that haven't happened yet are stale buffer
+                    // leftovers — skip them.
+                    guard timestamp <= Date() else { continue }
                     let average = (Double(minValue) + Double(maxValue)) / 2
                     readings.append(HealthReading(metric: .spo2, value: average, recordedAt: timestamp))
                 }
