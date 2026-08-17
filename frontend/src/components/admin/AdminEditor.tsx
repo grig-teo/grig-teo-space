@@ -858,9 +858,20 @@ export function AdminEditor() {
                 <span className="rounded border border-border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-accent">
                   {attachmentType(attachment)}
                 </span>
-                <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted" title={attachment.url}>
-                  {attachment.title ?? attachment.url.split('/').pop()}
-                </span>
+                <input
+                  value={attachment.title ?? ''}
+                  placeholder={attachment.url.split('/').pop()}
+                  title={attachment.url}
+                  onChange={(e) =>
+                    updateProject(selectedProject, (item) => ({
+                      ...item,
+                      attachments: (item.attachments ?? []).map((a, i) =>
+                        i === index ? { ...a, title: e.target.value } : a,
+                      ),
+                    }))
+                  }
+                  className="min-w-0 flex-1 rounded border border-border bg-background px-2 py-1 font-mono text-xs text-foreground placeholder:text-muted/60"
+                />
                 <button
                   type="button"
                   onClick={() =>
@@ -1067,9 +1078,20 @@ export function AdminEditor() {
                 <span className="rounded border border-border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-accent">
                   {attachmentType(attachment)}
                 </span>
-                <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted" title={attachment.url}>
-                  {attachment.title ?? attachment.url.split('/').pop()}
-                </span>
+                <input
+                  value={attachment.title ?? ''}
+                  placeholder={attachment.url.split('/').pop()}
+                  title={attachment.url}
+                  onChange={(e) =>
+                    updateExperienceItem(selectedExperience, (item) => ({
+                      ...item,
+                      attachments: (item.attachments ?? []).map((a, i) =>
+                        i === index ? { ...a, title: e.target.value } : a,
+                      ),
+                    }))
+                  }
+                  className="min-w-0 flex-1 rounded border border-border bg-background px-2 py-1 font-mono text-xs text-foreground placeholder:text-muted/60"
+                />
                 <button
                   type="button"
                   onClick={() =>
