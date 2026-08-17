@@ -103,7 +103,7 @@ export default async function ProjectDetailPage({ params }: Props) {
           )}
 
           {project.attachments && project.attachments.length > 0 && (
-            <div className="mt-8 space-y-4">
+            <div className="mt-8 flex flex-wrap items-start gap-4">
               {project.attachments.map((attachment) => (
                 <AttachmentView key={attachment.url} attachment={attachment} />
               ))}

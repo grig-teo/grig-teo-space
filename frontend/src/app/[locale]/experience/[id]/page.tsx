@@ -87,7 +87,7 @@ export default async function ExperienceDetailPage({ params }: Props) {
           )}
 
           {item.attachments && item.attachments.length > 0 && (
-            <div className="mt-8 space-y-4">
+            <div className="mt-8 flex flex-wrap items-start gap-4">
               {item.attachments.map((attachment) => (
                 <AttachmentView key={attachment.url} attachment={attachment} />
               ))}
