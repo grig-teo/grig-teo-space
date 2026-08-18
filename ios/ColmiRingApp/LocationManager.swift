@@ -11,21 +11,27 @@ import Foundation
  one per hour — weather changes slowly, and the app isn't a tracker.
  */
 @MainActor
-final class LocationManager: NSObject {
+final class LocationManager: NSObject, ObservableObject {
     static let shared = LocationManager()
 
     /// Whether the user granted (any) location authorization.
     private(set) var isAuthorized = false
 
+    /// Reverse-geocoded city/locality of the last uploaded location, shown
+    /// next to the weather on the Profile page. Persisted across launches.
+    @Published private(set) var locality: String?
+
     private let manager = CLLocationManager()
     private let settings = AppSettings.shared
     private let lastSentKey = "location.lastSentAt"
+    private let localityKey = "location.locality"
 
     private override init() {
         super.init()
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
         isAuthorized = Self.authorized(manager.authorizationStatus)
+        locality = UserDefaults.standard.string(forKey: localityKey)
     }
 
     /**
@@ -66,6 +72,16 @@ final class LocationManager: NSObject {
         guard req.httpBody != nil else { return }
         URLSession.shared.dataTask(with: req).resume()
         lastSent = Date()
+        Task { await reverseGeocode(location) }
+    }
+
+    /// Resolves coordinates to a city name for display (on-device, no API).
+    private func reverseGeocode(_ coordinate: CLLocationCoordinate2D) async {
+        let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        let placemarks = try? await CLGeocoder().reverseGeocodeLocation(location)
+        guard let name = placemarks?.first?.locality ?? placemarks?.first?.subAdministrativeArea else { return }
+        locality = name
+        UserDefaults.standard.set(name, forKey: localityKey)
     }
 }
 
