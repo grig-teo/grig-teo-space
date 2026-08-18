@@ -17,6 +17,7 @@ import {
 import { HealthNote, HealthNoteSource } from '../entities/health-note.entity';
 import { HealthTip } from '../entities/health-tip.entity';
 import { SleepSession } from '../entities/sleep-session.entity';
+import { StorageService } from '../storage/storage.service';
 import { WeatherService } from '../weather/weather.service';
 
 // --- Public exposure configuration ---------------------------------------
@@ -404,6 +405,7 @@ export class HealthService {
     @InjectRepository(SleepSession)
     private readonly sleepRepo: Repository<SleepSession>,
     private readonly weather: WeatherService,
+    private readonly storage: StorageService,
   ) {}
 
   // --- Ingest -------------------------------------------------------------
@@ -453,7 +455,7 @@ export class HealthService {
     if (!content) {
       throw new RangeError('Note content must not be empty');
     }
-    return this.noteRepo.save({
+    const saved = await this.noteRepo.save({
       content: content.slice(0, 4000),
       mood: note.mood?.trim().slice(0, 16) ?? null,
       source: note.source ?? 'manual',
@@ -461,6 +463,56 @@ export class HealthService {
       mediaType: note.mediaType === 'video' ? 'video' : note.mediaType === 'photo' ? 'photo' : null,
       recordedAt: this.parseDate(note.recordedAt) ?? new Date(),
     });
+    // Describe attached photos with the on-VPS vision model in the
+    // background — the note save must not wait on a ~30–180s CPU inference.
+    if (saved.mediaType === 'photo' && saved.mediaKey) {
+      void this.describeNoteMedia(saved.id, saved.mediaKey);
+    }
+    return saved;
+  }
+
+  /**
+   * Describes a note's photo with the local vision model (Ollama, default
+   * qwen2.5vl:7b) and stores the one-sentence result on the note — the tip
+   * generator then sees "ate pizza" [photo: a pepperoni pizza slice]
+   * instead of a bare "[photo attached]". Videos are skipped (frames are
+   * not worth the inference cost on a shared VPS).
+   */
+  private async describeNoteMedia(noteId: string, mediaKey: string): Promise<void> {
+    try {
+      const buffer = await this.storage.getPrivateBuffer(mediaKey);
+      const base = (process.env.OLLAMA_BASE_URL?.trim() || 'http://ollama:11434').replace(/\/+$/, '');
+      const model = process.env.OLLAMA_VISION_MODEL?.trim() || 'qwen2.5vl:7b';
+      // Native /api/chat (not the OpenAI shim): it accepts `images` and,
+      // crucially, `options.num_ctx` — the default 4096 ctx is fully eaten
+      // by image tokens, truncating the description to a few words.
+      const response = await fetch(`${base}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          stream: false,
+          options: { num_ctx: 8192, temperature: 0.2, num_predict: 120 },
+          messages: [
+            {
+              role: 'user',
+              content:
+                'What is in this photo? Answer in one short sentence, focusing on food, drinks, activities, or place.',
+              images: [buffer.toString('base64')],
+            },
+          ],
+        }),
+        signal: AbortSignal.timeout(300_000),
+      });
+      if (!response.ok) return;
+      const payload = (await response.json()) as { message?: { content?: string } };
+      const description = payload.message?.content?.trim().slice(0, 300);
+      if (description) {
+        await this.noteRepo.update({ id: noteId }, { mediaNote: description });
+      }
+    } catch {
+      // Vision is best-effort — the note keeps "[photo attached]" otherwise.
+    }
   }
 
   /** Maps an incoming reading to a row, or returns null when it's invalid
@@ -1505,7 +1557,11 @@ export class HealthService {
           hour: '2-digit',
           minute: '2-digit',
         });
-        const media = note.mediaType ? ` [${note.mediaType} attached]` : '';
+        const media = note.mediaNote
+          ? ` [photo: ${note.mediaNote}]`
+          : note.mediaType
+            ? ` [${note.mediaType} attached]`
+            : '';
         lines.push(`- [${at} UTC] "${note.content}"${media}`);
       }
     }

@@ -38,6 +38,11 @@ export class HealthNote {
   @Column({ type: 'varchar', length: 8, nullable: true })
   mediaType!: string | null;
 
+  /** Vision-model description of the attached photo ("a pepperoni pizza"),
+   *  filled asynchronously after upload. Feeds the tip context. */
+  @Column({ type: 'text', nullable: true })
+  mediaNote!: string | null;
+
   @Column({ name: 'recorded_at', type: 'timestamptz' })
   recordedAt!: Date;
 

@@ -109,8 +109,21 @@ export class StorageService implements OnModuleInit {
     return { key, size: file.size };
   }
 
-  /**
-   * Opens a stream to a private object, honoring an HTTP `Range` header so
+  /** Reads a whole private object into memory (used for small files like
+   *  note photos fed to the vision model — not for large media). */
+  async getPrivateBuffer(key: string): Promise<Buffer> {
+    if (!this.privateReady) {
+      await this.ensurePrivateBucket();
+    }
+    const stream = await this.client.getObject(this.privateBucket, key);
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
+  }
+
+  /** Opens a stream to a private object, honoring an HTTP `Range` header so
    * videos can seek. Accepts the raw `Range` header value (e.g.
    * `bytes=0-1023`, `bytes=0-`, `bytes=-500`) and resolves open-ended/suffix
    * forms against the object's real size. Returns the stream, the HTTP status

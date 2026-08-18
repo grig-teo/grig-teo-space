@@ -126,9 +126,13 @@ async function main(): Promise<void> {
     if (!guard(ctx, () => undefined)) return;
     try {
       const isVideo = 'video' in ctx.message;
+      // Telegram serves several downscaled photo sizes; take a ~320px one —
+      // enough for "pizza vs salad" and ~4x fewer vision tokens than the
+      // full-size original (CPU inference time scales with image tokens).
+      const sizes = isVideo ? [] : ctx.message.photo;
       const fileId = isVideo
         ? ctx.message.video.file_id
-        : ctx.message.photo[ctx.message.photo.length - 1].file_id;
+        : sizes[Math.max(0, sizes.length - 3)].file_id;
       const link = await ctx.telegram.getFileLink(fileId);
       const data = await (await fetch(link.href)).arrayBuffer();
       const contentType = isVideo
