@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -7,9 +8,14 @@ import {
   Put,
   Query,
   UnauthorizedException,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { DeviceKeyGuard } from './device-key.guard';
+import { StorageService } from '../storage/storage.service';
 import {
   HealthService,
   type IncomingNote,
@@ -27,7 +33,10 @@ import {
  */
 @Controller('health')
 export class HealthController {
-  constructor(private readonly health: HealthService) {}
+  constructor(
+    private readonly health: HealthService,
+    private readonly storage: StorageService,
+  ) {}
 
   @Post('readings')
   @UseGuards(DeviceKeyGuard)
@@ -45,6 +54,27 @@ export class HealthController {
   @HttpCode(201)
   async addNote(@Body() body: IncomingNote) {
     return this.health.addNote(body);
+  }
+
+  /**
+   * Uploads a note attachment (photo/video from the Telegram bot) to the
+   * PRIVATE bucket — note media is personal and must never be public.
+   * Returns the object key to pass as `mediaKey` to POST /notes.
+   */
+  @Post('notes/media')
+  @UseGuards(DeviceKeyGuard)
+  @HttpCode(201)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 25 * 1024 * 1024 },
+    }),
+  )
+  async uploadNoteMedia(@UploadedFile() file?: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('Expected multipart file field "file"');
+    }
+    return this.storage.uploadPrivate(file, 'notes/');
   }
 
   @Get('summary')

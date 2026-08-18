@@ -17,6 +17,8 @@ struct ProfileView: View {
     @StateObject private var recoveryClient = RecoveryClient.shared
     @StateObject private var insightsClient = InsightsClient.shared
     @State private var latestMedia: [MediaLibraryWrapper.AssetSnapshot] = []
+    @State private var noteText = ""
+    @State private var noteSaved = false
 
     var body: some View {
         NavigationStack {
@@ -28,6 +30,7 @@ struct ProfileView: View {
                     weatherRow
                     StressChartView(client: stressClient)
                     digestCard
+                    noteCard
                     tipCard
                     mediaSection
                     if let error = client.lastError {
@@ -74,6 +77,41 @@ struct ProfileView: View {
             }
             .padding()
             .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
+        }
+    }
+
+    /// Quick context note ("tired", "ate pizza", "sleep at 23:30") — the
+    /// hourly tip generator reads the last 24h of these.
+    private var noteCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("How do you feel?")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            HStack(spacing: 8) {
+                TextField("tired, ate pizza, sleep at 23:30…", text: $noteText)
+                    .font(.callout)
+                    .submitLabel(.send)
+                    .onSubmit { saveNote() }
+                Button(action: saveNote) {
+                    Image(systemName: noteSaved ? "checkmark" : "paperplane.fill")
+                        .foregroundStyle(noteSaved ? Color.green : Color.accentColor)
+                }
+                .disabled(noteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding()
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
+    }
+
+    private func saveNote() {
+        let text = noteText
+        noteText = ""
+        Task {
+            if await insightsClient.addNote(text) {
+                noteSaved = true
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                noteSaved = false
+            }
         }
     }
 

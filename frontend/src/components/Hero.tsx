@@ -148,7 +148,7 @@ export function Hero({
     };
   }, []);
 
-  const { bpm, cadence, stepsToday, stress } = vitals;
+  const { bpm, cadence, stepsToday, stress, now } = vitals;
   return (
     <section id="about" className="px-4 py-20 sm:px-6 md:px-12 md:py-28">
       <div className="max-w-6xl lg:grid lg:grid-cols-[1fr_auto] lg:items-start lg:gap-12">
@@ -181,6 +181,23 @@ export function Hero({
           </div>
         </div>
       </div>
+      {now ? <NowBadge status={now} /> : null}
     </section>
+  );
+}
+
+/** Pulsing "currently: walking" pill under the hero vitals. */
+function NowBadge({ status }: { status: string }) {
+  const t = useTranslations('hero');
+  return (
+    <div className="mt-6 flex justify-center lg:justify-end">
+      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 font-mono text-[11px] text-muted">
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+        </span>
+        {t(`now.${status}`)}
+      </span>
+    </div>
   );
 }

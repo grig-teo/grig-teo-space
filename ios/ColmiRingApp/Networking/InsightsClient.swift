@@ -77,6 +77,23 @@ final class InsightsClient: ObservableObject {
         digest = try? await fetch("/api/health/digest")
     }
 
+    /** Logs a quick note ("how I feel, what I ate, plans") — the tip
+     *  generator sees the last 24h of these. */
+    func addNote(_ text: String) async -> Bool {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty,
+              let url = URL(string: "\(settings.backendURL)/api/health/notes") else { return false }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue(settings.deviceKey, forHTTPHeaderField: "X-Device-Key")
+        req.httpBody = try? JSONEncoder().encode(["content": clean, "source": "ios"])
+        guard let (_, response) = try? await URLSession.shared.data(for: req),
+              let http = response as? HTTPURLResponse
+        else { return false }
+        return (200..<300).contains(http.statusCode)
+    }
+
     /** Auto-detected activities for the last `days` days. */
     func loadActivities(days: Int = 7) async {
         activities = (try? await fetch("/api/health/activities?days=\(days)")) ?? []

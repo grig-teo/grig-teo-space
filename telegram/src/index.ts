@@ -120,6 +120,36 @@ async function main(): Promise<void> {
     }
   });
 
+  // Photos and videos are notes too: the caption (if any) is the note text,
+  // the file goes to the private bucket, and the tip generator sees both.
+  bot.on(['photo', 'video'], async (ctx) => {
+    if (!guard(ctx, () => undefined)) return;
+    try {
+      const isVideo = 'video' in ctx.message;
+      const fileId = isVideo
+        ? ctx.message.video.file_id
+        : ctx.message.photo[ctx.message.photo.length - 1].file_id;
+      const link = await ctx.telegram.getFileLink(fileId);
+      const data = await (await fetch(link.href)).arrayBuffer();
+      const contentType = isVideo
+        ? ctx.message.video.mime_type ?? 'video/mp4'
+        : 'image/jpeg';
+      const { key } = await client.uploadNoteMedia(
+        data,
+        isVideo ? 'note.mp4' : 'note.jpg',
+        contentType,
+      );
+      const caption = ctx.message.caption?.trim();
+      await client.addNote(caption || (isVideo ? '(video)' : '(photo)'), undefined, {
+        key,
+        type: isVideo ? 'video' : 'photo',
+      });
+      await ctx.reply('✅ Saved as a note with media');
+    } catch (error) {
+      await ctx.reply(`⚠️ ${(error as Error).message}`);
+    }
+  });
+
   // Background jobs: anomaly alerts + daily digest.
   const scheduler = new Scheduler(bot, client, chatId, log);
   scheduler.start();

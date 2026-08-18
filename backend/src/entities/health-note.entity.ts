@@ -6,12 +6,13 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-export type HealthNoteSource = 'telegram' | 'manual' | 'demo';
+export type HealthNoteSource = 'telegram' | 'manual' | 'demo' | 'ios';
 
 export const HEALTH_NOTE_SOURCES: readonly HealthNoteSource[] = [
   'telegram',
   'manual',
   'demo',
+  'ios',
 ] as const;
 
 @Entity('health_note')
@@ -28,6 +29,14 @@ export class HealthNote {
 
   @Column({ type: 'varchar', length: 16 })
   source!: HealthNoteSource;
+
+  /** Private-bucket object key of an attached photo/video, if any. */
+  @Column({ type: 'varchar', length: 128, nullable: true })
+  mediaKey!: string | null;
+
+  /** 'photo' | 'video' when mediaKey is set. */
+  @Column({ type: 'varchar', length: 8, nullable: true })
+  mediaType!: string | null;
 
   @Column({ name: 'recorded_at', type: 'timestamptz' })
   recordedAt!: Date;

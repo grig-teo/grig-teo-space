@@ -5,6 +5,8 @@ export type HealthVitals = {
   cadence?: number;
   stepsToday?: number;
   stress?: number;
+  /** Live activity key ('walking' | 'working_out' | 'asleep' | 'resting'). */
+  now?: string;
 };
 
 /** Sums the step readings recorded on the current LOCAL day (toISOString
@@ -38,5 +40,6 @@ export function computeVitals(health: PublicHealthPayload | null): HealthVitals 
     cadence: avgSteps ? Math.min(Math.max(avgSteps * 0.06, 0.9), 2.2) : undefined,
     stepsToday: stepsMetric ? sumTodaySteps(stepsMetric.series) : undefined,
     stress: avgStress != null ? Math.min(Math.max(Math.round(avgStress), 0), 100) : undefined,
+    now: health.now?.status ?? undefined,
   };
 }

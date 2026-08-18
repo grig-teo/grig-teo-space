@@ -72,11 +72,39 @@ export class BackendClient {
     });
   }
 
-  async addNote(content: string, mood?: string): Promise<{ id: string }> {
+  async addNote(
+    content: string,
+    mood?: string,
+    media?: { key: string; type: 'photo' | 'video' },
+  ): Promise<{ id: string }> {
     return this.request<{ id: string }>('/api/health/notes', {
       method: 'POST',
-      body: JSON.stringify({ content, mood, source: 'telegram' }),
+      body: JSON.stringify({
+        content,
+        mood,
+        source: 'telegram',
+        mediaKey: media?.key,
+        mediaType: media?.type,
+      }),
     });
+  }
+
+  /** Uploads a note attachment to the private bucket (photos/videos sent
+   *  to the bot). Returns the object key for addNote. */
+  async uploadNoteMedia(
+    data: ArrayBuffer,
+    filename: string,
+    contentType: string,
+  ): Promise<{ key: string }> {
+    const form = new FormData();
+    form.append('file', new Blob([data], { type: contentType }), filename);
+    const res = await fetch(`${this.baseUrl}/api/health/notes/media`, {
+      method: 'POST',
+      headers: { 'X-Device-Key': this.deviceKey },
+      body: form,
+    });
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    return res.json() as Promise<{ key: string }>;
   }
 
   async getSummary(days = 1): Promise<HealthSummary> {

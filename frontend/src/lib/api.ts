@@ -174,6 +174,8 @@ export type PublicHealthPayload = {
   displayName: string;
   windowDays: number;
   metrics: PublicHealthMetric[];
+  /** Coarse live activity for the hero badge; null when data is stale. */
+  now?: { status: 'walking' | 'working_out' | 'asleep' | 'resting' } | null;
 };
 
 /** Returns null when the public health page is disabled (404-safe). */

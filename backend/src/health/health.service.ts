@@ -62,6 +62,10 @@ export type IncomingNote = {
   mood?: string | null;
   source?: HealthNoteSource;
   recordedAt?: string;
+  /** Private-bucket key from POST /health/notes/media. */
+  mediaKey?: string;
+  /** 'photo' | 'video' when mediaKey is set. */
+  mediaType?: string;
 };
 
 /** One night's sleep as uploaded by the iOS app (parsed ring frame). */
@@ -234,6 +238,12 @@ export type PublicHealthPayload = {
   displayName: string;
   windowDays: number;
   metrics: PublicMetricPayload[];
+  now: PublicNowStatus | null;
+};
+
+/** Coarse live activity for the landing page badge. */
+export type PublicNowStatus = {
+  status: 'walking' | 'working_out' | 'asleep' | 'resting';
 };
 
 export type HealthOverview = {
@@ -447,6 +457,8 @@ export class HealthService {
       content: content.slice(0, 4000),
       mood: note.mood?.trim().slice(0, 16) ?? null,
       source: note.source ?? 'manual',
+      mediaKey: note.mediaKey?.trim().slice(0, 128) || null,
+      mediaType: note.mediaType === 'video' ? 'video' : note.mediaType === 'photo' ? 'photo' : null,
       recordedAt: this.parseDate(note.recordedAt) ?? new Date(),
     });
   }
@@ -584,8 +596,16 @@ export class HealthService {
       order: { recordedAt: 'ASC' },
     });
 
+    // Notes from the last 24h (feelings, food, plans) — the qualitative
+    // context the metrics don't carry.
+    const recentNotes = await this.noteRepo.find({
+      where: { recordedAt: MoreThan(new Date(now.getTime() - 24 * 3_600_000)) },
+      order: { recordedAt: 'ASC' },
+      take: 30,
+    });
+
     const weatherLine = await this.weather.currentLine().catch(() => null);
-    const context = this.buildTipContext(readings, now, weatherLine, sleepHistory);
+    const context = this.buildTipContext(readings, now, weatherLine, sleepHistory, recentNotes);
     try {
       const tip = await this.aiComplete(TIP_SYSTEM_PROMPT, context);
       await this.saveTipIfNew(tip, now);
@@ -1283,6 +1303,7 @@ export class HealthService {
         displayName: config.displayName,
         windowDays: config.windowDays,
         metrics: [],
+        now: null,
       };
     }
 
@@ -1296,6 +1317,7 @@ export class HealthService {
         displayName: config.displayName,
         windowDays: config.windowDays,
         metrics: [],
+        now: null,
       };
     }
 
@@ -1323,7 +1345,39 @@ export class HealthService {
           series: this.downsample(points),
         };
       }),
+      now: this.computeNowStatus(readings),
     };
+  }
+
+  /**
+   * Coarse "what is the owner doing right now" for the landing page badge.
+   * Derived only from recent readings; returns null when data is stale
+   * (> 3h) so the badge hides instead of lying. Night hours are approximated
+   * in UTC (21:00–04:00 ≈ midnight–7am in the owner's UTC+3).
+   */
+  private computeNowStatus(readings: HealthReading[]): PublicNowStatus | null {
+    if (readings.length === 0) return null;
+    const now = Date.now();
+    const latest = readings[readings.length - 1].recordedAt.getTime();
+    if (now - latest > 3 * 3_600_000) return null;
+
+    const recentValues = (ms: number, metric: HealthMetric) =>
+      readings
+        .filter((r) => r.metric === metric && now - r.recordedAt.getTime() < ms)
+        .map((r) => r.value);
+
+    const hr = recentValues(15 * 60_000, 'heart_rate');
+    const avgHr = hr.length ? hr.reduce((a, v) => a + v, 0) / hr.length : 0;
+    if (avgHr >= 110) return { status: 'working_out' };
+
+    const steps75 = recentValues(75 * 60_000, 'steps').reduce((a, v) => a + v, 0);
+    if (steps75 >= 200) return { status: 'walking' };
+
+    const utcHour = new Date(now).getUTCHours();
+    const steps2h = recentValues(2 * 3_600_000, 'steps').reduce((a, v) => a + v, 0);
+    if ((utcHour >= 21 || utcHour <= 4) && steps2h < 50) return { status: 'asleep' };
+
+    return { status: 'resting' };
   }
 
   async isPublicEnabled(): Promise<boolean> {
@@ -1429,6 +1483,7 @@ export class HealthService {
     now: Date,
     weatherLine: string | null = null,
     sleepHistory: HealthReading[] = [],
+    notes: HealthNote[] = [],
   ): string {
     const windowStart = new Date(now.getTime() - TIP_WINDOW_HOURS * 3_600_000);
     const grouped = this.groupByMetric(allRecent);
@@ -1438,6 +1493,21 @@ export class HealthService {
     ];
     if (weatherLine) {
       lines.push(`Weather outside: ${weatherLine}`);
+    }
+    if (notes.length > 0) {
+      lines.push('Recent notes (feelings, food, plans — factor these in):');
+      for (const note of notes) {
+        const at = note.recordedAt.toLocaleString('en-GB', {
+          timeZone: 'UTC',
+          hour12: false,
+          day: 'numeric',
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        const media = note.mediaType ? ` [${note.mediaType} attached]` : '';
+        lines.push(`- [${at} UTC] "${note.content}"${media}`);
+      }
     }
     // Sleep is handled separately below — its cumulative per-night counter
     // is meaningless as a last-hour average.
