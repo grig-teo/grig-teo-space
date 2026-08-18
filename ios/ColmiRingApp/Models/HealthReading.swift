@@ -45,7 +45,9 @@ struct HealthReading: Codable, Identifiable {
         let raw = try container.decode(String.self, forKey: .recordedAt)
         self.recordedAt = ISO8601DateFormatter.shared.date(from: raw) ?? Date()
         self.source = try container.decodeIfPresent(String.self, forKey: .source) ?? "ring"
-        self.raw = nil
+        // Must round-trip: pending readings are persisted to disk and
+        // re-decoded before upload — dropping raw here loses it.
+        self.raw = try container.decodeIfPresent([String: AnyCodable].self, forKey: .raw)
     }
 }
 

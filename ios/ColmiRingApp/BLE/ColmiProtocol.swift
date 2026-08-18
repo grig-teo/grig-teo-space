@@ -422,20 +422,43 @@ final class SleepParser {
         return sessions
     }
 
-    /// Readings for one session: duration in hours and a quality score
-    /// (deep + REM share of the session, 0–100). The duration reading
-    /// carries the raw frame block in `raw` for protocol analysis.
+    /// Readings for one session: duration in hours and a composite sleep
+    /// score (0–100, see `sleepScore`). The duration reading carries the
+    /// raw frame block in `raw` for protocol analysis.
     func readings(for session: Session) -> [HealthReading] {
         let minutes = session.end.timeIntervalSince(session.start) / 60
         guard minutes > 0 else { return [] }
-        let restorative = Double(session.stageMinutes[3, default: 0] + session.stageMinutes[4, default: 0])
-        let quality = min(100, (restorative / minutes) * 100)
         var duration = HealthReading(metric: .sleepDurationH, value: minutes / 60, recordedAt: session.end)
         duration.raw = ["sleepFrame": AnyCodable(session.rawHex)]
         return [
             duration,
-            HealthReading(metric: .sleepQuality, value: quality, recordedAt: session.end),
+            HealthReading(metric: .sleepQuality, value: sleepScore(for: session, totalMinutes: minutes), recordedAt: session.end),
         ]
+    }
+
+    /**
+     * Composite sleep score (0–100), replacing the old deep+REM share that
+     * read as a misleading "32%": 50% duration vs the 7–9 h ideal, 30%
+     * restorative (deep+REM) share vs a 40% target, 20% awake-time penalty.
+     * Lands in the vendor app's range (9.1 h + 32% restorative + 0 awake
+     * scores ≈ 94 here vs 90 "excellent" in QRing).
+     */
+    private func sleepScore(for session: Session, totalMinutes: Double) -> Double {
+        let hours = totalMinutes / 60
+        let durationScore: Double
+        if (7...9).contains(hours) {
+            durationScore = 100
+        } else if hours < 7 {
+            durationScore = max(0, hours / 7 * 100)
+        } else {
+            durationScore = max(60, 100 - (hours - 9) * 15)
+        }
+        let restorative = Double(session.stageMinutes[3, default: 0] + session.stageMinutes[4, default: 0])
+        let restorativeScore = min(100, restorative / totalMinutes / 0.40 * 100)
+        let awake = Double(session.stageMinutes[5, default: 0])
+        let awakeScore = max(0, 100 - awake / totalMinutes * 300)
+        let score = 0.5 * durationScore + 0.3 * restorativeScore + 0.2 * awakeScore
+        return (score * 10).rounded() / 10
     }
 }
 
