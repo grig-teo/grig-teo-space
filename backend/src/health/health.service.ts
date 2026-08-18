@@ -86,6 +86,15 @@ export type HourlySeries = {
   buckets: HourlyBucket[];
 };
 
+/** Rolling-window time series for one metric (iOS metric detail charts). */
+export type MetricSeries = {
+  metric: HealthMetric;
+  unit: string | null;
+  windowDays: number;
+  summary: MetricSummary;
+  points: MetricSeriesPoint[];
+};
+
 export type MetricSummary = {
   metric: HealthMetric;
   count: number;
@@ -568,6 +577,32 @@ export class HealthService {
       metric: safeMetric,
       unit: unit ?? DEFAULT_UNITS[safeMetric],
       buckets,
+    };
+  }
+
+  /**
+   * Raw time series for one metric over a rolling window of the last `days`
+   * days — unlike `getHourlySeries`, which folds the window into 24
+   * hour-of-day buckets. Powers the iOS metric detail charts (24h/7d/30d).
+   */
+  async getMetricSeries(metric: HealthMetric, days = 1): Promise<MetricSeries> {
+    const safeMetric = HEALTH_METRICS.includes(metric) ? metric : 'stress';
+    const span = Math.max(1, Math.min(days, 365));
+    const { from } = this.window(span);
+    const readings = await this.readingRepo.find({
+      where: { recordedAt: MoreThan(from), metric: safeMetric },
+      order: { recordedAt: 'ASC' },
+    });
+    const points: MetricSeriesPoint[] = readings.map((r) => ({
+      recordedAt: r.recordedAt.toISOString(),
+      value: r.value,
+    }));
+    return {
+      metric: safeMetric,
+      unit: readings.find((r) => r.unit)?.unit ?? DEFAULT_UNITS[safeMetric],
+      windowDays: span,
+      summary: this.summarize(safeMetric, readings),
+      points: this.downsample(points),
     };
   }
 

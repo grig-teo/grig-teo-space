@@ -1,8 +1,20 @@
 import SwiftUI
 import BackgroundTasks
 
+/** Restricts the app to portrait everywhere except views that explicitly
+ *  widen the mask via `OrientationManager` (metric detail charts). */
+final class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        supportedInterfaceOrientationsFor window: UIWindow?,
+    ) -> UIInterfaceOrientationMask {
+        OrientationManager.shared.allowed
+    }
+}
+
 @main
 struct ColmiRingApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var appState = AppState.shared
     /// Observed directly (not via `AppState`) so SwiftUI re-renders the root
     /// when `isLocked` flips. `AppState` is a plain `ObservableObject` that

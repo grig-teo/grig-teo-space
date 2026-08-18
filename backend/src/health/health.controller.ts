@@ -70,6 +70,23 @@ export class HealthController {
     );
   }
 
+  /**
+   * Raw (downsampled) time series for one metric over a rolling window.
+   * The iOS metric detail pages read this with days = 1 / 7 / 30.
+   */
+  @Get('series')
+  @UseGuards(DeviceKeyGuard)
+  async series(
+    @Query('metric') metric?: string,
+    @Query('days') days?: string,
+  ) {
+    const parsedDays = Number(days ?? 1);
+    return this.health.getMetricSeries(
+      (metric as never) ?? 'stress',
+      Number.isFinite(parsedDays) ? parsedDays : 1,
+    );
+  }
+
   @Get('tip')
   @UseGuards(DeviceKeyGuard)
   async tip() {

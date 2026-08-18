@@ -28,8 +28,12 @@ targets:
         CFBundleVersion: "4"
         UILaunchScreen:
           UIColorName: ""
+        # Landscape is declared so the metric detail charts can rotate;
+        # AppDelegate + OrientationManager keep the rest of the app portrait.
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         NSBluetoothAlwaysUsageDescription: "The app connects to your COLMI R11 smart ring over Bluetooth to read heart rate, blood oxygen, sleep, and activity data."
         NSBluetoothPeripheralUsageDescription: "The app uses Bluetooth to communicate with your COLMI smart ring."
         NSCameraUsageDescription: "The app uses the camera to scan physical health documents (lab results, prescriptions) and extract their text."

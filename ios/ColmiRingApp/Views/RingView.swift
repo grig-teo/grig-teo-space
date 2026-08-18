@@ -41,11 +41,16 @@ struct RingView: View {
                     .padding(.horizontal)
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                         ForEach(RingMetric.allCases, id: \.self) { metric in
-                            MetricCard(
-                                metric: metric,
-                                value: valueForDisplay(metric),
-                                loading: lifecycle.isSyncing,
-                            )
+                            NavigationLink {
+                                MetricDetailView(metric: metric)
+                            } label: {
+                                MetricCard(
+                                    metric: metric,
+                                    value: valueForDisplay(metric),
+                                    loading: lifecycle.isSyncing,
+                                )
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.horizontal)
