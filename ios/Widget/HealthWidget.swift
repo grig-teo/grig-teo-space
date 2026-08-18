@@ -20,8 +20,8 @@ struct HealthWidget: Widget {
                     Color(.systemGroupedBackground)
                 }
         }
-        .configurationDisplayName("Health")
-        .description("Stress, sleep, vitals, your latest health tip, and a refresh button.")
+        .configurationDisplayName("Health Tip")
+        .description("Your latest AI health tip, with a refresh button.")
         .supportedFamilies([.systemLarge])
     }
 }
