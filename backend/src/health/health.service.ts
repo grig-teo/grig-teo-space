@@ -385,6 +385,7 @@ export class HealthService {
     const metrics = HEALTH_METRICS.map((metric) =>
       this.summarize(metric, grouped[metric] ?? []),
     );
+    this.useFinalNightAsLatest(metrics, grouped);
     const alerts = this.detectAlerts(readings);
 
     return {
@@ -394,6 +395,39 @@ export class HealthService {
       metrics,
       notesCount,
       alerts,
+    };
+  }
+
+  /**
+   * Sleep is a cumulative per-night counter: within a 24h window the LATEST
+   * reading is often the in-progress ramp of the night that just started
+   * (e.g. 3.7 h at 23:30), which made the widget show only part of the
+   * night. Point `latest` at the most complete night instead — the max
+   * duration in the window — and pair quality from the same timestamp.
+   */
+  private useFinalNightAsLatest(
+    metrics: MetricSummary[],
+    grouped: Record<string, HealthReading[]>,
+  ): void {
+    const durations = grouped['sleep_duration_h'] ?? [];
+    if (durations.length === 0) return;
+    const finalRow = durations.reduce((a, b) => (b.value >= a.value ? b : a));
+    const durationSummary = metrics.find((m) => m.metric === 'sleep_duration_h');
+    if (durationSummary) {
+      durationSummary.latest = {
+        recordedAt: finalRow.recordedAt.toISOString(),
+        value: finalRow.value,
+      };
+    }
+    const qualities = grouped['sleep_quality'] ?? [];
+    const qualitySummary = metrics.find((m) => m.metric === 'sleep_quality');
+    if (!qualitySummary || qualities.length === 0) return;
+    const matching =
+      qualities.find((q) => q.recordedAt.getTime() === finalRow.recordedAt.getTime()) ??
+      qualities[qualities.length - 1];
+    qualitySummary.latest = {
+      recordedAt: matching.recordedAt.toISOString(),
+      value: matching.value,
     };
   }
 
@@ -868,34 +902,38 @@ export class HealthService {
 
   /**
    * Builds the sleep line for the tip context. The ring reports sleep as a
-   * CUMULATIVE per-night counter (values ramp 2h → 9h through the night and
-   * reset when the next night starts), so the correct "last night" number is
-   * the latest value of the current episode — never an hourly average. When
-   * the episode is still growing the line says so explicitly; otherwise the
-   * LLM turns mid-night progress ("3.4 h so far") into "you only slept 3.4 h".
+   * CUMULATIVE per-night counter, and history contains in-progress ramp
+   * snapshots that sort AFTER the completed night — so "last night" is the
+   * MAX duration in the window (ties → the later, better-anchored row), not
+   * the temporally last row. A newer, smaller, still-growing ramp means the
+   * next night is in progress and is reported as "so far" instead — the LLM
+   * must never read mid-night progress as a full night ("you slept 3.4 h").
    */
   private sleepContextLine(history: HealthReading[], now: Date): string | null {
     const durations = history.filter((r) => r.metric === 'sleep_duration_h');
     if (durations.length === 0) return null;
 
-    // Find the current episode's start: walk back while values are
-    // non-decreasing (a drop marks the counter reset = previous night ended).
-    let episodeStart = durations.length - 1;
-    while (
-      episodeStart > 0 &&
-      durations[episodeStart - 1].value <= durations[episodeStart].value
-    ) {
-      episodeStart -= 1;
-    }
-    const episode = durations.slice(episodeStart);
-    const last = episode[episode.length - 1];
-    const total = Math.round(last.value * 10) / 10;
-    const inProgress = now.getTime() - last.recordedAt.getTime() < 2 * 3_600_000;
-
-    const qualityRows = history.filter(
-      (r) => r.metric === 'sleep_quality' && r.recordedAt >= episode[0].recordedAt,
+    const finalRow = durations.reduce((a, b) =>
+      b.value > a.value || (b.value === a.value && b.recordedAt > a.recordedAt) ? b : a,
     );
-    const quality = qualityRows.length > 0 ? qualityRows[qualityRows.length - 1] : null;
+    const lastRow = durations[durations.length - 1];
+    const rampIsFresh = now.getTime() - lastRow.recordedAt.getTime() < 2 * 3_600_000;
+    const inProgress = lastRow !== finalRow && lastRow.value < finalRow.value && rampIsFresh;
+    const focus = inProgress ? lastRow : finalRow;
+    const total = Math.round(focus.value * 10) / 10;
+
+    // Quality paired from the nearest-quality row by timestamp (the ramp and
+    // the final can carry different legacy timestamps for the same night).
+    const qualityRows = history.filter((r) => r.metric === 'sleep_quality');
+    const quality = qualityRows.reduce<HealthReading | null>(
+      (best, q) =>
+        !best ||
+        Math.abs(q.recordedAt.getTime() - focus.recordedAt.getTime()) <
+          Math.abs(best.recordedAt.getTime() - focus.recordedAt.getTime())
+          ? q
+          : best,
+      null,
+    );
     const qualityText = quality ? `, quality ${Math.round(quality.value)}%` : '';
 
     return inProgress
