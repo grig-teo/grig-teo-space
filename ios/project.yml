@@ -17,6 +17,11 @@ targets:
     deploymentTarget: "16.0"
     sources:
       - path: ColmiRingApp
+    entitlements:
+      path: ColmiRingApp/ColmiRingApp.entitlements
+      properties:
+        # Read-only HealthKit: phone steps fill ring-off gaps.
+        com.apple.developer.healthkit: true
     dependencies:
       - target: HealthWidget
         embed: true
@@ -41,6 +46,7 @@ targets:
         # evaluatePolicy call without this string.
         NSFaceIDUsageDescription: "Face ID protects access to your personal health data."
         NSLocationWhenInUseUsageDescription: "The app shares your approximate location to fetch local weather and correlate it with your stress, HRV, and heart rate."
+        NSHealthShareUsageDescription: "The app reads step counts from Apple Health to fill gaps when the ring is off. Data is only read, never written."
         NSPhotoLibraryUsageDescription: "The app reads your photo library to display your media and back up your photos and videos to your private server."
         NSPhotoLibraryAddUsageDescription: "The app may save media back to your photo library."
         # Background execution: keep the BLE link alive, schedule OS wakeups

@@ -732,6 +732,10 @@ extension RingBluetoothManager: CBPeripheralDelegate {
                 let hex = frame.map { String(format: "%02X", $0) }.joined(separator: " ")
                 logTraffic("← Sleep: no data (\(hex))")
             }
+            // Rich sessions (stage breakdown) go to the sleep page pipeline.
+            Task { @MainActor in
+                SleepClient.shared.upload(sessions)
+            }
             for session in sessions {
                 let readings = sleepParser.readings(for: session)
                 readings.forEach(emit)

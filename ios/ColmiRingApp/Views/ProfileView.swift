@@ -14,6 +14,7 @@ struct ProfileView: View {
     @StateObject private var mediaLibrary = MediaLibraryWrapper.shared
     @StateObject private var weatherClient = WeatherClient()
     @StateObject private var locationManager = LocationManager.shared
+    @StateObject private var recoveryClient = RecoveryClient.shared
     @State private var latestMedia: [MediaLibraryWrapper.AssetSnapshot] = []
 
     var body: some View {
@@ -21,6 +22,7 @@ struct ProfileView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     header
+                    recoveryCard
                     weatherRow
                     StressChartView(client: stressClient)
                     tipCard
@@ -43,7 +45,58 @@ struct ProfileView: View {
             // city label; the backend upload itself is throttled internally.
             LocationManager.shared.shareLocation()
             await weatherClient.load(days: 1)
+            await recoveryClient.load()
         }
+    }
+
+    /// Morning recovery: one 0–100 number from sleep + HRV and resting-HR
+    /// baselines, with the component breakdown underneath.
+    @ViewBuilder
+    private var recoveryCard: some View {
+        if let recovery = recoveryClient.recovery {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .lastTextBaseline, spacing: 8) {
+                    Text("Recovery")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text("\(recovery.score)")
+                        .font(.system(.title, design: .rounded).bold())
+                        .foregroundStyle(recoveryColor(recovery.score))
+                    Text(recovery.label)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                HStack(spacing: 12) {
+                    component("Sleep", recovery.components.sleepScore.map { "\($0)" })
+                    component("HRV", recovery.components.hrv.current.map { String(format: "%.0f ms", $0) })
+                    component("Resting HR", recovery.components.restingHr.current.map { "\($0) bpm" })
+                }
+                ForEach(recovery.alerts, id: \.self) { alert in
+                    Label(alert, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+                }
+            }
+            .padding()
+            .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
+        }
+    }
+
+    private func component(_ label: String, _ value: String?) -> some View {
+        HStack(spacing: 4) {
+            Text(label)
+            Text(value ?? "—").bold()
+        }
+        .font(.caption2)
+        .foregroundColor(.secondary)
+    }
+
+    private func recoveryColor(_ score: Int) -> Color {
+        if score >= 80 { return .green }
+        if score >= 65 { return .yellow }
+        if score >= 50 { return .orange }
+        return .red
     }
 
     /// One-line current conditions (temp · pressure · humidity) above the

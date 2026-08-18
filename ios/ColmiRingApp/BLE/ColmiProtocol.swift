@@ -378,6 +378,14 @@ final class SleepParser {
         /// backend as `raw` so newer firmware fields (e.g. a computed sleep
         /// score) can be reverse-engineered without a phone attached.
         let rawHex: String
+
+        /// Composite 0–100 score (same formula the readings use).
+        var score: Double {
+            SleepParser.score(
+                stageMinutes: stageMinutes,
+                totalMinutes: end.timeIntervalSince(start) / 60,
+            )
+        }
     }
 
     /// Parses a complete big data frame into sleep sessions.
@@ -386,7 +394,12 @@ final class SleepParser {
         let daysInPacket = Int(bytes[6])
         var index = 7
         var sessions: [Session] = []
-        let calendar = Calendar.current
+        // The ring's clock is set to UTC (ColmiProtocol.setTimePacket), so
+        // sleepStart/sleepEnd are minutes into the UTC day — anchoring to
+        // the phone's LOCAL midnight scattered one night's rows across two
+        // calendar days in UTC+3.
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
 
         for _ in 0..<daysInPacket {
             let blockStart = index
@@ -432,7 +445,7 @@ final class SleepParser {
         duration.raw = ["sleepFrame": AnyCodable(session.rawHex)]
         return [
             duration,
-            HealthReading(metric: .sleepQuality, value: sleepScore(for: session, totalMinutes: minutes), recordedAt: session.end),
+            HealthReading(metric: .sleepQuality, value: session.score, recordedAt: session.end),
         ]
     }
 
@@ -443,7 +456,7 @@ final class SleepParser {
      * Lands in the vendor app's range (9.1 h + 32% restorative + 0 awake
      * scores ≈ 94 here vs 90 "excellent" in QRing).
      */
-    private func sleepScore(for session: Session, totalMinutes: Double) -> Double {
+    static func score(stageMinutes: [UInt8: Int], totalMinutes: Double) -> Double {
         let hours = totalMinutes / 60
         let durationScore: Double
         if (7...9).contains(hours) {
@@ -453,9 +466,9 @@ final class SleepParser {
         } else {
             durationScore = max(60, 100 - (hours - 9) * 15)
         }
-        let restorative = Double(session.stageMinutes[3, default: 0] + session.stageMinutes[4, default: 0])
+        let restorative = Double(stageMinutes[3, default: 0] + stageMinutes[4, default: 0])
         let restorativeScore = min(100, restorative / totalMinutes / 0.40 * 100)
-        let awake = Double(session.stageMinutes[5, default: 0])
+        let awake = Double(stageMinutes[5, default: 0])
         let awakeScore = max(0, 100 - awake / totalMinutes * 300)
         let score = 0.5 * durationScore + 0.3 * restorativeScore + 0.2 * awakeScore
         return (score * 10).rounded() / 10

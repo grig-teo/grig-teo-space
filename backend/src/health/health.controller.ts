@@ -14,6 +14,7 @@ import {
   HealthService,
   type IncomingNote,
   type IncomingReading,
+  type IncomingSleepSession,
 } from './health.service';
 
 /**
@@ -90,6 +91,39 @@ export class HealthController {
       (metric as never) ?? 'stress',
       Number.isFinite(parsedDays) ? parsedDays : 1,
     );
+  }
+
+  /** Rich sleep nights (stage breakdown) uploaded by the iOS app. */
+  @Post('sleep')
+  @UseGuards(DeviceKeyGuard)
+  @HttpCode(201)
+  async addSleepSessions(@Body('sessions') sessions?: IncomingSleepSession[]) {
+    if (!Array.isArray(sessions)) {
+      throw new UnauthorizedException('Expected { sessions: [...] }');
+    }
+    return this.health.addSleepSessions(sessions);
+  }
+
+  /** Nights + aggregates for the iOS sleep page (tzOffset = local minutes). */
+  @Get('sleep')
+  @UseGuards(DeviceKeyGuard)
+  async sleepSessions(
+    @Query('days') days?: string,
+    @Query('tzOffset') tzOffset?: string,
+  ) {
+    const parsedDays = Number(days ?? 7);
+    const parsedOffset = Number(tzOffset ?? 0);
+    return this.health.getSleepSessions(
+      Number.isFinite(parsedDays) ? parsedDays : 7,
+      Number.isFinite(parsedOffset) ? parsedOffset : 0,
+    );
+  }
+
+  /** Morning recovery score + deviation alerts (iOS Profile card). */
+  @Get('recovery')
+  @UseGuards(DeviceKeyGuard)
+  async recovery() {
+    return this.health.getRecovery();
   }
 
   @Get('tip')

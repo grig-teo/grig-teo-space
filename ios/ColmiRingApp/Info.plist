@@ -62,6 +62,10 @@
 	<string>The app uses the camera to scan physical health documents (lab results, prescriptions) and extract their text.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Face ID protects access to your personal health data.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>The app reads step counts from Apple Health to fill gaps when the ring is off. Data is only read, never written.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>The app shares your approximate location to fetch local weather and correlate it with your stress, HRV, and heart rate.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>The app may save media back to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -85,6 +89,8 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 </dict>
 </plist>

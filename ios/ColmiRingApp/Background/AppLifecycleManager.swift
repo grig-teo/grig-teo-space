@@ -269,6 +269,9 @@ final class AppLifecycleManager: ObservableObject {
             // Throttled internally to one upload/hour; no-op until the user
             // grants location permission from the Weather page.
             LocationManager.shared.shareLocation()
+            // HealthKit steps gap-fill (ring-off hours) — throttled 1/h,
+            // no-op until HealthKit read access is granted.
+            Task { await HealthKitManager.shared.syncStepsGap() }
         case .inactive:
             break
         case .background:

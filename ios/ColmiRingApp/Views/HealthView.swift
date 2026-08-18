@@ -47,6 +47,17 @@ struct HealthView: View {
                     }
 
                     NavigationLink {
+                        SleepView()
+                    } label: {
+                        HubButton(
+                            title: "Sleep",
+                            subtitle: "Stages, score & bedtime consistency",
+                            systemImage: "moon.stars.fill",
+                            color: .purple,
+                        )
+                    }
+
+                    NavigationLink {
                         WeatherView()
                     } label: {
                         HubButton(

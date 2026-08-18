@@ -4,6 +4,7 @@ import { HealthNote } from '../entities/health-note.entity';
 import { HealthReading } from '../entities/health-reading.entity';
 import { HealthTip } from '../entities/health-tip.entity';
 import { SiteContent } from '../entities/site-content.entity';
+import { SleepSession } from '../entities/sleep-session.entity';
 import { DeviceKeyGuard } from './device-key.guard';
 import { HealthAdminController } from './health-admin.controller';
 import { HealthController } from './health.controller';
@@ -15,7 +16,7 @@ import { WeatherModule } from '../weather/weather.module';
   // is exported so DocumentsService (the AI doctor) can read ring + body context.
   // WeatherModule feeds current conditions into the hourly tip context.
   imports: [
-    TypeOrmModule.forFeature([HealthReading, HealthNote, HealthTip, SiteContent]),
+    TypeOrmModule.forFeature([HealthReading, HealthNote, HealthTip, SiteContent, SleepSession]),
     WeatherModule,
   ],
   controllers: [HealthController, HealthAdminController],

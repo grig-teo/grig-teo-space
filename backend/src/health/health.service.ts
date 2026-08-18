@@ -16,6 +16,7 @@ import {
 } from '../entities/health-reading.entity';
 import { HealthNote, HealthNoteSource } from '../entities/health-note.entity';
 import { HealthTip } from '../entities/health-tip.entity';
+import { SleepSession } from '../entities/sleep-session.entity';
 import { WeatherService } from '../weather/weather.service';
 
 // --- Public exposure configuration ---------------------------------------
@@ -61,6 +62,53 @@ export type IncomingNote = {
   mood?: string | null;
   source?: HealthNoteSource;
   recordedAt?: string;
+};
+
+/** One night's sleep as uploaded by the iOS app (parsed ring frame). */
+export type IncomingSleepSession = {
+  start: string;
+  end: string;
+  deepMin?: number;
+  remMin?: number;
+  lightMin?: number;
+  awakeMin?: number;
+  score?: number;
+  raw?: Record<string, unknown>;
+};
+
+export type SleepSessionView = {
+  startedAt: string;
+  endedAt: string;
+  durationMin: number;
+  deepMin: number;
+  remMin: number;
+  lightMin: number;
+  awakeMin: number;
+  score: number;
+};
+
+export type SleepOverview = {
+  days: number;
+  sessions: SleepSessionView[];
+  avgScore: number | null;
+  avgDurationMin: number | null;
+  /** Bedtime spread across the window, as local minutes after midnight. */
+  bedtimeRange: { earliestMin: number; latestMin: number } | null;
+  /** Accumulated shortfall vs the 8h goal over the window, in minutes. */
+  debtMin: number;
+};
+
+export type RecoveryScore = {
+  score: number;
+  label: string;
+  generatedAt: string;
+  components: {
+    sleepScore: number | null;
+    hrv: { current: number | null; baseline: number | null };
+    restingHr: { current: number | null; baseline: number | null };
+  };
+  /** Human-readable deviation warnings (HRV drop, resting-HR rise). */
+  alerts: string[];
 };
 
 export type MetricSeriesPoint = {
@@ -281,6 +329,8 @@ export class HealthService {
     private readonly contentRepo: Repository<SiteContent>,
     @InjectRepository(HealthTip)
     private readonly tipRepo: Repository<HealthTip>,
+    @InjectRepository(SleepSession)
+    private readonly sleepRepo: Repository<SleepSession>,
     private readonly weather: WeatherService,
   ) {}
 
@@ -656,6 +706,223 @@ export class HealthService {
       summary: this.summarize(safeMetric, readings),
       points: this.downsample(points),
     };
+  }
+
+  // --- Sleep sessions (rich stage data) -------------------------------------
+
+  /** Upserts nights by endedAt — ring history re-syncs resend the same nights. */
+  async addSleepSessions(sessions: IncomingSleepSession[]): Promise<{ inserted: number }> {
+    const rows = sessions
+      .map((s) => this.toSleepSessionOrNull(s))
+      .filter((row): row is NonNullable<typeof row> => row !== null);
+    if (rows.length === 0) return { inserted: 0 };
+    // Collapse duplicate end times inside the batch (same night twice).
+    const byEnd = new Map<string, (typeof rows)[number]>();
+    for (const row of rows) byEnd.set(row.endedAt.toISOString(), row);
+    await this.sleepRepo
+      .createQueryBuilder()
+      .insert()
+      .values([...byEnd.values()] as never)
+      .orUpdate(
+        ['startedAt', 'durationMin', 'deepMin', 'remMin', 'lightMin', 'awakeMin', 'score', 'raw'],
+        ['endedAt'],
+      )
+      .execute();
+    return { inserted: byEnd.size };
+  }
+
+  private toSleepSessionOrNull(s: IncomingSleepSession) {
+    const start = this.parseDate(s?.start);
+    const end = this.parseDate(s?.end);
+    if (!start || !end || end <= start) return null;
+    const durationMin = Math.round((end.getTime() - start.getTime()) / 60000);
+    if (durationMin < 30 || durationMin > 18 * 60) return null; // sanity: 30m..18h
+    const stage = (v?: number) => Math.max(0, Math.round(Number(v) || 0));
+    return {
+      startedAt: start,
+      endedAt: end,
+      durationMin,
+      deepMin: stage(s.deepMin),
+      remMin: stage(s.remMin),
+      lightMin: stage(s.lightMin),
+      awakeMin: stage(s.awakeMin),
+      score: Number.isFinite(Number(s.score)) ? Number(s.score) : 0,
+      raw: s.raw ?? null,
+    };
+  }
+
+  /** Nights + aggregates for the iOS sleep page. tzOffset (client minutes
+   *  from UTC) makes the bedtime spread follow the local clock. */
+  async getSleepSessions(days = 7, tzOffsetMinutes = 0): Promise<SleepOverview> {
+    const span = Math.max(1, Math.min(days, 90));
+    const offset = Math.max(-720, Math.min(840, Math.round(tzOffsetMinutes)));
+    const from = new Date(Date.now() - span * 86400000);
+    const rows = await this.sleepRepo.find({
+      where: { endedAt: MoreThan(from) },
+      order: { endedAt: 'DESC' },
+    });
+    const sessions: SleepSessionView[] = rows.map((r) => ({
+      startedAt: r.startedAt.toISOString(),
+      endedAt: r.endedAt.toISOString(),
+      durationMin: r.durationMin,
+      deepMin: r.deepMin,
+      remMin: r.remMin,
+      lightMin: r.lightMin,
+      awakeMin: r.awakeMin,
+      score: r.score,
+    }));
+    return {
+      days: span,
+      sessions,
+      avgScore: rows.length ? Math.round(rows.reduce((a, r) => a + r.score, 0) / rows.length) : null,
+      avgDurationMin: rows.length
+        ? Math.round(rows.reduce((a, r) => a + r.durationMin, 0) / rows.length)
+        : null,
+      bedtimeRange: this.bedtimeRange(rows, offset),
+      debtMin: rows.reduce((acc, r) => acc + Math.max(0, 480 - r.durationMin), 0),
+    };
+  }
+
+  /** Bedtime spread as LOCAL minutes after midnight. Evening-anchored so
+   *  23:50 and 00:20 are 30 minutes apart, not ~24h. */
+  private bedtimeRange(
+    rows: SleepSession[],
+    offsetMinutes: number,
+  ): SleepOverview['bedtimeRange'] {
+    if (rows.length === 0) return null;
+    // Anchor at 18:00 local: 22:47 → 287, 00:20 → 380 — one linear scale.
+    const anchored = rows.map((r) => {
+      const localMin = Math.floor(r.startedAt.getTime() / 60000 + offsetMinutes);
+      return (((localMin % 1440) + 1440) % 1440 - 1080 + 1440) % 1440;
+    });
+    const toLocal = (anchoredMin: number) => (anchoredMin + 1080) % 1440;
+    return {
+      earliestMin: toLocal(Math.min(...anchored)),
+      latestMin: toLocal(Math.max(...anchored)),
+    };
+  }
+
+  // --- Morning recovery ------------------------------------------------------
+
+  /**
+   * 0–100 recovery score: last night's sleep (50%) + HRV vs the 14-day
+   * baseline (25%) + resting HR vs baseline (25%). Weights renormalize when a
+   * component is missing. Also emits deviation alerts (HRV drop ≥ 20%,
+   * resting-HR rise ≥ 8 bpm, very low sleep score).
+   */
+  async getRecovery(): Promise<RecoveryScore> {
+    const now = Date.now();
+    const dayAgo = new Date(now - 86400000);
+    const readings = await this.readingRepo.find({
+      where: {
+        recordedAt: MoreThan(new Date(now - 14 * 86400000)),
+        metric: In(['hrv', 'heart_rate'] as HealthMetric[]),
+      },
+      order: { recordedAt: 'ASC' },
+    });
+    const recent = readings.filter((r) => r.recordedAt >= dayAgo);
+    const older = readings.filter((r) => r.recordedAt < dayAgo);
+
+    const hrvCurrent = this.mean(recent.filter((r) => r.metric === 'hrv'));
+    const hrvBaseline = this.mean(older.filter((r) => r.metric === 'hrv'));
+    const rhrCurrent = this.restingHr(recent.filter((r) => r.metric === 'heart_rate'));
+    const rhrBaseline = this.restingHr(older.filter((r) => r.metric === 'heart_rate'));
+    const sleepScore = await this.latestSleepScore();
+
+    const hrvScore =
+      hrvCurrent != null && hrvBaseline
+        ? Math.max(0, Math.min(100, Math.round((hrvCurrent / hrvBaseline) * 100)))
+        : null;
+    const rhrScore =
+      rhrCurrent != null && rhrBaseline
+        ? Math.max(0, Math.min(100, Math.round(100 - Math.max(0, rhrCurrent - rhrBaseline) * 5)))
+        : null;
+
+    const parts: Array<[number, number]> = [];
+    if (sleepScore != null) parts.push([sleepScore, 0.5]);
+    if (hrvScore != null) parts.push([hrvScore, 0.25]);
+    if (rhrScore != null) parts.push([rhrScore, 0.25]);
+    const weightSum = parts.reduce((a, [, w]) => a + w, 0);
+    const score =
+      weightSum === 0 ? 0 : Math.round(parts.reduce((a, [s, w]) => a + s * w, 0) / weightSum);
+
+    return {
+      score,
+      label: this.recoveryLabel(score, weightSum),
+      generatedAt: new Date(now).toISOString(),
+      components: {
+        sleepScore,
+        hrv: { current: this.round1(hrvCurrent), baseline: this.round1(hrvBaseline) },
+        restingHr: { current: rhrCurrent, baseline: rhrBaseline },
+      },
+      alerts: this.recoveryAlerts(hrvCurrent, hrvBaseline, rhrCurrent, rhrBaseline, sleepScore),
+    };
+  }
+
+  private recoveryLabel(score: number, weightSum: number): string {
+    if (weightSum === 0) return 'No data yet';
+    if (score >= 80) return 'Great — good day to push';
+    if (score >= 65) return 'Good';
+    if (score >= 50) return 'Fair — keep it light';
+    return 'Low — rest today';
+  }
+
+  private recoveryAlerts(
+    hrvCurrent: number | null,
+    hrvBaseline: number | null,
+    rhrCurrent: number | null,
+    rhrBaseline: number | null,
+    sleepScore: number | null,
+  ): string[] {
+    const alerts: string[] = [];
+    if (hrvCurrent != null && hrvBaseline && hrvCurrent < hrvBaseline * 0.8) {
+      const drop = Math.round((1 - hrvCurrent / hrvBaseline) * 100);
+      alerts.push(
+        `HRV ${drop}% below your 14-day baseline (${Math.round(hrvCurrent)} vs ${Math.round(hrvBaseline)} ms) — you might be getting sick or overtrained`,
+      );
+    }
+    if (rhrCurrent != null && rhrBaseline && rhrCurrent > rhrBaseline + 8) {
+      alerts.push(
+        `Resting HR up ${Math.round(rhrCurrent - rhrBaseline)} bpm vs your 14-day baseline (${rhrCurrent} vs ${rhrBaseline} bpm)`,
+      );
+    }
+    if (sleepScore != null && sleepScore < 55) {
+      alerts.push(`Last night's sleep score was low (${sleepScore})`);
+    }
+    return alerts;
+  }
+
+  /** Resting-HR proxy: mean of the lowest 10% of readings. */
+  private restingHr(rows: HealthReading[]): number | null {
+    if (rows.length < 20) return null;
+    const sorted = rows.map((r) => r.value).sort((a, b) => a - b);
+    const n = Math.max(1, Math.floor(sorted.length * 0.1));
+    return Math.round(sorted.slice(0, n).reduce((a, v) => a + v, 0) / n);
+  }
+
+  private mean(rows: HealthReading[]): number | null {
+    if (rows.length === 0) return null;
+    return rows.reduce((a, r) => a + r.value, 0) / rows.length;
+  }
+
+  private round1(value: number | null): number | null {
+    return value == null ? null : Math.round(value * 10) / 10;
+  }
+
+  /** Latest night's composite score; falls back to the best sleep_quality
+   *  reading in 36h for data predating the sleep_sessions table. */
+  private async latestSleepScore(): Promise<number | null> {
+    const rows = await this.sleepRepo.find({ order: { endedAt: 'DESC' }, take: 1 });
+    if (rows[0]) return Math.round(rows[0].score);
+    const fallback = await this.readingRepo.find({
+      where: {
+        recordedAt: MoreThan(new Date(Date.now() - 36 * 3600000)),
+        metric: 'sleep_quality',
+      },
+      order: { value: 'DESC' },
+      take: 1,
+    });
+    return fallback[0] ? Math.round(fallback[0].value) : null;
   }
 
   /**

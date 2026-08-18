@@ -18,6 +18,7 @@ import { HealthReading } from './entities/health-reading.entity';
 import { HealthTip } from './entities/health-tip.entity';
 import { MediaItem } from './entities/media-item.entity';
 import { SiteContent } from './entities/site-content.entity';
+import { SleepSession } from './entities/sleep-session.entity';
 import { WeatherSample } from './entities/weather-sample.entity';
 import { DocumentsModule } from './documents/documents.module';
 import { HealthModule } from './health/health.module';
@@ -50,6 +51,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
         HealthDocChatMessage,
         HealthTip,
         MediaItem,
+        SleepSession,
         WeatherSample,
       ],
       synchronize: true,

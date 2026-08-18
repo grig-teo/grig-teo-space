@@ -94,6 +94,17 @@ final class ApiClient: ObservableObject {
         enqueue(reading)
     }
 
+    /** Enqueues externally-sourced readings (e.g. HealthKit gap-fill) and
+     *  schedules a flush, reusing the same disk queue + retry path. */
+    func submit(_ readings: [HealthReading]) {
+        guard !readings.isEmpty else { return }
+        var pending = loadPending()
+        pending.append(contentsOf: readings)
+        savePending(pending)
+        pendingCount = pending.count
+        scheduleFlush()
+    }
+
     private func enqueue(_ reading: HealthReading) {
         var pending = loadPending()
         pending.append(reading)
