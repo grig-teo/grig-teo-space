@@ -89,6 +89,11 @@ export class BackendClient {
     return this.request<HourlyTip>('/api/health/tip', { method: 'GET' });
   }
 
+  /** LLM weekly digest (cached server-side, shared with the iOS app). */
+  async getWeeklyDigest(): Promise<{ text: string }> {
+    return this.request<{ text: string }>('/api/health/digest', { method: 'GET' });
+  }
+
   private async request<T>(path: string, init: RequestInit): Promise<T> {
     const res = await fetch(`${this.baseUrl}${path}`, {
       ...init,

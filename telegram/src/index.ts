@@ -101,8 +101,8 @@ async function main(): Promise<void> {
     if (!guard(ctx, () => undefined)) return;
     try {
       await ctx.reply('⏳ Gathering the last 7 days…');
-      const scheduler = new Scheduler(bot, client, chatId, log);
-      await scheduler.sendDigestNow(7, 'last 7 days');
+      const digest = await client.getWeeklyDigest();
+      await ctx.reply(`📊 This week:\n\n${digest.text}`);
     } catch (error) {
       await ctx.reply(`⚠️ ${(error as Error).message}`);
     }

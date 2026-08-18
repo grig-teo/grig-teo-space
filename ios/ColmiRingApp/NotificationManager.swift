@@ -11,6 +11,7 @@ final class NotificationManager {
     static let shared = NotificationManager()
 
     private let stampKey = "alerts.lastNotifiedStamp"
+    private let goalKey = "alerts.lastGoalNotifiedDay"
 
     /** Posts a local notification for new alerts (deduped by `stamp`). */
     func notifyNewAlerts(_ alerts: [String], stamp: String) {
@@ -31,6 +32,22 @@ final class NotificationManager {
                 break
             }
         }
+    }
+
+    /** "Goal reached" milestone — once per local day, when today's steps
+     *  cross the goal. */
+    func notifyGoalReached(steps: Int, goal: Int, reached: Bool) {
+        guard reached else { return }
+        let today = Date().formatted(.dateTime.year().month().day())
+        guard today != UserDefaults.standard.string(forKey: goalKey) else { return }
+        UserDefaults.standard.set(today, forKey: goalKey)
+        let content = UNMutableNotificationContent()
+        content.title = "Step goal reached"
+        content.body = "\(steps) steps today — goal of \(goal) hit. Keep it up tomorrow."
+        content.sound = .default
+        UNUserNotificationCenter.current().add(
+            UNNotificationRequest(identifier: "step-goal-\(today)", content: content, trigger: nil),
+        )
     }
 
     private var lastStamp: String? {

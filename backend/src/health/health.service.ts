@@ -111,6 +111,57 @@ export type RecoveryScore = {
   alerts: string[];
 };
 
+/** Daily goal + streak state for the iOS Profile streak card. */
+export type ActivityInsights = {
+  goalSteps: number;
+  todaySteps: number;
+  todayKm: number;
+  goalReached: boolean;
+  streakDays: number;
+  bestStreakDays: number;
+};
+
+/** LLM-written weekly summary with the numbers behind it. */
+export type WeeklyDigest = {
+  text: string;
+  generatedAt: string;
+  stats: {
+    steps: number;
+    km: number;
+    avgStress: number | null;
+    avgSleepScore: number | null;
+    avgSleepH: number | null;
+    bestDay: { date: string; steps: number } | null;
+    prevSteps: number;
+    prevKm: number;
+    prevAvgSleepScore: number | null;
+  };
+};
+
+/** One auto-detected activity window (HR spike + step rate). */
+export type DetectedActivity = {
+  start: string;
+  end: string;
+  steps: number;
+  km: number;
+  avgHr: number | null;
+  peakHr: number | null;
+};
+
+export type YearReview = {
+  daysWithData: number;
+  totalSteps: number;
+  totalKm: number;
+  bestStreakDays: number;
+  bestDay: { date: string; steps: number } | null;
+  avgSleepScore: number | null;
+  avgSleepH: number | null;
+  longestActivityMin: number | null;
+};
+
+/** Daily step goal driving the streak. */
+const STEP_GOAL = 8000;
+
 export type MetricSeriesPoint = {
   recordedAt: string;
   value: number;
@@ -282,6 +333,17 @@ const TIP_SYSTEM_PROMPT =
   'the tip itself, so the reader sees what it is based on.\n' +
   '- Do not diagnose or give medical advice. If a value looks concerning, ' +
   'briefly suggest they check with a doctor.';
+
+const DIGEST_SYSTEM_PROMPT =
+  'You are a friendly health coach writing a weekly digest for the owner of ' +
+  'a smart ring. You receive this week\'s totals and averages plus the ' +
+  'previous week\'s for comparison.\n\n' +
+  'Rules:\n' +
+  '- 3 to 4 sentences, under 90 words. Plain text, no markdown, no emoji.\n' +
+  '- Compare this week with last week using the actual numbers (steps, km, ' +
+  'sleep score) — say whether each went up or down.\n' +
+  '- Mention the best day by name if one is given.\n' +
+  '- End with one concrete suggestion for next week.';
 
 /** Default body stats (used until the user sets their own). */
 const DEFAULT_BODY_STATS = { heightCm: 185, weightKg: 94 };
@@ -907,6 +969,234 @@ export class HealthService {
 
   private round1(value: number | null): number | null {
     return value == null ? null : Math.round(value * 10) / 10;
+  }
+
+  // --- Streaks, digest, activities, year ---------------------------------
+
+  /** Per-local-day totals for one metric over the window. */
+  private async dailyTotals(metric: HealthMetric, days: number, offsetMinutes: number): Promise<Map<number, number>> {
+    const from = new Date(Date.now() - days * 86400000);
+    const readings = await this.readingRepo.find({
+      where: { recordedAt: MoreThan(from), metric },
+      order: { recordedAt: 'ASC' },
+    });
+    const totals = new Map<number, number>();
+    for (const r of readings) {
+      const day = Math.floor((r.recordedAt.getTime() + offsetMinutes * 60000) / 86400000);
+      totals.set(day, (totals.get(day) ?? 0) + r.value);
+    }
+    return totals;
+  }
+
+  /** Current and best streak of days meeting the step goal. */
+  private streaks(daily: Map<number, number>, todayKey: number): { current: number; best: number } {
+    let current = 0;
+    // Today counts only if already reached; otherwise count back from yesterday.
+    let day = (daily.get(todayKey) ?? 0) >= STEP_GOAL ? todayKey : todayKey - 1;
+    while ((daily.get(day) ?? 0) >= STEP_GOAL) {
+      current += 1;
+      day -= 1;
+    }
+    let best = 0;
+    let run = 0;
+    const keys = [...daily.keys()].sort((a, b) => a - b);
+    for (const key of keys) {
+      run = (daily.get(key) ?? 0) >= STEP_GOAL ? run + 1 : 0;
+      best = Math.max(best, run);
+    }
+    return { current, best };
+  }
+
+  /** Step-goal streak + today's progress (Profile streak card). */
+  async getInsights(tzOffsetMinutes = 0): Promise<ActivityInsights> {
+    const offset = Math.max(-720, Math.min(840, Math.round(tzOffsetMinutes)));
+    const steps = await this.dailyTotals('steps', 90, offset);
+    const distance = await this.dailyTotals('distance_km', 2, offset);
+    const todayKey = Math.floor((Date.now() + offset * 60000) / 86400000);
+    const { current, best } = this.streaks(steps, todayKey);
+    const todaySteps = Math.round(steps.get(todayKey) ?? 0);
+    return {
+      goalSteps: STEP_GOAL,
+      todaySteps,
+      todayKm: Math.round((distance.get(todayKey) ?? 0) * 100) / 100,
+      goalReached: todaySteps >= STEP_GOAL,
+      streakDays: current,
+      bestStreakDays: best,
+    };
+  }
+
+  /**
+   * LLM-written weekly digest (this week vs last). Cached in site_content
+   * for 12h — the iOS Profile card and Telegram /week share it.
+   */
+  async getDigest(): Promise<WeeklyDigest> {
+    const cached = await this.cachedDigest();
+    if (cached) return cached;
+
+    const stats = await this.weeklyStats();
+    const context = [
+      `This week (last 7 days): ${stats.steps} steps, ${stats.km} km` +
+        (stats.avgStress != null ? `, avg stress ${stats.avgStress}` : '') +
+        (stats.avgSleepScore != null ? `, avg sleep score ${stats.avgSleepScore}` : '') +
+        (stats.avgSleepH != null ? `, avg sleep ${stats.avgSleepH} h` : '') +
+        (stats.bestDay ? `, best day ${stats.bestDay.date} with ${stats.bestDay.steps} steps` : ''),
+      `Previous week: ${stats.prevSteps} steps, ${stats.prevKm} km` +
+        (stats.prevAvgSleepScore != null ? `, avg sleep score ${stats.prevAvgSleepScore}` : ''),
+    ].join('\n');
+    const text = await this.aiComplete(DIGEST_SYSTEM_PROMPT, context);
+    const digest: WeeklyDigest = { text, generatedAt: new Date().toISOString(), stats };
+    await this.contentRepo.save({
+      key: 'weekly_digest' as ContentKey,
+      data: digest as unknown,
+    });
+    return digest;
+  }
+
+  /** Returns the cached digest when it's less than 12h old. */
+  private async cachedDigest(): Promise<WeeklyDigest | null> {
+    const row = await this.contentRepo.findOne({
+      where: { key: 'weekly_digest' as ContentKey },
+    });
+    const data = row?.data as WeeklyDigest | undefined;
+    if (!data?.generatedAt || !data.text) return null;
+    const age = Date.now() - new Date(data.generatedAt).getTime();
+    return age < 12 * 3600000 ? data : null;
+  }
+
+  private async weeklyStats(): Promise<WeeklyDigest['stats']> {
+    const now = Date.now();
+    const weekAgo = new Date(now - 7 * 86400000);
+    const twoWeeksAgo = new Date(now - 14 * 86400000);
+    const readings = await this.readingRepo.find({
+      where: { recordedAt: MoreThan(twoWeeksAgo) },
+      order: { recordedAt: 'ASC' },
+    });
+    const thisWeek = readings.filter((r) => r.recordedAt >= weekAgo);
+    const prevWeek = readings.filter((r) => r.recordedAt < weekAgo);
+    const sum = (rows: HealthReading[], metric: HealthMetric) =>
+      rows.filter((r) => r.metric === metric).reduce((a, r) => a + r.value, 0);
+
+    const byDay = new Map<string, number>();
+    for (const r of thisWeek.filter((r) => r.metric === 'steps')) {
+      const day = r.recordedAt.toISOString().slice(0, 10);
+      byDay.set(day, (byDay.get(day) ?? 0) + r.value);
+    }
+    let bestDay: { date: string; steps: number } | null = null;
+    for (const [date, steps] of byDay) {
+      if (!bestDay || steps > bestDay.steps) bestDay = { date, steps: Math.round(steps) };
+    }
+
+    const sleep = await this.sleepRepo.find({
+      where: { endedAt: MoreThan(twoWeeksAgo) },
+      order: { endedAt: 'ASC' },
+    });
+    const sleepThis = sleep.filter((s) => s.endedAt >= weekAgo);
+    const sleepPrev = sleep.filter((s) => s.endedAt < weekAgo);
+    const avgScore = (rows: SleepSession[]) =>
+      rows.length ? Math.round(rows.reduce((a, s) => a + s.score, 0) / rows.length) : null;
+
+    return {
+      steps: Math.round(sum(thisWeek, 'steps')),
+      km: this.round1(sum(thisWeek, 'distance_km')) ?? 0,
+      avgStress: this.round1(this.mean(thisWeek.filter((r) => r.metric === 'stress'))),
+      avgSleepScore: avgScore(sleepThis),
+      avgSleepH: sleepThis.length
+        ? this.round1(sleepThis.reduce((a, s) => a + s.durationMin, 0) / sleepThis.length / 60)
+        : null,
+      bestDay,
+      prevSteps: Math.round(sum(prevWeek, 'steps')),
+      prevKm: this.round1(sum(prevWeek, 'distance_km')) ?? 0,
+      prevAvgSleepScore: avgScore(sleepPrev),
+    };
+  }
+
+  /**
+   * Auto-detected activities: hourly step slots above the active threshold,
+   * merged across gaps up to 75 min, kept when the window totals ≥ 800
+   * steps. HR stats come from the readings inside each window.
+   */
+  async getActivities(days = 7): Promise<DetectedActivity[]> {
+    const span = Math.max(1, Math.min(days, 365));
+    const from = new Date(Date.now() - span * 86400000);
+    const readings = await this.readingRepo.find({
+      where: {
+        recordedAt: MoreThan(from),
+        metric: In(['steps', 'distance_km', 'heart_rate'] as HealthMetric[]),
+      },
+      order: { recordedAt: 'ASC' },
+    });
+    const slots = readings
+      .filter((r) => r.metric === 'steps' && r.value >= 500)
+      .map((r) => ({ at: r.recordedAt, steps: r.value }));
+
+    const windows: Array<{ start: Date; end: Date }> = [];
+    for (const slot of slots) {
+      const last = windows[windows.length - 1];
+      if (last && slot.at.getTime() - last.end.getTime() <= 75 * 60000) {
+        last.end = slot.at;
+      } else {
+        windows.push({ start: slot.at, end: slot.at });
+      }
+    }
+
+    const activities: DetectedActivity[] = [];
+    for (const w of windows) {
+      const end = new Date(w.end.getTime() + 3600000); // slot covers the hour
+      const inside = readings.filter((r) => r.recordedAt >= w.start && r.recordedAt < end);
+      const steps = Math.round(inside.filter((r) => r.metric === 'steps').reduce((a, r) => a + r.value, 0));
+      if (steps < 800) continue;
+      const hrs = inside.filter((r) => r.metric === 'heart_rate').map((r) => r.value);
+      activities.push({
+        start: w.start.toISOString(),
+        end: end.toISOString(),
+        steps,
+        km: this.round1(inside.filter((r) => r.metric === 'distance_km').reduce((a, r) => a + r.value, 0)) ?? 0,
+        avgHr: hrs.length ? Math.round(hrs.reduce((a, v) => a + v, 0) / hrs.length) : null,
+        peakHr: hrs.length ? Math.max(...hrs) : null,
+      });
+    }
+    return activities.reverse(); // newest first
+  }
+
+  /** Year-in-review stats (window: last 365 days of data). */
+  async getYearReview(tzOffsetMinutes = 0): Promise<YearReview> {
+    const offset = Math.max(-720, Math.min(840, Math.round(tzOffsetMinutes)));
+    const steps = await this.dailyTotals('steps', 365, offset);
+    const distance = await this.dailyTotals('distance_km', 365, offset);
+    const todayKey = Math.floor((Date.now() + offset * 60000) / 86400000);
+
+    let totalSteps = 0;
+    let bestDay: YearReview['bestDay'] = null;
+    for (const [day, value] of steps) {
+      totalSteps += value;
+      if (!bestDay || value > bestDay.steps) {
+        bestDay = { date: new Date((day * 86400000 - offset * 60000)).toISOString().slice(0, 10), steps: Math.round(value) };
+      }
+    }
+    let totalKm = 0;
+    for (const value of distance.values()) totalKm += value;
+
+    const sleep = await this.sleepRepo.find({ order: { endedAt: 'ASC' } });
+    const activities = await this.getActivities(365);
+    const longest = activities.reduce(
+      (max, a) => Math.max(max, (new Date(a.end).getTime() - new Date(a.start).getTime()) / 60000),
+      0,
+    );
+
+    return {
+      daysWithData: steps.size,
+      totalSteps: Math.round(totalSteps),
+      totalKm: this.round1(totalKm) ?? 0,
+      bestStreakDays: this.streaks(steps, todayKey).best,
+      bestDay,
+      avgSleepScore: sleep.length
+        ? Math.round(sleep.reduce((a, s) => a + s.score, 0) / sleep.length)
+        : null,
+      avgSleepH: sleep.length
+        ? this.round1(sleep.reduce((a, s) => a + s.durationMin, 0) / sleep.length / 60)
+        : null,
+      longestActivityMin: longest > 0 ? Math.round(longest) : null,
+    };
   }
 
   /** Latest night's composite score; falls back to the best sleep_quality

@@ -126,6 +126,37 @@ export class HealthController {
     return this.health.getRecovery();
   }
 
+  /** Step-goal streak + today's progress (iOS Profile streak card). */
+  @Get('insights')
+  @UseGuards(DeviceKeyGuard)
+  async insights(@Query('tzOffset') tzOffset?: string) {
+    const parsed = Number(tzOffset ?? 0);
+    return this.health.getInsights(Number.isFinite(parsed) ? parsed : 0);
+  }
+
+  /** LLM weekly digest, cached 12h (iOS Profile card + Telegram /week). */
+  @Get('digest')
+  @UseGuards(DeviceKeyGuard)
+  async digest() {
+    return this.health.getDigest();
+  }
+
+  /** Auto-detected activity windows (HR spike + step rate). */
+  @Get('activities')
+  @UseGuards(DeviceKeyGuard)
+  async activities(@Query('days') days?: string) {
+    const parsed = Number(days ?? 7);
+    return this.health.getActivities(Number.isFinite(parsed) ? parsed : 7);
+  }
+
+  /** Year-in-review stats (iOS Year page). */
+  @Get('year')
+  @UseGuards(DeviceKeyGuard)
+  async year(@Query('tzOffset') tzOffset?: string) {
+    const parsed = Number(tzOffset ?? 0);
+    return this.health.getYearReview(Number.isFinite(parsed) ? parsed : 0);
+  }
+
   @Get('tip')
   @UseGuards(DeviceKeyGuard)
   async tip() {

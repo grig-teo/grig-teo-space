@@ -69,6 +69,28 @@ struct HealthView: View {
                     }
 
                     NavigationLink {
+                        ActivitiesView()
+                    } label: {
+                        HubButton(
+                            title: "Activities",
+                            subtitle: "Auto-detected walks & workouts",
+                            systemImage: "figure.walk",
+                            color: .green,
+                        )
+                    }
+
+                    NavigationLink {
+                        YearView()
+                    } label: {
+                        HubButton(
+                            title: "Year in Review",
+                            subtitle: "Totals, streaks & best days",
+                            systemImage: "calendar",
+                            color: .orange,
+                        )
+                    }
+
+                    NavigationLink {
                         TipHistoryView()
                     } label: {
                         HubButton(

@@ -15,6 +15,7 @@ struct ProfileView: View {
     @StateObject private var weatherClient = WeatherClient()
     @StateObject private var locationManager = LocationManager.shared
     @StateObject private var recoveryClient = RecoveryClient.shared
+    @StateObject private var insightsClient = InsightsClient.shared
     @State private var latestMedia: [MediaLibraryWrapper.AssetSnapshot] = []
 
     var body: some View {
@@ -23,8 +24,10 @@ struct ProfileView: View {
                 VStack(spacing: 24) {
                     header
                     recoveryCard
+                    streakCard
                     weatherRow
                     StressChartView(client: stressClient)
+                    digestCard
                     tipCard
                     mediaSection
                     if let error = client.lastError {
@@ -46,6 +49,49 @@ struct ProfileView: View {
             LocationManager.shared.shareLocation()
             await weatherClient.load(days: 1)
             await recoveryClient.load()
+            await insightsClient.loadInsights()
+            await insightsClient.loadDigest()
+        }
+    }
+
+    /// Step-goal streak: today's progress bar + the current streak count.
+    @ViewBuilder
+    private var streakCard: some View {
+        if let insights = insightsClient.insights {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Image(systemName: "flame.fill")
+                        .foregroundStyle(.orange)
+                    Text("\(insights.streakDays)-day streak")
+                        .font(.subheadline.bold())
+                    Spacer()
+                    Text("\(insights.todaySteps) / \(insights.goalSteps) steps")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                ProgressView(value: Double(insights.todaySteps), total: Double(insights.goalSteps))
+                    .tint(insights.goalReached ? .green : .orange)
+            }
+            .padding()
+            .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
+        }
+    }
+
+    /// The LLM weekly digest (this week vs last), cached server-side.
+    @ViewBuilder
+    private var digestCard: some View {
+        if let digest = insightsClient.digest {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("This week")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text(digest.text)
+                    .font(.callout)
+                    .foregroundColor(.primary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+            .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
         }
     }
 
