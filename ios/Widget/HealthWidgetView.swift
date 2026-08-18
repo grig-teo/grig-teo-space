@@ -2,13 +2,14 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
-/** Displays the health status (stress + sleep recovery), the latest AI tip,
- *  the last-updated time, and a refresh button (top-right).
+/** Displays the health status (stress, sleep, quality, plus heart rate,
+ *  SpO2 and steps), the latest AI tip, the last-updated time, and a refresh
+ *  button (top-right).
  *
  *  Tapping anywhere on the widget (outside the refresh button) opens the host
  *  app on the Ring page via the `grigteo://ring` deep link.
  *
- *  Two layouts: `.systemSmall` (compact) and `.systemMedium` (full). */
+ *  Single size: `.systemLarge` — the only family the widget supports. */
 struct HealthWidgetView: View {
     static let deepLink = URL(string: "grigteo://ring")!
 
@@ -17,55 +18,19 @@ struct HealthWidgetView: View {
     let family: WidgetFamily
 
     var body: some View {
-        Group {
-            switch family {
-            case .systemSmall:
-                SmallLayout(payload: payload, updatedAt: updatedAt)
-            default:
-                MediumLayout(payload: payload, updatedAt: updatedAt)
-            }
-        }
-        .widgetURL(Self.deepLink)
+        LargeLayout(payload: payload, updatedAt: updatedAt)
+            .widgetURL(Self.deepLink)
     }
 }
 
-// MARK: - Small layout
+// MARK: - Large layout
 
-private struct SmallLayout: View {
+private struct LargeLayout: View {
     let payload: WidgetPayload?
     let updatedAt: Date
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .top) {
-                Text("Updated \(updatedAt.time24)")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                Spacer()
-                RefreshButton()
-            }
-            if let payload {
-                StressBadge(value: payload.summary.latest("stress"), compact: true)
-                SleepLine(payload: payload)
-                Spacer(minLength: 0)
-                TipLine(text: payload.tip.tip)
-            } else {
-                Placeholder()
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-}
-
-// MARK: - Medium layout
-
-private struct MediumLayout: View {
-    let payload: WidgetPayload?
-    let updatedAt: Date
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 Text("Updated \(updatedAt.time24)")
                     .font(.caption2)
@@ -75,19 +40,25 @@ private struct MediumLayout: View {
             }
             if let payload {
                 HStack(spacing: 12) {
-                    StressBadge(value: payload.summary.latest("stress"), compact: false)
+                    StressBadge(value: payload.summary.latest("stress"))
                     Divider().frame(height: 36)
-                    SleepStat(value: payload.summary.latest("sleep_duration_h"), label: "Sleep", unit: "h")
-                    SleepStat(value: payload.summary.latest("sleep_quality"), label: "Quality", unit: "%")
+                    Stat(value: payload.summary.latest("sleep_duration_h"), label: "Sleep", unit: "h", fractionDigits: 1)
+                    Stat(value: payload.summary.latest("sleep_quality"), label: "Quality", unit: "%")
                 }
                 Divider()
-                TipLine(text: payload.tip.tip, multiline: true)
+                HStack(spacing: 12) {
+                    Stat(value: payload.summary.latest("heart_rate"), label: "Heart Rate", unit: "bpm")
+                    Stat(value: payload.summary.latest("spo2"), label: "Blood Oxygen", unit: "%")
+                    Stat(value: payload.summary.latest("steps"), label: "Steps today", unit: "")
+                }
+                Divider()
+                TipLine(text: payload.tip.tip)
                 Spacer(minLength: 0)
             } else {
                 Placeholder()
             }
         }
-        .padding(14)
+        .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
@@ -112,7 +83,6 @@ private struct RefreshButton: View {
 
 private struct StressBadge: View {
     let value: Double?
-    let compact: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -120,8 +90,8 @@ private struct StressBadge: View {
                 .font(.caption2)
                 .foregroundColor(.secondary)
             HStack(alignment: .lastTextBaseline, spacing: 2) {
-                Text(value.map { formatStress($0) } ?? "—")
-                    .font(compact ? .system(.title2, design: .rounded).bold() : .system(.title, design: .rounded).bold())
+                Text(value.map { String(Int($0)) } ?? "—")
+                    .font(.system(.title, design: .rounded).bold())
                 Text(tier)
                     .font(.caption2.bold())
                     .foregroundColor(tierColor)
@@ -142,14 +112,14 @@ private struct StressBadge: View {
         if value < 60 { return .orange }
         return .red
     }
-
-    private func formatStress(_ v: Double) -> String { String(Int(v)) }
 }
 
-private struct SleepStat: View {
+/** One labeled stat (sleep, quality, HR, SpO2, steps). */
+private struct Stat: View {
     let value: Double?
     let label: String
     let unit: String
+    var fractionDigits: Int = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -157,48 +127,27 @@ private struct SleepStat: View {
                 .font(.caption2)
                 .foregroundColor(.secondary)
             HStack(alignment: .lastTextBaseline, spacing: 2) {
-                Text(value.map { String(format: "%.1f", $0) } ?? "—")
+                Text(value.map { String(format: "%.\(fractionDigits)f", $0) } ?? "—")
                     .font(.system(.headline, design: .rounded).bold())
-                Text(unit)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                if !unit.isEmpty {
+                    Text(unit)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
             }
         }
     }
 }
 
-private struct SleepLine: View {
-    let payload: WidgetPayload
-
-    var body: some View {
-        let duration = payload.summary.latest("sleep_duration_h")
-        let quality = payload.summary.latest("sleep_quality")
-        if duration != nil || quality != nil {
-            HStack(spacing: 6) {
-                if let duration {
-                    Text(String(format: "%.1f h sleep", duration))
-                }
-                if let quality {
-                    Text("\(Int(quality))% quality")
-                }
-            }
-            .font(.caption2)
-            .foregroundColor(.secondary)
-        }
-    }
-}
-
-/** Renders the tip text, or a neutral placeholder when no tip is available. */
+/** The latest AI tip — the large widget has room for the full text. */
 private struct TipLine: View {
     let text: String?
-    var multiline: Bool = false
 
     var body: some View {
         if let text, !text.isEmpty {
             Text(text)
-                .font(.caption)
+                .font(.callout)
                 .foregroundColor(.primary)
-                .lineLimit(multiline ? 4 : 2)
         } else {
             Label("No tip yet", systemImage: "lightbulb")
                 .font(.caption2)

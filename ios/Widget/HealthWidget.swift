@@ -2,13 +2,13 @@ import AppIntents
 import WidgetKit
 import SwiftUI
 
-/** Home-screen widget showing the latest stress index, sleep recovery, and the
- *  hourly AI health tip. Fetches the combined payload from the backend in the
- *  timeline provider; the host app triggers a reload via WidgetCenter after
- *  each readings flush, and the in-widget refresh button lets the user force a
- *  reload on demand.
+/** Home-screen widget showing the latest stress index, sleep recovery, key
+ *  vitals, and the hourly AI health tip. Fetches the combined payload from
+ *  the backend in the timeline provider; the host app triggers a reload via
+ *  WidgetCenter after each readings flush, and the in-widget refresh button
+ *  lets the user force a reload on demand.
  *
- *  Supports `.systemSmall` and `.systemMedium`. iOS 17+ (interactive button). */
+ *  Single size: `.systemLarge`. iOS 17+ (interactive button). */
 @main
 struct HealthWidget: Widget {
     let kind: String = "HealthWidget"
@@ -21,8 +21,8 @@ struct HealthWidget: Widget {
                 }
         }
         .configurationDisplayName("Health")
-        .description("Stress, sleep, your latest health tip, and a refresh button.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .description("Stress, sleep, vitals, your latest health tip, and a refresh button.")
+        .supportedFamilies([.systemLarge])
     }
 }
 
@@ -70,8 +70,8 @@ struct RefreshWidgetIntent: AppIntent {
     }
 }
 
-#Preview(as: .systemSmall) {
+#Preview(as: .systemLarge) {
     HealthWidget()
 } timeline: {
-    HealthEntry(date: .now, payload: nil, family: .systemSmall)
+    HealthEntry(date: .now, payload: nil, family: .systemLarge)
 }
