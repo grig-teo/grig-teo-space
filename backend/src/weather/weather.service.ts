@@ -83,13 +83,25 @@ export class WeatherService {
       lon: Math.round(lon * 1000) / 1000,
       updatedAt: new Date().toISOString(),
     };
+    const previous = await this.getLocation();
     await this.contentRepo.save({
       key: 'weather_location' as ContentKey,
       data: location as unknown,
     });
-    // A new location invalidates old samples only slowly; refetch soon after.
-    await this.ensureFresh();
+    // A big jump (~50 km) means the stored history is for the wrong place —
+    // drop it so the backfill and correlations use the new location only.
+    if (previous && this.isFarFrom(previous, location)) {
+      await this.sampleRepo.clear();
+    }
+    // A location change invalidates the samples immediately — refetch now,
+    // ignoring the freshness window (they were fetched for the old place).
+    await this.ensureFresh(true);
     return location;
+  }
+
+  /** Rough distance check: ~0.5° in either axis ≈ 50 km. */
+  private isFarFrom(a: WeatherLocation, b: WeatherLocation): boolean {
+    return Math.abs(a.lat - b.lat) > 0.5 || Math.abs(a.lon - b.lon) > 0.5;
   }
 
   // --- Collection (lazy, tip-cache style) -----------------------------------
@@ -98,14 +110,14 @@ export class WeatherService {
    * Refreshes samples from Open-Meteo when the newest one is stale. Called on
    * every read — no cron needed; first call backfills PAST_DAYS of history.
    */
-  async ensureFresh(): Promise<void> {
+  async ensureFresh(force = false): Promise<void> {
     const location = await this.getLocation();
     if (!location) return;
     const latest = await this.sampleRepo.findOne({
       where: {},
       order: { recordedAt: 'DESC' },
     });
-    if (latest && Date.now() - latest.recordedAt.getTime() < FRESH_MS) return;
+    if (!force && latest && Date.now() - latest.recordedAt.getTime() < FRESH_MS) return;
     try {
       await this.fetchAndStore(location);
     } catch (error) {
