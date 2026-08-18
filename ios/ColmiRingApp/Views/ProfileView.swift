@@ -59,13 +59,13 @@ struct ProfileView: View {
                     Text("Recovery")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Spacer()
                     Text("\(recovery.score)")
-                        .font(.system(.title, design: .rounded).bold())
+                        .font(.system(.subheadline, design: .rounded).bold())
                         .foregroundStyle(recoveryColor(recovery.score))
                     Text(recovery.label)
                         .font(.caption)
                         .foregroundColor(.secondary)
+                    Spacer()
                 }
                 HStack(spacing: 12) {
                     component("Sleep", recovery.components.sleepScore.map { "\($0)" })
