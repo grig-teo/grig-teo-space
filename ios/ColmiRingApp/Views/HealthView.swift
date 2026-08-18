@@ -47,6 +47,17 @@ struct HealthView: View {
                     }
 
                     NavigationLink {
+                        WeatherView()
+                    } label: {
+                        HubButton(
+                            title: "Weather & You",
+                            subtitle: "Weather vs your stress, HRV & heart rate",
+                            systemImage: "cloud.sun.fill",
+                            color: .blue,
+                        )
+                    }
+
+                    NavigationLink {
                         TipHistoryView()
                     } label: {
                         HubButton(

@@ -12,6 +12,7 @@ struct ProfileView: View {
     @StateObject private var stressClient = StressSeriesClient.shared
     @StateObject private var tipClient = TipClient.shared
     @StateObject private var mediaLibrary = MediaLibraryWrapper.shared
+    @StateObject private var weatherClient = WeatherClient()
     @State private var latestMedia: [MediaLibraryWrapper.AssetSnapshot] = []
 
     var body: some View {
@@ -19,6 +20,7 @@ struct ProfileView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     header
+                    weatherRow
                     StressChartView(client: stressClient)
                     tipCard
                     mediaSection
@@ -36,6 +38,27 @@ struct ProfileView: View {
         }
         .task {
             latestMedia = Array(mediaLibrary.allSnapshots().prefix(3))
+            await weatherClient.load(days: 1)
+        }
+    }
+
+    /// One-line current conditions (temp · pressure · humidity) above the
+    /// stress chart — the environmental context for the body's numbers.
+    @ViewBuilder
+    private var weatherRow: some View {
+        if let current = weatherClient.series?.current {
+            HStack(spacing: 12) {
+                Label("\(Int(current.temperatureC.rounded()))°C", systemImage: "thermometer.medium")
+                if let pressure = current.pressureHpa {
+                    Label("\(Int(pressure.rounded())) hPa", systemImage: "barometer")
+                }
+                if let humidity = current.humidityPct {
+                    Label("\(Int(humidity.rounded()))%", systemImage: "humidity")
+                }
+                Spacer()
+            }
+            .font(.caption)
+            .foregroundColor(.secondary)
         }
     }
 

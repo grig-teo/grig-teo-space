@@ -18,6 +18,7 @@ import { HealthReading } from './entities/health-reading.entity';
 import { HealthTip } from './entities/health-tip.entity';
 import { MediaItem } from './entities/media-item.entity';
 import { SiteContent } from './entities/site-content.entity';
+import { WeatherSample } from './entities/weather-sample.entity';
 import { DocumentsModule } from './documents/documents.module';
 import { HealthModule } from './health/health.module';
 import { MediaModule } from './media/media.module';
@@ -26,6 +27,7 @@ import { LinkedInService } from './linkedin.service';
 import { PortfolioController } from './portfolio.controller';
 import { PortfolioService } from './portfolio.service';
 import { StorageModule } from './storage/storage.module';
+import { WeatherModule } from './weather/weather.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
@@ -48,6 +50,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
         HealthDocChatMessage,
         HealthTip,
         MediaItem,
+        WeatherSample,
       ],
       synchronize: true,
     }),
@@ -59,6 +62,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     HealthModule,
     DocumentsModule,
     MediaModule,
+    WeatherModule,
     WebhooksModule,
   ],
   controllers: [PortfolioController, AiController, LinkedInController],

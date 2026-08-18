@@ -16,6 +16,7 @@ import {
 } from '../entities/health-reading.entity';
 import { HealthNote, HealthNoteSource } from '../entities/health-note.entity';
 import { HealthTip } from '../entities/health-tip.entity';
+import { WeatherService } from '../weather/weather.service';
 
 // --- Public exposure configuration ---------------------------------------
 
@@ -280,6 +281,7 @@ export class HealthService {
     private readonly contentRepo: Repository<SiteContent>,
     @InjectRepository(HealthTip)
     private readonly tipRepo: Repository<HealthTip>,
+    private readonly weather: WeatherService,
   ) {}
 
   // --- Ingest -------------------------------------------------------------
@@ -424,7 +426,8 @@ export class HealthService {
       return { tip: null, generatedAt: now.toISOString(), skippedReason: 'no_data' };
     }
 
-    const context = this.buildTipContext(readings, now);
+    const weatherLine = await this.weather.currentLine().catch(() => null);
+    const context = this.buildTipContext(readings, now, weatherLine);
     try {
       const tip = await this.aiComplete(TIP_SYSTEM_PROMPT, context);
       await this.saveTipIfNew(tip, now);
@@ -815,13 +818,20 @@ export class HealthService {
    * the last hour, falling back to the most recent value within the staleness
    * window when the hour itself has no readings for that metric.
    */
-  private buildTipContext(allRecent: HealthReading[], now: Date): string {
+  private buildTipContext(
+    allRecent: HealthReading[],
+    now: Date,
+    weatherLine: string | null = null,
+  ): string {
     const windowStart = new Date(now.getTime() - TIP_WINDOW_HOURS * 3_600_000);
     const grouped = this.groupByMetric(allRecent);
     const lines: string[] = [
       `Current time: ${now.toLocaleString('en-GB', { timeZone: 'UTC', hour12: false })} UTC`,
       `Metrics (last ${TIP_WINDOW_HOURS}h average, with latest as fallback):`,
     ];
+    if (weatherLine) {
+      lines.push(`Weather outside: ${weatherLine}`);
+    }
     for (const metric of HEALTH_METRICS) {
       const rows = grouped[metric] ?? [];
       const inWindow = rows.filter((r) => r.recordedAt >= windowStart);

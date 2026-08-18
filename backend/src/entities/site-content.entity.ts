@@ -6,7 +6,8 @@ export type ContentKey =
   | 'experience'
   | 'blog'
   | 'health_public'
-  | 'body_stats';
+  | 'body_stats'
+  | 'weather_location';
 
 @Entity('site_content')
 export class SiteContent {

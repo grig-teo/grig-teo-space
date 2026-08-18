@@ -40,6 +40,7 @@ targets:
         # Required for the optional app lock: iOS crashes the first Face ID
         # evaluatePolicy call without this string.
         NSFaceIDUsageDescription: "Face ID protects access to your personal health data."
+        NSLocationWhenInUseUsageDescription: "The app shares your approximate location to fetch local weather and correlate it with your stress, HRV, and heart rate."
         NSPhotoLibraryUsageDescription: "The app reads your photo library to display your media and back up your photos and videos to your private server."
         NSPhotoLibraryAddUsageDescription: "The app may save media back to your photo library."
         # Background execution: keep the BLE link alive, schedule OS wakeups

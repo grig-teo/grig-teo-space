@@ -266,6 +266,9 @@ final class AppLifecycleManager: ObservableObject {
         case .active:
             endBackgroundTask()
             startPolling()
+            // Throttled internally to one upload/hour; no-op until the user
+            // grants location permission from the Weather page.
+            LocationManager.shared.shareLocation()
         case .inactive:
             break
         case .background:

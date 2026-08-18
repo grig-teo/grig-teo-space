@@ -8,11 +8,16 @@ import { DeviceKeyGuard } from './device-key.guard';
 import { HealthAdminController } from './health-admin.controller';
 import { HealthController } from './health.controller';
 import { HealthService } from './health.service';
+import { WeatherModule } from '../weather/weather.module';
 
 @Module({
   // HealthTip is registered here so HealthService can persist tips. HealthService
   // is exported so DocumentsService (the AI doctor) can read ring + body context.
-  imports: [TypeOrmModule.forFeature([HealthReading, HealthNote, HealthTip, SiteContent])],
+  // WeatherModule feeds current conditions into the hourly tip context.
+  imports: [
+    TypeOrmModule.forFeature([HealthReading, HealthNote, HealthTip, SiteContent]),
+    WeatherModule,
+  ],
   controllers: [HealthController, HealthAdminController],
   providers: [HealthService, DeviceKeyGuard],
   exports: [HealthService],
