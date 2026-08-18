@@ -1569,9 +1569,28 @@ export class HealthService {
     // is meaningless as a last-hour average.
     const sleepLine = this.sleepContextLine(sleepHistory, now);
     if (sleepLine) lines.push(sleepLine);
+    // Slot metrics (steps/calories/distance) arrive as per-hour slots that
+    // the ring fills only when the hour completes — a rolling "last 60 min"
+    // window systematically misses them (a 13:00 walk is invisible at
+    // 14:21). Use the last full hour's slot + the current one, summed.
+    const slotStart = new Date(now);
+    slotStart.setUTCMinutes(0, 0, 0);
+    slotStart.setUTCHours(slotStart.getUTCHours() - 1);
+    const slotLabel = `${String(slotStart.getUTCHours()).padStart(2, '0')}:00 UTC`;
+    const SLOT_METRICS = new Set<string>(['steps', 'calories', 'distance_km']);
     for (const metric of HEALTH_METRICS) {
       if (metric === 'sleep_duration_h' || metric === 'sleep_quality') continue;
       const rows = grouped[metric] ?? [];
+      if (SLOT_METRICS.has(metric)) {
+        const slotRows = rows.filter((r) => r.recordedAt >= slotStart);
+        const used = slotRows.length > 0 ? slotRows : rows.slice(-1);
+        if (used.length === 0) continue;
+        const total = Math.round(used.reduce((a, r) => a + r.value, 0) * 100) / 100;
+        lines.push(
+          `- ${METRIC_LABELS[metric]}: ${total} ${DEFAULT_UNITS[metric]} since ${slotLabel}`,
+        );
+        continue;
+      }
       const inWindow = rows.filter((r) => r.recordedAt >= windowStart);
       const used = inWindow.length > 0 ? inWindow : rows.slice(-1);
       if (used.length === 0) continue;
