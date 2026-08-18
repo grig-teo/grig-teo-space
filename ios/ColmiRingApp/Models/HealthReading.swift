@@ -33,6 +33,7 @@ struct HealthReading: Codable, Identifiable {
         try container.encodeIfPresent(unit, forKey: .unit)
         try container.encode(ISO8601DateFormatter.shared.string(from: recordedAt), forKey: .recordedAt)
         try container.encode(source, forKey: .source)
+        try container.encodeIfPresent(raw, forKey: .raw)
     }
 
     init(from decoder: Decoder) throws {

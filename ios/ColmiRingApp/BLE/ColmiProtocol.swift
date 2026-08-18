@@ -374,6 +374,10 @@ final class SleepParser {
         let start: Date
         let end: Date
         let stageMinutes: [UInt8: Int]  // stage type → minutes
+        /// This day's raw block from the frame, hex-encoded. Sent to the
+        /// backend as `raw` so newer firmware fields (e.g. a computed sleep
+        /// score) can be reverse-engineered without a phone attached.
+        let rawHex: String
     }
 
     /// Parses a complete big data frame into sleep sessions.
@@ -385,6 +389,7 @@ final class SleepParser {
         let calendar = Calendar.current
 
         for _ in 0..<daysInPacket {
+            let blockStart = index
             guard index + 6 <= bytes.count else { break }
             let daysAgo = Int(bytes[index]); index += 1
             let dayBytes = Int(bytes[index]); index += 1
@@ -409,20 +414,26 @@ final class SleepParser {
                     stageMinutes[stage, default: 0] += minutes
                 }
             }
-            sessions.append(Session(start: start, end: end, stageMinutes: stageMinutes))
+            let rawHex = bytes[blockStart..<index]
+                .map { String(format: "%02X", $0) }
+                .joined(separator: " ")
+            sessions.append(Session(start: start, end: end, stageMinutes: stageMinutes, rawHex: rawHex))
         }
         return sessions
     }
 
     /// Readings for one session: duration in hours and a quality score
-    /// (deep + REM share of the session, 0–100).
+    /// (deep + REM share of the session, 0–100). The duration reading
+    /// carries the raw frame block in `raw` for protocol analysis.
     func readings(for session: Session) -> [HealthReading] {
         let minutes = session.end.timeIntervalSince(session.start) / 60
         guard minutes > 0 else { return [] }
         let restorative = Double(session.stageMinutes[3, default: 0] + session.stageMinutes[4, default: 0])
         let quality = min(100, (restorative / minutes) * 100)
+        var duration = HealthReading(metric: .sleepDurationH, value: minutes / 60, recordedAt: session.end)
+        duration.raw = ["sleepFrame": AnyCodable(session.rawHex)]
         return [
-            HealthReading(metric: .sleepDurationH, value: minutes / 60, recordedAt: session.end),
+            duration,
             HealthReading(metric: .sleepQuality, value: quality, recordedAt: session.end),
         ]
     }
