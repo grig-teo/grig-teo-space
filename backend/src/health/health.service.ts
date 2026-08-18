@@ -426,8 +426,20 @@ export class HealthService {
       return { tip: null, generatedAt: now.toISOString(), skippedReason: 'no_data' };
     }
 
+    // Sleep needs a longer lens than the 3h staleness window: the ring
+    // reports a cumulative per-night counter, so the "last night total" is
+    // the latest value of the current episode, which can end hours before
+    // the tip is generated. Fetched separately over 36h.
+    const sleepHistory = await this.readingRepo.find({
+      where: {
+        recordedAt: MoreThan(new Date(now.getTime() - 36 * 3_600_000)),
+        metric: In(['sleep_duration_h', 'sleep_quality'] as HealthMetric[]),
+      },
+      order: { recordedAt: 'ASC' },
+    });
+
     const weatherLine = await this.weather.currentLine().catch(() => null);
-    const context = this.buildTipContext(readings, now, weatherLine);
+    const context = this.buildTipContext(readings, now, weatherLine, sleepHistory);
     try {
       const tip = await this.aiComplete(TIP_SYSTEM_PROMPT, context);
       await this.saveTipIfNew(tip, now);
@@ -538,16 +550,19 @@ export class HealthService {
   async getHourlySeries(
     metric: HealthMetric,
     days = 1,
+    tzOffsetMinutes = 0,
   ): Promise<HourlySeries> {
     const safeMetric = HEALTH_METRICS.includes(metric) ? metric : 'stress';
     const span = Math.max(1, Math.min(days, 365));
-    // Start at UTC midnight of the current day, not a rolling 24h window —
-    // a rolling window would average yesterday's readings into today's hour
-    // buckets, so the "today" graph would show data from yesterday. All day
-    // math in the health pipeline is UTC; clients localize for display.
-    const from = new Date();
-    from.setUTCHours(0, 0, 0, 0);
-    from.setUTCDate(from.getUTCDate() - (span - 1));
+    // Buckets follow the CLIENT's local clock: tzOffsetMinutes is the
+    // client's offset from UTC in minutes (+180 for Moscow). The window
+    // starts at local midnight so "today" runs to the current local hour —
+    // UTC bucketing would leave the chart 3 hours behind for UTC+3.
+    const offsetMs =
+      Math.max(-720, Math.min(840, Math.round(tzOffsetMinutes))) * 60_000;
+    const localNow = Date.now() + offsetMs;
+    const localMidnight = Math.floor(localNow / 86_400_000) * 86_400_000;
+    const from = new Date(localMidnight - (span - 1) * 86_400_000 - offsetMs);
 
     const readings = await this.readingRepo.find({
       where: { recordedAt: MoreThan(from), metric: safeMetric },
@@ -563,7 +578,7 @@ export class HealthService {
     let unit: string | null = null;
     for (const r of readings) {
       if (unit === null) unit = r.unit ?? DEFAULT_UNITS[safeMetric];
-      const hour = r.recordedAt.getUTCHours();
+      const hour = new Date(r.recordedAt.getTime() + offsetMs).getUTCHours();
       sums[hour] += r.value;
       counts[hour] += 1;
       latestAtMs[hour] = Math.max(latestAtMs[hour], r.recordedAt.getTime());
@@ -822,6 +837,7 @@ export class HealthService {
     allRecent: HealthReading[],
     now: Date,
     weatherLine: string | null = null,
+    sleepHistory: HealthReading[] = [],
   ): string {
     const windowStart = new Date(now.getTime() - TIP_WINDOW_HOURS * 3_600_000);
     const grouped = this.groupByMetric(allRecent);
@@ -832,7 +848,12 @@ export class HealthService {
     if (weatherLine) {
       lines.push(`Weather outside: ${weatherLine}`);
     }
+    // Sleep is handled separately below — its cumulative per-night counter
+    // is meaningless as a last-hour average.
+    const sleepLine = this.sleepContextLine(sleepHistory, now);
+    if (sleepLine) lines.push(sleepLine);
     for (const metric of HEALTH_METRICS) {
+      if (metric === 'sleep_duration_h' || metric === 'sleep_quality') continue;
       const rows = grouped[metric] ?? [];
       const inWindow = rows.filter((r) => r.recordedAt >= windowStart);
       const used = inWindow.length > 0 ? inWindow : rows.slice(-1);
@@ -843,6 +864,43 @@ export class HealthService {
       lines.push(`- ${METRIC_LABELS[metric]}: ${avg} ${unit} (latest ${values[values.length - 1]})`);
     }
     return lines.join('\n');
+  }
+
+  /**
+   * Builds the sleep line for the tip context. The ring reports sleep as a
+   * CUMULATIVE per-night counter (values ramp 2h → 9h through the night and
+   * reset when the next night starts), so the correct "last night" number is
+   * the latest value of the current episode — never an hourly average. When
+   * the episode is still growing the line says so explicitly; otherwise the
+   * LLM turns mid-night progress ("3.4 h so far") into "you only slept 3.4 h".
+   */
+  private sleepContextLine(history: HealthReading[], now: Date): string | null {
+    const durations = history.filter((r) => r.metric === 'sleep_duration_h');
+    if (durations.length === 0) return null;
+
+    // Find the current episode's start: walk back while values are
+    // non-decreasing (a drop marks the counter reset = previous night ended).
+    let episodeStart = durations.length - 1;
+    while (
+      episodeStart > 0 &&
+      durations[episodeStart - 1].value <= durations[episodeStart].value
+    ) {
+      episodeStart -= 1;
+    }
+    const episode = durations.slice(episodeStart);
+    const last = episode[episode.length - 1];
+    const total = Math.round(last.value * 10) / 10;
+    const inProgress = now.getTime() - last.recordedAt.getTime() < 2 * 3_600_000;
+
+    const qualityRows = history.filter(
+      (r) => r.metric === 'sleep_quality' && r.recordedAt >= episode[0].recordedAt,
+    );
+    const quality = qualityRows.length > 0 ? qualityRows[qualityRows.length - 1] : null;
+    const qualityText = quality ? `, quality ${Math.round(quality.value)}%` : '';
+
+    return inProgress
+      ? `- Sleep: ${total} h so far this night${qualityText} — the night is STILL IN PROGRESS; do not treat this as a full night of sleep`
+      : `- Sleep last night: ${total} h total${qualityText}`;
   }
 
   /**

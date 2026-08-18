@@ -56,17 +56,22 @@ export class HealthController {
   /**
    * Hourly average series for one metric over the last `days` days (defaults
    * to today). The iOS Profile page's stress graph reads `metric=stress&days=1`.
+   * `tzOffset` is the client's offset from UTC in minutes (e.g. 180 for
+   * Moscow) — buckets follow the client's local clock.
    */
   @Get('hourly')
   @UseGuards(DeviceKeyGuard)
   async hourly(
     @Query('metric') metric?: string,
     @Query('days') days?: string,
+    @Query('tzOffset') tzOffset?: string,
   ) {
     const parsedDays = Number(days ?? 1);
+    const parsedOffset = Number(tzOffset ?? 0);
     return this.health.getHourlySeries(
       (metric as never) ?? 'stress',
       Number.isFinite(parsedDays) ? parsedDays : 1,
+      Number.isFinite(parsedOffset) ? parsedOffset : 0,
     );
   }
 

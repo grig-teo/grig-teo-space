@@ -40,12 +40,15 @@ final class StressSeriesClient: ObservableObject {
         }
     }
 
-    /** Loads today's hourly stress averages. */
+    /** Loads today's hourly stress averages, bucketed by the LOCAL clock
+     *  (the backend takes the offset so "today" ends at the current local
+     *  hour, not UTC midnight). */
     func load() async {
         isLoading = true
         lastError = nil
+        let tzOffset = TimeZone.current.secondsFromGMT() / 60
         do {
-            series = try await fetch("/api/health/hourly?metric=stress&days=1")
+            series = try await fetch("/api/health/hourly?metric=stress&days=1&tzOffset=\(tzOffset)")
         } catch {
             lastError = error.localizedDescription
         }

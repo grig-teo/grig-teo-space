@@ -250,6 +250,17 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
         state = .disconnected
     }
 
+    /// The ring's clock is set to UTC on every connect (see
+    /// `ColmiProtocol.setTimePacket`), so its interval-log days (stress/HRV)
+    /// start at UTC midnight — NOT the phone's local midnight. Anchoring to
+    /// local midnight stamped every slot 3h early in UTC+3, which showed as
+    /// "stress graph 3 hours behind".
+    private static func utcStartOfToday() -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        return calendar.startOfDay(for: Date())
+    }
+
     /// Poll the ring with a logical command (see `ColmiProtocol.Command`).
     /// Realtime commands manage the ring's streaming state: starting a
     /// different kind stops the current stream first; repeating the same
@@ -264,10 +275,10 @@ final class RingBluetoothManager: NSObject, ObservableObject, RingDataSource {
             stepsParser.reset()
             write(ColmiProtocol.stepsPacket(dayOffset: 0), "Request today's activity")
         case .stressLog:
-            intervalLogParser = IntervalLogParser(metric: .stress, dayStart: Calendar.current.startOfDay(for: Date()))
+            intervalLogParser = IntervalLogParser(metric: .stress, dayStart: Self.utcStartOfToday())
             write(ColmiProtocol.stressPacket(), "Request stress history")
         case .hrvLog:
-            intervalLogParser = IntervalLogParser(metric: .hrv, dayStart: Calendar.current.startOfDay(for: Date()))
+            intervalLogParser = IntervalLogParser(metric: .hrv, dayStart: Self.utcStartOfToday())
             write(ColmiProtocol.hrvPacket(daysAgo: 0), "Request HRV history")
         case .sleepLog:
             writeBigData(ColmiProtocol.bigDataRequest(type: .sleep), "Request sleep history")
