@@ -36,7 +36,8 @@ final class LocationManager: NSObject, ObservableObject {
 
     /**
      * Requests permission on first use, then pushes the current location to
-     * the backend. No-op when throttled or when the user denied permission.
+     * the backend. The backend upload is throttled to one per hour, but the
+     * on-device locality (city label) is refreshed whenever it's missing.
      */
     func shareLocation(force: Bool = false) {
         switch manager.authorizationStatus {
@@ -44,13 +45,20 @@ final class LocationManager: NSObject, ObservableObject {
             manager.requestWhenInUseAuthorization()
         case .authorizedWhenInUse, .authorizedAlways:
             isAuthorized = true
-            if !force, let last = lastSent, Date().timeIntervalSince(last) < 3600 { return }
-            manager.requestLocation()
+            if force || needsUpload || locality == nil {
+                manager.requestLocation()
+            }
         case .denied, .restricted:
             isAuthorized = false
         @unknown default:
             break
         }
+    }
+
+    /// True when the last backend upload is older than the 1h throttle.
+    private var needsUpload: Bool {
+        guard let last = lastSent else { return true }
+        return Date().timeIntervalSince(last) >= 3600
     }
 
     private var lastSent: Date? {
@@ -60,6 +68,13 @@ final class LocationManager: NSObject, ObservableObject {
 
     private static func authorized(_ status: CLAuthorizationStatus) -> Bool {
         status == .authorizedWhenInUse || status == .authorizedAlways
+    }
+
+    /** Handles a fresh fix: uploads when the throttle allows, always
+     *  refreshes the city label. */
+    private func handle(_ coordinate: CLLocationCoordinate2D) {
+        if needsUpload { upload(coordinate) }
+        Task { await reverseGeocode(coordinate) }
     }
 
     private func upload(_ location: CLLocationCoordinate2D) {
@@ -72,7 +87,6 @@ final class LocationManager: NSObject, ObservableObject {
         guard req.httpBody != nil else { return }
         URLSession.shared.dataTask(with: req).resume()
         lastSent = Date()
-        Task { await reverseGeocode(location) }
     }
 
     /// Resolves coordinates to a city name for display (on-device, no API).
@@ -97,7 +111,7 @@ extension LocationManager: CLLocationManagerDelegate {
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let coordinate = locations.last?.coordinate else { return }
         Task { @MainActor in
-            LocationManager.shared.upload(coordinate)
+            LocationManager.shared.handle(coordinate)
         }
     }
 

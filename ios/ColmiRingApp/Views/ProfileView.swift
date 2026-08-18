@@ -39,6 +39,9 @@ struct ProfileView: View {
         }
         .task {
             latestMedia = Array(mediaLibrary.allSnapshots().prefix(3))
+            // Triggers the permission prompt on first run and refreshes the
+            // city label; the backend upload itself is throttled internally.
+            LocationManager.shared.shareLocation()
             await weatherClient.load(days: 1)
         }
     }
