@@ -38,7 +38,7 @@ struct RecordDetailView: View {
             }
             .padding()
         }
-        .navigationTitle(title)
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if detail != nil {
@@ -183,7 +183,7 @@ struct FullPageView: View {
             }
         }
         .background(Color(.systemBackground))
-        .navigationTitle("Page \(pageNumber)")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
     }
 }

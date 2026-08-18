@@ -37,7 +37,7 @@ struct SettingsView: View {
                 }
             }
         }
-        .navigationTitle("Settings")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: appLockToggle) { newValue in
             requestLockChange(enabled: newValue)

@@ -59,7 +59,7 @@ struct RecordsView: View {
             }
         }
         .listStyle(.plain)
-        .navigationTitle("Records")
+        .navigationTitle("")
         .searchable(text: $query, prompt: "Search documents")
         .overlay(alignment: .bottomTrailing) {
             Button {

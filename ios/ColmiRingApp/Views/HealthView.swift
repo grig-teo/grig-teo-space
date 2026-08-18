@@ -81,7 +81,7 @@ struct HealthView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Health")
+            .navigationTitle("")
             .overlay(alignment: .bottomTrailing) {
                 Button {
                     showingChat = true

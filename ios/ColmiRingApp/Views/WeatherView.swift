@@ -28,7 +28,7 @@ struct WeatherView: View {
                 portraitLayout
             }
         }
-        .navigationTitle("Weather & You")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(isLandscape ? .hidden : .visible, for: .navigationBar)
         .task(id: range) { await weather.load(days: range.days) }

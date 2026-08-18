@@ -28,7 +28,7 @@ struct MetricDetailView: View {
                 portraitLayout
             }
         }
-        .navigationTitle(metric.displayName)
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(isLandscape ? .hidden : .visible, for: .navigationBar)
         .task(id: range) {

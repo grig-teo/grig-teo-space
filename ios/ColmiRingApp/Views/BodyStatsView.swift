@@ -32,7 +32,7 @@ struct BodyStatsView: View {
                 Section { Text(error).foregroundColor(.red).font(.caption) }
             }
         }
-        .navigationTitle("Body Stats")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
     }

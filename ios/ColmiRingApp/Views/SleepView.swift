@@ -19,7 +19,7 @@ struct SleepView: View {
             }
             .padding()
         }
-        .navigationTitle("Sleep")
+        .navigationTitle("")
         .task { await client.load(days: 7) }
     }
 

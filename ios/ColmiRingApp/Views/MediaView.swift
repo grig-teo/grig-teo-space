@@ -37,7 +37,7 @@ struct MediaView: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle("Media")
+                .navigationTitle("")
                 .toolbar { selectButton }
                 .overlay(alignment: .bottomTrailing) { if !isSelecting { fab } }
                 .overlay(alignment: .bottom) { selectionBar }
