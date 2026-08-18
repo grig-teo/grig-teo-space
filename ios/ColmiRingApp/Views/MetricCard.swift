@@ -9,9 +9,16 @@ struct MetricCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(metric.displayName)
-                .font(.caption)
-                .foregroundColor(.secondary)
+            HStack {
+                Text(metric.displayName)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                // Hints that the card opens the metric detail chart.
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(.secondary.opacity(0.6))
+            }
             HStack(alignment: .lastTextBaseline, spacing: 2) {
                 if let value {
                     Text(format(value))
