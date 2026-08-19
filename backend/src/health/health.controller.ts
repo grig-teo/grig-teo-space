@@ -3,16 +3,21 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   HttpCode,
+  NotFoundException,
+  Param,
   Post,
   Put,
   Query,
+  Res,
   UnauthorizedException,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import { memoryStorage } from 'multer';
 import { DeviceKeyGuard } from './device-key.guard';
 import { StorageService } from '../storage/storage.service';
@@ -75,6 +80,39 @@ export class HealthController {
       throw new BadRequestException('Expected multipart file field "file"');
     }
     return this.storage.uploadPrivate(file, 'notes/');
+  }
+
+  /** Journal notes, newest first (iOS Journal page). */
+  @Get('notes')
+  @UseGuards(DeviceKeyGuard)
+  async listNotes(
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.health.listNotes(
+      Number(limit ?? 50),
+      Number(offset ?? 0),
+    );
+  }
+
+  /** Streams a note's photo/video from the private bucket (Range support). */
+  @Get('notes/:id/media')
+  @UseGuards(DeviceKeyGuard)
+  async noteMedia(
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
+    @Headers('range') range?: string,
+  ) {
+    const { stream, statusCode, headers } = await this.health.openNoteMedia(id, range);
+    res.status(statusCode);
+    for (const [key, value] of Object.entries(headers)) {
+      res.setHeader(key, value);
+    }
+    return new Promise<void>((resolve, reject) => {
+      stream.on('error', reject);
+      stream.on('end', resolve);
+      stream.pipe(res);
+    });
   }
 
   @Get('summary')

@@ -15,6 +15,7 @@ final class InsightsClient: ObservableObject {
     @Published private(set) var activities: [Activity] = []
     @Published private(set) var year: YearReview?
     @Published private(set) var recentAlerts: [HealthAlert] = []
+    @Published private(set) var notes: [JournalNote] = []
 
     private let settings = AppSettings.shared
 
@@ -40,6 +41,19 @@ final class InsightsClient: ObservableObject {
         let recordedAt: String
 
         var id: String { "\(metric)-\(value)-\(recordedAt)" }
+        var date: Date? { ISO8601DateFormatter.shared.date(from: recordedAt) }
+    }
+
+    struct JournalNote: Decodable, Identifiable {
+        let id: String
+        let content: String
+        let mood: String?
+        let source: String
+        let recordedAt: String
+        let mediaType: String?
+        let mediaNote: String?
+        let hasMedia: Bool
+
         var date: Date? { ISO8601DateFormatter.shared.date(from: recordedAt) }
     }
 
@@ -90,8 +104,7 @@ final class InsightsClient: ObservableObject {
     }
 
     /** Recent anomaly alerts (24h); fresh ones fire local notifications. */
-    func loadAlerts() async {
-        let alerts: [HealthAlert] = (try? await fetch("/api/health/alerts?hours=24")) ?? []
+    func loadAlerts() async {        let alerts: [HealthAlert] = (try? await fetch("/api/health/alerts?hours=24")) ?? []
         recentAlerts = alerts
         // Only readings from the last 2h notify — older ones are list-only.
         let fresh = alerts.filter { alert in
@@ -102,6 +115,23 @@ final class InsightsClient: ObservableObject {
             let time = alert.date?.time24 ?? ""
             return (key: alert.id, text: "\(alert.message) — \(Int(alert.value)) at \(time)")
         })
+    }
+
+    /** Journal notes (newest first) for the Journal page. */
+    func loadNotes() async {
+        struct Page: Decodable { let items: [JournalNote] }
+        notes = (try? await fetch("/api/health/notes?limit=50") as Page)?.items ?? []
+    }
+
+    /** Downloads a note's photo/video bytes through the guarded proxy. */
+    func noteMediaData(_ noteId: String) async -> Data? {
+        guard let url = URL(string: "\(settings.backendURL)/api/health/notes/\(noteId)/media") else { return nil }
+        var req = URLRequest(url: url)
+        req.setValue(settings.deviceKey, forHTTPHeaderField: "X-Device-Key")
+        guard let (data, response) = try? await URLSession.shared.data(for: req),
+              let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode)
+        else { return nil }
+        return data
     }
 
     /** Logs a quick note ("how I feel, what I ate, plans") — the tip

@@ -14,7 +14,7 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var appState: AppState
     @StateObject private var profileClient = ProfileClient.shared
-    @State private var selectedTab = 1
+    @State private var selectedTab = 0
 
     var body: some View {
         TabView(selection: $selectedTab) {

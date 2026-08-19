@@ -70,6 +70,17 @@ struct HealthView: View {
                     }
 
                     NavigationLink {
+                        JournalView()
+                    } label: {
+                        HubButton(
+                            title: "Journal",
+                            subtitle: "Notes, food & how you feel",
+                            systemImage: "note.text",
+                            color: .brown,
+                        )
+                    }
+
+                    NavigationLink {
                         ActivitiesView()
                     } label: {
                         HubButton(

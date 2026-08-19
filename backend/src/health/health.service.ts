@@ -3,6 +3,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -481,6 +482,38 @@ export class HealthService {
       void this.processNoteMedia(saved.id, saved.mediaKey, saved.mediaType);
     }
     return saved;
+  }
+
+  /** Journal page: notes newest first with media + extracted text. */
+  async listNotes(limit = 50, offset = 0) {
+    const safeLimit = Math.max(1, Math.min(100, limit));
+    const [rows, total] = await this.noteRepo.findAndCount({
+      order: { recordedAt: 'DESC' },
+      take: safeLimit,
+      skip: Math.max(0, offset),
+    });
+    return {
+      total,
+      items: rows.map((n) => ({
+        id: n.id,
+        content: n.content,
+        mood: n.mood,
+        source: n.source,
+        recordedAt: n.recordedAt.toISOString(),
+        mediaType: n.mediaType,
+        mediaNote: n.mediaNote,
+        hasMedia: Boolean(n.mediaKey),
+      })),
+    };
+  }
+
+  /** Streams a note's media from the private bucket (Range-aware). */
+  async openNoteMedia(id: string, range?: string) {
+    const note = await this.noteRepo.findOne({ where: { id } });
+    if (!note?.mediaKey) {
+      throw new NotFoundException('Note media not found');
+    }
+    return this.storage.getRangeStream(note.mediaKey, range);
   }
 
   /**
