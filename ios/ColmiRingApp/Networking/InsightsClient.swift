@@ -105,8 +105,8 @@ final class InsightsClient: ObservableObject {
     }
 
     /** Logs a quick note ("how I feel, what I ate, plans") — the tip
-     *  generator sees the last 24h of these. */
-    func addNote(_ text: String) async -> Bool {
+     *  generator sees the last 24h of these. Optional media attachment. */
+    func addNote(_ text: String, mediaKey: String? = nil, mediaType: String? = nil) async -> Bool {
         let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !clean.isEmpty,
               let url = URL(string: "\(settings.backendURL)/api/health/notes") else { return false }
@@ -114,11 +114,38 @@ final class InsightsClient: ObservableObject {
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue(settings.deviceKey, forHTTPHeaderField: "X-Device-Key")
-        req.httpBody = try? JSONEncoder().encode(["content": clean, "source": "ios"])
+        var body: [String: String] = ["content": clean, "source": "ios"]
+        body["mediaKey"] = mediaKey
+        body["mediaType"] = mediaType
+        req.httpBody = try? JSONEncoder().encode(body)
         guard let (_, response) = try? await URLSession.shared.data(for: req),
               let http = response as? HTTPURLResponse
         else { return false }
         return (200..<300).contains(http.statusCode)
+    }
+
+    /** Uploads a note attachment to the private bucket; returns its key. */
+    func uploadNoteMedia(_ data: Data, filename: String, mime: String) async -> String? {
+        guard let url = URL(string: "\(settings.backendURL)/api/health/notes/media") else { return nil }
+        let boundary = UUID().uuidString
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mime)\r\n\r\n".data(using: .utf8)!)
+        body.append(data)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.timeoutInterval = 300
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        req.setValue(settings.deviceKey, forHTTPHeaderField: "X-Device-Key")
+        req.httpBody = body
+        struct UploadResponse: Decodable { let key: String }
+        guard let (responseData, response) = try? await URLSession.shared.data(for: req),
+              let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
+              let parsed = try? JSONDecoder().decode(UploadResponse.self, from: responseData)
+        else { return nil }
+        return parsed.key
     }
 
     /** Auto-detected activities for the last `days` days. */

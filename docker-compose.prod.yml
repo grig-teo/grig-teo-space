@@ -67,6 +67,8 @@ services:
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:14b-instruct-q5_K_M}
+      OLLAMA_VISION_MODEL: ${OLLAMA_VISION_MODEL:-qwen2.5vl:7b}
+      WHISPER_BASE_URL: ${WHISPER_BASE_URL:-http://whisper:8000}
       LEMNISCATE_WEBHOOK_SECRET: ${LEMNISCATE_WEBHOOK_SECRET:-}
       DEV_TELEGRAM_BOT_TOKEN: ${DEV_TELEGRAM_BOT_TOKEN:-}
       DEV_TELEGRAM_CHAT_ID: ${DEV_TELEGRAM_CHAT_ID:-}
@@ -113,6 +115,18 @@ services:
       backend:
         condition: service_healthy
 
+  # CPU speech-to-text for voice/video notes (faster-whisper, model cached
+  # in the whisper_models volume). Only the backend talks to it.
+  whisper:
+    build:
+      context: ./backend
+      dockerfile: scripts/Dockerfile.whisper
+    restart: unless-stopped
+    environment:
+      WHISPER_MODEL: ${WHISPER_MODEL:-small}
+    volumes:
+      - whisper_models:/root/.cache/huggingface
+
   # Local LLM for health-tip generation. Shares politrack_ollama's model
   # store (qwen2.5-14b / qwen3-14b already pulled) — no downloads, no GPU
   # needed, only the backend talks to it over the compose network.
@@ -125,6 +139,7 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  whisper_models:
   politrack_ollama_models:
     external: true
     name: politrack_politrack_ollama_data

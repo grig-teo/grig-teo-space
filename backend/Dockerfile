@@ -13,7 +13,7 @@ COPY package*.json ./
 RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
 COPY scripts ./scripts
-RUN apk add --no-cache python3 py3-pip \
+RUN apk add --no-cache python3 py3-pip ffmpeg \
   && pip3 install --no-cache-dir --break-system-packages -r scripts/requirements.txt
 RUN mkdir -p generated
 EXPOSE 3001

@@ -7,8 +7,12 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, LessThan, MoreThan, Not, Repository, Between } from 'typeorm';
-import { ContentKey, SiteContent } from '../entities/site-content.entity';
-import {
+import { execFile } from 'child_process';
+import { mkdtemp, readFile, rm, writeFile } from 'fs/promises';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { promisify } from 'util';
+import { ContentKey, SiteContent } from '../entities/site-content.entity';import {
   HealthMetric,
   HEALTH_METRICS,
   HealthReading,
@@ -19,6 +23,8 @@ import { HealthTip } from '../entities/health-tip.entity';
 import { SleepSession } from '../entities/sleep-session.entity';
 import { StorageService } from '../storage/storage.service';
 import { WeatherService } from '../weather/weather.service';
+
+const execFileAsync = promisify(execFile);
 
 // --- Public exposure configuration ---------------------------------------
 
@@ -464,15 +470,129 @@ export class HealthService {
       mood: note.mood?.trim().slice(0, 16) ?? null,
       source: note.source ?? 'manual',
       mediaKey: note.mediaKey?.trim().slice(0, 128) || null,
-      mediaType: note.mediaType === 'video' ? 'video' : note.mediaType === 'photo' ? 'photo' : null,
+      mediaType: ['video', 'photo', 'audio'].includes(note.mediaType ?? '')
+        ? note.mediaType!
+        : null,
       recordedAt: this.parseDate(note.recordedAt) ?? new Date(),
     });
-    // Describe attached photos with the on-VPS vision model in the
-    // background — the note save must not wait on a ~30–180s CPU inference.
-    if (saved.mediaType === 'photo' && saved.mediaKey) {
-      void this.describeNoteMedia(saved.id, saved.mediaKey);
+    // Media understanding runs in the background — the note save must not
+    // wait on transcription/vision inference (tens of seconds to minutes).
+    if (saved.mediaType && saved.mediaKey) {
+      void this.processNoteMedia(saved.id, saved.mediaKey, saved.mediaType);
     }
     return saved;
+  }
+
+  /**
+   * Turns note media into text the tip generator and AI doctor can use:
+   * photos via the vision model, audio via Whisper, video via both (Whisper
+   * on the extracted audio track + k3 reading the video frames).
+   */
+  private async processNoteMedia(noteId: string, mediaKey: string, mediaType: string): Promise<void> {
+    try {
+      if (mediaType === 'photo') {
+        return await this.describeNoteMedia(noteId, mediaKey);
+      }
+      const buffer = await this.storage.getPrivateBuffer(mediaKey);
+      const dir = await mkdtemp(join(tmpdir(), 'note-media-'));
+      try {
+        const ext = mediaKey.split('.').pop() ?? (mediaType === 'video' ? 'mp4' : 'm4a');
+        const input = join(dir, `input.${ext}`);
+        await writeFile(input, buffer);
+        const parts: string[] = [];
+        if (mediaType === 'video') {
+          const visual = await this.describeVideo(buffer);
+          if (visual) parts.push(`video shows: ${visual}`);
+          const wav = join(dir, 'audio.wav');
+          if (await this.extractAudio(input, wav)) {
+            const speech = await this.transcribeAudio(wav);
+            if (speech) parts.push(`speech: "${speech}"`);
+          }
+        } else {
+          const speech = await this.transcribeAudio(input);
+          if (speech) parts.push(`speech: "${speech}"`);
+        }
+        if (parts.length > 0) {
+          await this.noteRepo.update({ id: noteId }, { mediaNote: parts.join(' ').slice(0, 900) });
+        }
+      } finally {
+        await rm(dir, { recursive: true, force: true });
+      }
+    } catch {
+      // Media understanding is best-effort — the note keeps the raw marker.
+    }
+  }
+
+  /** Extracts a 16kHz mono wav from a video; false when there is no audio. */
+  private async extractAudio(input: string, output: string): Promise<boolean> {
+    try {
+      await execFileAsync('ffmpeg', [
+        '-y', '-i', input, '-vn', '-ar', '16000', '-ac', '1', '-f', 'wav', output,
+      ]);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Speech-to-text via the compose-local faster-whisper sidecar. */
+  private async transcribeAudio(path: string): Promise<string | null> {
+    try {
+      const base = (process.env.WHISPER_BASE_URL?.trim() || 'http://whisper:8000').replace(/\/+$/, '');
+      const form = new FormData();
+      form.append('file', new Blob([await readFile(path)]), 'audio.wav');
+      const response = await fetch(`${base}/transcribe`, {
+        method: 'POST',
+        body: form,
+        signal: AbortSignal.timeout(300_000),
+      });
+      if (!response.ok) return null;
+      const payload = (await response.json()) as { text?: string };
+      return payload.text?.trim() || null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Visual description of a video note via k3 (reads frames directly).
+   *  Skipped without a Kimi key or for files over 8MB. */
+  private async describeVideo(buffer: Buffer): Promise<string | null> {
+    const apiKey = process.env.KIMI_API_KEY?.trim();
+    if (!apiKey || buffer.length > 8 * 1024 * 1024) return null;
+    try {
+      const response = await fetch('https://api.kimi.com/coding/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: process.env.KIMI_MODEL?.trim() || 'k3',
+          max_tokens: 300,
+          stream: false,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: 'This is a personal video note for a health journal. Describe in one short sentence what is visible (place, activity, food, objects).',
+                },
+                {
+                  type: 'video_url',
+                  video_url: { url: `data:video/mp4;base64,${buffer.toString('base64')}` },
+                },
+              ],
+            },
+          ],
+        }),
+        signal: AbortSignal.timeout(300_000),
+      });
+      if (!response.ok) return null;
+      const payload = (await response.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      return payload.choices?.[0]?.message?.content?.trim() ?? null;
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -1569,7 +1689,7 @@ export class HealthService {
           minute: '2-digit',
         });
         const media = note.mediaNote
-          ? ` [photo: ${note.mediaNote}]`
+          ? ` [${note.mediaType ?? 'media'}: ${note.mediaNote}]`
           : note.mediaType
             ? ` [${note.mediaType} attached]`
             : '';
