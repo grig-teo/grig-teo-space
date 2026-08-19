@@ -270,6 +270,9 @@ final class DocumentsClient: ObservableObject {
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        // Multi-round tool-calling answers can take minutes — the default
+        // 60s URLSession timeout kills them mid-generation.
+        request.timeoutInterval = 300
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         for (k, v) in authHeaders() { request.setValue(v, forHTTPHeaderField: k) }
         request.httpBody = try JSONSerialization.data(withJSONObject: [
