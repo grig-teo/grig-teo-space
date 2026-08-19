@@ -192,6 +192,9 @@ struct MetricDetailView: View {
                         .font(.caption2)
                 }
             }
+            // Keep marks inside the plot while panning/zooming — otherwise
+            // the line/area draw past the frame for off-domain points.
+            .clipped()
             // contentShape first: a bare Chart only hit-tests near its
             // marks, so pinches on empty plot areas never reach the gesture.
             .contentShape(Rectangle())
