@@ -66,9 +66,9 @@ struct NoteComposerView: View {
                         Label("Audio", systemImage: "folder")
                     }
                     .buttonStyle(.bordered)
-                }
 
-                recordRow
+                    recordButton
+                }
 
                 if let error {
                     Text(error).font(.caption).foregroundColor(.red)
@@ -122,21 +122,19 @@ struct NoteComposerView: View {
         }
     }
 
-    /** Voice-recording row: red record button with a running timer. */
-    private var recordRow: some View {
-        HStack(spacing: 12) {
-            Button {
-                toggleRecording()
-            } label: {
-                Image(systemName: recorder.isRecording ? "stop.circle.fill" : "record.circle")
-                    .font(.system(size: 30))
-                    .foregroundStyle(.red)
-            }
-            Text(recorder.isRecording ? "Recording… \(recorder.seconds)s" : "Record a voice note")
-                .font(.caption)
-                .foregroundColor(.secondary)
-            Spacer()
+    /** Red record button, same style as the others; while recording it
+     *  morphs into a stop button with the elapsed seconds. */
+    private var recordButton: some View {
+        Button {
+            toggleRecording()
+        } label: {
+            Label(
+                recorder.isRecording ? "\(recorder.seconds)s" : "Record",
+                systemImage: recorder.isRecording ? "stop.fill" : "mic.fill",
+            )
         }
+        .buttonStyle(.bordered)
+        .tint(.red)
     }
 
     private func toggleRecording() {
