@@ -5,8 +5,6 @@ import argparse
 import json
 from pathlib import Path
 
-from io import BytesIO
-
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
@@ -51,33 +49,17 @@ DEFAULT_LANGUAGES = [
     "English — Professional Working",
 ]
 
-_GITHUB_LOGO: ImageReader | None = None
+ASSETS_DIR = Path(__file__).resolve().parent / "assets"
+
+_LOGO_CACHE: dict[str, ImageReader] = {}
 
 
-def github_logo_reader() -> ImageReader:
-    global _GITHUB_LOGO
-    if _GITHUB_LOGO is not None:
-        return _GITHUB_LOGO
-
-    from PIL import Image, ImageDraw
-
-    size = 96
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    ink = (17, 17, 17, 255)
-
-    draw.ellipse((10, 18, 86, 88), fill=ink)
-    draw.ellipse((8, 4, 34, 34), fill=ink)
-    draw.ellipse((62, 4, 88, 34), fill=ink)
-    draw.rounded_rectangle((72, 52, 90, 88), radius=6, fill=ink)
-    draw.ellipse((18, 10, 28, 20), fill=(248, 246, 242, 255))
-    draw.ellipse((68, 10, 78, 20), fill=(248, 246, 242, 255))
-
-    buf = BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-    _GITHUB_LOGO = ImageReader(buf)
-    return _GITHUB_LOGO
+def logo_reader(name: str) -> ImageReader | None:
+    """Real brand/site logo from scripts/assets, cached after first read."""
+    if name not in _LOGO_CACHE:
+        path = ASSETS_DIR / name
+        _LOGO_CACHE[name] = ImageReader(str(path)) if path.exists() else None
+    return _LOGO_CACHE[name]
 
 
 class ContactRow(Flowable):
@@ -125,27 +107,27 @@ class ContactRow(Flowable):
 
     @staticmethod
     def _website(c, cx, cy, r):
-        c.setStrokeColor(INK)
-        c.setLineWidth(0.8)
-        c.circle(cx, cy, r, stroke=1, fill=0)
-        c.line(cx - r * 0.65, cy, cx + r * 0.65, cy)
-        c.line(cx, cy - r * 0.65, cx, cy + r * 0.65)
-        c.circle(cx, cy, r * 0.35, stroke=1, fill=0)
+        logo = logo_reader("site-logo.png")
+        if logo is None:
+            return
+        side = r * 2.4
+        c.drawImage(logo, cx - side / 2, cy - side / 2, side, side, mask="auto")
 
     @staticmethod
     def _github(c, cx, cy, r):
-        logo = github_logo_reader()
+        logo = logo_reader("github-mark.png")
+        if logo is None:
+            return
         side = r * 2.2
         c.drawImage(logo, cx - side / 2, cy - side / 2, side, side, mask="auto")
 
     @staticmethod
     def _linkedin(c, cx, cy, r):
-        c.setStrokeColor(INK)
-        c.setLineWidth(0.8)
-        c.roundRect(cx - r, cy - r, r * 2, r * 2, 1.5, stroke=1, fill=0)
-        c.setFillColor(INK)
-        c.setFont(FONT_BOLD, 7)
-        c.drawCentredString(cx, cy - 2.5, "in")
+        logo = logo_reader("linkedin-bug.png")
+        if logo is None:
+            return
+        side = r * 2.2
+        c.drawImage(logo, cx - side / 2, cy - side / 2, side, side, mask="auto")
 
     @staticmethod
     def _mail(c, cx, cy, r):
@@ -284,29 +266,6 @@ def generate(output_path: Path, data: dict) -> None:
         Spacer(1, 8),
     ]
 
-    if projects:
-        story.append(Paragraph(labels.get("projects", "PROJECTS"), styles["section"]))
-        for project in projects:
-            block = []
-            title = project["title"]
-            if project.get("inDevelopment"):
-                in_dev = labels.get("inDevelopment", "(in development)")
-                title = f'{title} <font color="#444444">{in_dev}</font>'
-            block.append(Paragraph(title, styles["job_title"]))
-            summary = project.get("overview") or project.get("description") or ""
-            if summary:
-                block.append(Spacer(1, 4))
-                block.append(Paragraph(summary, styles["body"]))
-            block.append(Spacer(1, 4))
-            for bullet in project.get("highlights") or []:
-                block.append(Paragraph(f"• {bullet}", styles["bullet"]))
-            if project.get("tags"):
-                block.append(Spacer(1, 3))
-                tech = labels.get("techStack", "Tech stack:")
-                block.append(Paragraph(f"{tech} {project['tags']}", styles["stack"]))
-            block.append(Spacer(1, 4))
-            story.extend(block)
-
     story.append(Paragraph(labels.get("experience", "EXPERIENCE"), styles["section"]))
 
     for job in experience:
@@ -344,6 +303,30 @@ def generate(output_path: Path, data: dict) -> None:
             block.append(Paragraph(f"{tech} {job['stack']}", styles["stack"]))
         block.append(Spacer(1, 4))
         story.extend(block)
+
+    # Projects come AFTER experience — they belong under the companies.
+    if projects:
+        story.append(Paragraph(labels.get("projects", "PROJECTS"), styles["section"]))
+        for project in projects:
+            block = []
+            title = project["title"]
+            if project.get("inDevelopment"):
+                in_dev = labels.get("inDevelopment", "(in development)")
+                title = f'{title} <font color="#444444">{in_dev}</font>'
+            block.append(Paragraph(title, styles["job_title"]))
+            summary = project.get("overview") or project.get("description") or ""
+            if summary:
+                block.append(Spacer(1, 4))
+                block.append(Paragraph(summary, styles["body"]))
+            block.append(Spacer(1, 4))
+            for bullet in project.get("highlights") or []:
+                block.append(Paragraph(f"• {bullet}", styles["bullet"]))
+            if project.get("tags"):
+                block.append(Spacer(1, 3))
+                tech = labels.get("techStack", "Tech stack:")
+                block.append(Paragraph(f"{tech} {project['tags']}", styles["stack"]))
+            block.append(Spacer(1, 4))
+            story.extend(block)
 
     story.append(Paragraph(labels.get("languages", "LANGUAGES"), styles["section"]))
     for lang in languages:
