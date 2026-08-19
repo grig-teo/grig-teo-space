@@ -16,6 +16,11 @@ struct WeatherView: View {
     @State private var range: ChartRange = .day
     @State private var metric: RingMetric = .stress
     @State private var weatherVar: WeatherVar = .temperature
+    /// Zoom/pan state for the overlay chart (see MetricDetailView).
+    @State private var zoom: CGFloat = 1
+    @State private var baseZoom: CGFloat = 1
+    @State private var pan: TimeInterval = 0
+    @State private var basePan: TimeInterval = 0
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     private var isLandscape: Bool { verticalSizeClass == .compact }
@@ -33,6 +38,7 @@ struct WeatherView: View {
         .toolbar(.hidden, for: .tabBar)
         .toolbar(isLandscape ? .hidden : .visible, for: .navigationBar)
         .task(id: range) { await weather.load(days: range.days) }
+        .onChange(of: range) { _ in resetView() }
         .task(id: "\(metric.rawValue)-\(range.days)") {
             await metricSeries.load(metric: metric, days: range.days)
         }
@@ -55,6 +61,7 @@ struct WeatherView: View {
                 currentCard
                 rangePicker
                 overlayChart(height: 260)
+                chartControls
                 pickers
                 insightsCard
             }
@@ -74,6 +81,10 @@ struct WeatherView: View {
                 }
                 .padding(.horizontal)
                 .padding(.top, 4)
+            }
+            .overlay(alignment: .bottom) {
+                chartControls
+                    .padding(.bottom, 8)
             }
     }
 
@@ -162,31 +173,137 @@ struct WeatherView: View {
     }
 
     private func overlayChart(height: CGFloat?) -> some View {
-        let weatherPoints = plots(from: weather.series?.points ?? [])
-        let metricPoints = (metricSeries.series?.points ?? []).compactMap { point -> Plot? in
-            guard let date = point.date else { return nil }
-            return Plot(date: date, value: point.value)
-        }
-        let domain = xDomain(weatherPoints, metricPoints)
+        let domain = visibleDomain()
 
         return VStack(alignment: .leading, spacing: 8) {
             legend
             ZStack {
-                if weatherPoints.isEmpty && metricPoints.isEmpty && !weather.isLoading {
+                if weatherPlots.isEmpty && metricPlots.isEmpty && !weather.isLoading {
                     Text("No data yet — allow location access and check back soon")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    weatherChart(weatherPoints, domain: domain)
-                    metricChart(metricPoints, domain: domain)
+                    weatherChart(weatherPlots, domain: domain)
+                    metricChart(metricPlots, domain: domain)
                 }
             }
+            // Gestures on the stack: contentShape makes the whole plot area
+            // touchable, drag pans, pinch zooms, double-tap resets.
+            .contentShape(Rectangle())
+            .simultaneousGesture(
+                DragGesture()
+                    .onChanged { value in
+                        pan = basePan - Double(value.translation.width) / 320 * currentSpan
+                    }
+                    .onEnded { _ in basePan = pan },
+            )
+            .gesture(
+                MagnificationGesture()
+                    .onChanged { scale in
+                        zoom = max(1, min(16, baseZoom * scale))
+                    }
+                    .onEnded { _ in baseZoom = zoom },
+            )
+            .onTapGesture(count: 2) { resetView() }
             .frame(height: height)
             .frame(maxHeight: height == nil ? .infinity : nil)
         }
         .padding(height == nil ? 0 : 16)
         .background(height == nil ? nil : RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
+    }
+
+    // --- Zoom / pan (same interaction model as the metric detail charts) -------
+
+    private var weatherPlots: [Plot] {
+        plots(from: weather.series?.points ?? [])
+    }
+
+    private var metricPlots: [Plot] {
+        (metricSeries.series?.points ?? []).compactMap { point in
+            guard let date = point.date else { return nil }
+            return Plot(date: date, value: point.value)
+        }
+    }
+
+    /** Seconds on screen at the current zoom (full range ÷ zoom). */
+    private var currentSpan: TimeInterval {
+        let dates = (weatherPlots + metricPlots).map(\.date)
+        guard let first = dates.min(), let last = dates.max(), last > first else { return 3600 }
+        return last.timeIntervalSince(first) / zoom
+    }
+
+    /** The shared visible time window for both overlaid charts. */
+    private func visibleDomain() -> ClosedRange<Date> {
+        let dates = (weatherPlots + metricPlots).map(\.date)
+        guard let first = dates.min(), let last = dates.max(), last > first else {
+            return Date().addingTimeInterval(-3600)...Date()
+        }
+        let full = last.timeIntervalSince(first)
+        let span = full / zoom
+        let clampedPan = min(max(pan, 0), max(0, full - span))
+        let end = last - clampedPan
+        let start = max(end - span, first)
+        return start...max(end, start.addingTimeInterval(60))
+    }
+
+    private func resetView() {
+        zoom = 1
+        baseZoom = 1
+        pan = 0
+        basePan = 0
+    }
+
+    private func zoomBy(_ factor: CGFloat) {
+        zoom = max(1, min(16, zoom * factor))
+        baseZoom = zoom
+        clampPan()
+    }
+
+    /** Moves the window by `spans` of the visible span (positive = older). */
+    private func panBy(_ spans: Double) {
+        pan += spans * currentSpan
+        clampPan()
+    }
+
+    private func clampPan() {
+        let dates = (weatherPlots + metricPlots).map(\.date)
+        guard let first = dates.min(), let last = dates.max(), last > first else {
+            pan = 0
+            basePan = 0
+            return
+        }
+        let full = last.timeIntervalSince(first)
+        pan = min(max(pan, 0), max(0, full - full / zoom))
+        basePan = pan
+    }
+
+    /** On-screen zoom/pan buttons (alternative to pinch/drag). */
+    @ViewBuilder
+    private var chartControls: some View {
+        if !weatherPlots.isEmpty || !metricPlots.isEmpty {
+            HStack(spacing: 20) {
+                controlButton("chevron.left", "Older") { panBy(0.5) }
+                controlButton("minus.magnifyingglass", "Zoom out") { zoomBy(1 / 1.5) }
+                controlButton("plus.magnifyingglass", "Zoom in") { zoomBy(1.5) }
+                controlButton("chevron.right", "Newer") { panBy(-0.5) }
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private func controlButton(
+        _ icon: String,
+        _ label: String,
+        action: @escaping () -> Void,
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.subheadline.weight(.semibold))
+                .frame(width: 40, height: 32)
+        }
+        .buttonStyle(.bordered)
+        .accessibilityLabel(label)
     }
 
     private func weatherChart(_ points: [Plot], domain: ClosedRange<Date>) -> some View {
@@ -213,6 +330,7 @@ struct WeatherView: View {
                     .foregroundStyle(.orange)
             }
         }
+        .clipped()
     }
 
     private func metricChart(_ points: [Plot], domain: ClosedRange<Date>) -> some View {
@@ -230,14 +348,7 @@ struct WeatherView: View {
                     .foregroundStyle(Color.accentColor)
             }
         }
-    }
-
-    /** Shared time window for both overlaid charts so the lines line up. */
-    private func xDomain(_ a: [Plot], _ b: [Plot]) -> ClosedRange<Date> {
-        let dates = (a + b).map(\.date)
-        let from = dates.min() ?? Date().addingTimeInterval(-86400)
-        let to = dates.max() ?? Date()
-        return from...max(to, from.addingTimeInterval(3600))
+        .clipped()
     }
 
     // --- Insights -------------------------------------------------------------
