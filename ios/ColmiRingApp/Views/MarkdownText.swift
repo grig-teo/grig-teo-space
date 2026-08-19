@@ -31,6 +31,7 @@ struct MarkdownText: View {
         case orderedList([String])
         case codeBlock(String)
         case quote(String)
+        case table(header: [String], rows: [[String]])
     }
 
     @ViewBuilder
@@ -78,6 +79,22 @@ struct MarkdownText: View {
                     .frame(width: 3)
                 inlineText(s, font: font)
                     .foregroundColor(.secondary)
+            }
+        case .table(let header, let rows):
+            Grid(horizontalSpacing: 12, verticalSpacing: 6) {
+                GridRow {
+                    ForEach(Array(header.enumerated()), id: \.offset) { _, cell in
+                        inlineText(cell, font: .footnote).bold()
+                    }
+                }
+                Divider()
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                    GridRow {
+                        ForEach(Array(row.enumerated()), id: \.offset) { _, cell in
+                            inlineText(cell, font: .footnote)
+                        }
+                    }
+                }
             }
         }
     }
@@ -200,6 +217,23 @@ struct MarkdownText: View {
                 continue
             }
 
+            // Pipe table: a `| a | b |` header line followed by a |---|---|
+            // separator row, then consecutive `|`-prefixed data rows.
+            if trimmed.hasPrefix("|"), isTableSeparator(lines, i + 1) {
+                flushAll()
+                let header = splitTableRow(trimmed)
+                i += 2 // header + separator
+                var rows: [[String]] = []
+                while i < lines.count {
+                    let rowLine = lines[i].trimmingCharacters(in: .whitespaces)
+                    guard rowLine.hasPrefix("|") else { break }
+                    rows.append(splitTableRow(rowLine))
+                    i += 1
+                }
+                result.append(.table(header: header, rows: rows))
+                continue
+            }
+
             // Ordered list item
             if let item = orderedItemText(trimmed) {
                 flushParagraph()
@@ -243,6 +277,27 @@ struct MarkdownText: View {
         guard "-*+".contains(first) else { return false }
         let after = line.dropFirst().trimmingCharacters(in: .whitespaces)
         return !after.isEmpty
+    }
+
+    /** True for a markdown table separator row (`|---|---|`, colons allowed). */
+    private func isTableSeparator(_ lines: [String], _ index: Int) -> Bool {
+        guard index < lines.count else { return false }
+        let line = lines[index].trimmingCharacters(in: .whitespaces)
+        guard line.hasPrefix("|"), line.contains("-") else { return false }
+        let stripped = line
+            .replacingOccurrences(of: "|", with: "")
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: ":", with: "")
+            .trimmingCharacters(in: .whitespaces)
+        return stripped.isEmpty
+    }
+
+    /** Splits `| a | b | c |` into trimmed cell strings. */
+    private func splitTableRow(_ line: String) -> [String] {
+        var row = line.trimmingCharacters(in: .whitespaces)
+        if row.hasPrefix("|") { row = String(row.dropFirst()) }
+        if row.hasSuffix("|") { row = String(row.dropLast()) }
+        return row.components(separatedBy: "|").map { $0.trimmingCharacters(in: .whitespaces) }
     }
 
     private func stripBulletPrefix(_ line: String) -> String {
