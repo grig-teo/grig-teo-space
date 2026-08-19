@@ -30,6 +30,7 @@ struct WeatherView: View {
         }
         .navigationTitle("Weather & You")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .toolbar(isLandscape ? .hidden : .visible, for: .navigationBar)
         .task(id: range) { await weather.load(days: range.days) }
         .task(id: "\(metric.rawValue)-\(range.days)") {

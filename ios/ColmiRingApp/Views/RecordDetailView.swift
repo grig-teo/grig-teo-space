@@ -40,6 +40,7 @@ struct RecordDetailView: View {
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .toolbar {
             if detail != nil {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -185,6 +186,7 @@ struct FullPageView: View {
         .background(Color(.systemBackground))
         .navigationTitle("Page \(pageNumber)")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
     }
 }
 

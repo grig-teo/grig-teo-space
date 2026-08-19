@@ -26,6 +26,7 @@ struct MediaViewerView: View {
             )
         }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .onAppear { load() }
     }
 

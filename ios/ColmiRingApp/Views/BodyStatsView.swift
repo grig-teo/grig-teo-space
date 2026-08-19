@@ -34,6 +34,7 @@ struct BodyStatsView: View {
         }
         .navigationTitle("Body Stats")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .tabBar)
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
     }

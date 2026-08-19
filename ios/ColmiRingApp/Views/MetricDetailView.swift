@@ -37,6 +37,7 @@ struct MetricDetailView: View {
         }
         .navigationTitle(metric.displayName)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .toolbar(isLandscape ? .hidden : .visible, for: .navigationBar)
         .task(id: range) {
             await client.load(metric: metric, days: range.days)

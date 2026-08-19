@@ -34,6 +34,7 @@ struct TipHistoryView: View {
         }
         .navigationTitle("Health Tips")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .tabBar)
         .navigationBarTitleDisplayMode(.inline)
         .task { if client.tips.isEmpty { await client.reload() } }
     }

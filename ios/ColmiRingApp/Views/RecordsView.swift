@@ -61,6 +61,7 @@ struct RecordsView: View {
         .listStyle(.plain)
         .navigationTitle("Records")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .tabBar)
         .searchable(text: $query, prompt: "Search documents")
         .overlay(alignment: .bottomTrailing) {
             Button {

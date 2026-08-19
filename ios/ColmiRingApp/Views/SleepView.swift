@@ -21,6 +21,7 @@ struct SleepView: View {
         }
         .navigationTitle("Sleep")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .task { await client.load(days: 7) }
     }
 

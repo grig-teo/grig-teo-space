@@ -38,6 +38,7 @@ struct YearView: View {
         }
         .navigationTitle("Year in Review")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .task { await client.loadYear() }
     }
 

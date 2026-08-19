@@ -26,6 +26,7 @@ struct ActivitiesView: View {
         }
         .navigationTitle("Activities")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .task { await client.loadActivities(days: 7) }
     }
 
