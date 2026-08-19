@@ -63,6 +63,7 @@ struct MetricDetailView: View {
                 statsCard
                 rangePicker
                 chartCard(height: 260)
+                chartControls
             }
             .padding()
         }
@@ -82,7 +83,67 @@ struct MetricDetailView: View {
                 .padding(.horizontal)
                 .padding(.top, 4)
             }
+            .overlay(alignment: .bottom) {
+                chartControls
+                    .padding(.bottom, 8)
+            }
             .background(Color(.systemBackground))
+    }
+
+    // --- Zoom / pan controls ---------------------------------------------------
+
+    /** On-screen zoom/pan buttons (alternative to pinch/drag). Hidden when
+     *  there is no data to move through. */
+    @ViewBuilder
+    private var chartControls: some View {
+        if !points.isEmpty {
+            HStack(spacing: 20) {
+                controlButton("chevron.left", "Older") { panBy(0.5) }
+                controlButton("minus.magnifyingglass", "Zoom out") { zoomBy(1 / 1.5) }
+                controlButton("plus.magnifyingglass", "Zoom in") { zoomBy(1.5) }
+                controlButton("chevron.right", "Newer") { panBy(-0.5) }
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private func controlButton(
+        _ icon: String,
+        _ label: String,
+        action: @escaping () -> Void,
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.subheadline.weight(.semibold))
+                .frame(width: 40, height: 32)
+        }
+        .buttonStyle(.bordered)
+        .accessibilityLabel(label)
+    }
+
+    private func zoomBy(_ factor: CGFloat) {
+        zoom = max(1, min(16, zoom * factor))
+        baseZoom = zoom
+        clampPan()
+    }
+
+    /** Moves the window by `spans` of the visible span (positive = older). */
+    private func panBy(_ spans: Double) {
+        pan += spans * currentSpan(for: points)
+        clampPan()
+    }
+
+    private func clampPan() {
+        let dates = points.map(\.date)
+        guard let first = dates.first, let last = dates.last, last > first else {
+            pan = 0
+            basePan = 0
+            return
+        }
+        let full = last.timeIntervalSince(first)
+        let maxPan = max(0, full - full / zoom)
+        pan = min(max(pan, 0), maxPan)
+        basePan = pan
     }
 
     // --- Components --------------------------------------------------------
@@ -144,10 +205,6 @@ struct MetricDetailView: View {
 
     @ViewBuilder
     private var chart: some View {
-        let points = (client.series?.points ?? []).compactMap { point -> Plot? in
-            guard let date = point.date else { return nil }
-            return Plot(date: date, value: point.value)
-        }
         if client.isLoading && points.isEmpty {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if points.isEmpty {
@@ -233,6 +290,14 @@ struct MetricDetailView: View {
         let dates = points.map(\.date)
         guard let first = dates.first, let last = dates.last, last > first else { return 3600 }
         return last.timeIntervalSince(first) / zoom
+    }
+
+    /** Plottable points (parsed date + value) for the current range. */
+    private var points: [Plot] {
+        (client.series?.points ?? []).compactMap { point in
+            guard let date = point.date else { return nil }
+            return Plot(date: date, value: point.value)
+        }
     }
 
     /** The visible time window: full range at zoom 1; pinch narrows it,
