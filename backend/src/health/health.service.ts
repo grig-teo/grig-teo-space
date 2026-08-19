@@ -6,7 +6,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, LessThan, MoreThan, Not, Repository } from 'typeorm';
+import { In, LessThan, MoreThan, Not, Repository, Between } from 'typeorm';
 import { ContentKey, SiteContent } from '../entities/site-content.entity';
 import {
   HealthMetric,
@@ -848,25 +848,32 @@ export class HealthService {
 
   // --- Sleep sessions (rich stage data) -------------------------------------
 
-  /** Upserts nights by endedAt — ring history re-syncs resend the same nights. */
+  /**
+   * Stores nights keyed by START time. The ring keeps extending the current
+   * night's sleepEnd while you sleep, so every sync sends an in-progress
+   * snapshot of the same night — same start, later end. Upserting on
+   * endedAt accumulated one row per snapshot (16 rows for one night);
+   * instead, any existing session starting within ±12h is the same night
+   * and gets replaced.
+   */
   async addSleepSessions(sessions: IncomingSleepSession[]): Promise<{ inserted: number }> {
     const rows = sessions
       .map((s) => this.toSleepSessionOrNull(s))
       .filter((row): row is NonNullable<typeof row> => row !== null);
     if (rows.length === 0) return { inserted: 0 };
-    // Collapse duplicate end times inside the batch (same night twice).
-    const byEnd = new Map<string, (typeof rows)[number]>();
-    for (const row of rows) byEnd.set(row.endedAt.toISOString(), row);
-    await this.sleepRepo
-      .createQueryBuilder()
-      .insert()
-      .values([...byEnd.values()] as never)
-      .orUpdate(
-        ['startedAt', 'durationMin', 'deepMin', 'remMin', 'lightMin', 'awakeMin', 'score', 'raw'],
-        ['endedAt'],
-      )
-      .execute();
-    return { inserted: byEnd.size };
+    const byStart = new Map<string, (typeof rows)[number]>();
+    for (const row of rows) byStart.set(row.startedAt.toISOString(), row);
+    const deduped = [...byStart.values()];
+    for (const row of deduped) {
+      await this.sleepRepo.delete({
+        startedAt: Between(
+          new Date(row.startedAt.getTime() - 12 * 3_600_000),
+          new Date(row.startedAt.getTime() + 12 * 3_600_000),
+        ),
+      });
+      await this.sleepRepo.insert(row as never);
+    }
+    return { inserted: deduped.length };
   }
 
   private toSleepSessionOrNull(s: IncomingSleepSession) {

@@ -20,8 +20,7 @@ export class SleepSession {
   @Column({ type: 'timestamptz' })
   startedAt!: Date;
 
-  /** Unique per night — re-syncs upsert on this key. */
-  @Index({ unique: true })
+  @Index()
   @Column({ type: 'timestamptz' })
   endedAt!: Date;
 
