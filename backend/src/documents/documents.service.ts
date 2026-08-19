@@ -3,13 +3,21 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Between, Repository } from 'typeorm';
 import { HealthDocument, type HealthDocSource } from '../entities/health-document.entity';
 import { HealthDocumentPage } from '../entities/health-document-page.entity';
+import { HealthNote } from '../entities/health-note.entity';
+import {
+  HEALTH_METRICS,
+  type HealthMetric,
+  HealthReading,
+} from '../entities/health-reading.entity';
+import { SleepSession } from '../entities/sleep-session.entity';
 import {
   HealthDocChatMessage,
   type HealthDocChatRole,
@@ -87,6 +95,121 @@ const DEEPSEEK_ENDPOINT = 'https://api.deepseek.com/chat/completions';
  *  model — its reasoning shares the max_tokens budget, so keep it high. */
 const KIMI_ENDPOINT = 'https://api.kimi.com/coding/v1/chat/completions';
 
+const DOCTOR_TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'get_metric_series',
+      description:
+        'Smart-ring metric readings (heart_rate, spo2, steps, calories, distance_km, stress, hrv) over ANY time range. Returns count/avg/min/max and a downsampled series.',
+      parameters: {
+        type: 'object',
+        properties: {
+          metric: { type: 'string', enum: [...HEALTH_METRICS] },
+          from: { type: 'string', description: 'ISO date/datetime, e.g. 2026-08-01' },
+          to: { type: 'string', description: 'ISO date/datetime (default: now)' },
+        },
+        required: ['metric', 'from'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_sleep_sessions',
+      description: 'Sleep nights with stage breakdown (deep/REM/light/awake minutes) and score over a time range.',
+      parameters: {
+        type: 'object',
+        properties: {
+          from: { type: 'string' },
+          to: { type: 'string' },
+        },
+        required: ['from'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_notes',
+      description:
+        'Journal notes the owner logged (feelings, food, plans) with timestamps and photo descriptions. Note ids are included when a photo can be viewed with view_note_photo.',
+      parameters: {
+        type: 'object',
+        properties: {
+          from: { type: 'string' },
+          to: { type: 'string' },
+        },
+        required: ['from'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_activities',
+      description: 'Auto-detected activity windows (walks/workouts) with steps, km, avg/peak heart rate over a time range.',
+      parameters: {
+        type: 'object',
+        properties: {
+          from: { type: 'string' },
+          to: { type: 'string' },
+        },
+        required: ['from'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_documents',
+      description: 'Lists scanned medical documents (id, title, date, page count).',
+      parameters: { type: 'object', properties: {} },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'read_document',
+      description: 'Full OCR text of one scanned document by id.',
+      parameters: {
+        type: 'object',
+        properties: { id: { type: 'string' } },
+        required: ['id'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'view_document_page',
+      description: 'See the actual scanned IMAGE of a document page (use when OCR text is unclear or layout matters).',
+      parameters: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'document id' },
+          page: { type: 'number', description: 'page number, 1-based' },
+        },
+        required: ['id', 'page'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'view_note_photo',
+      description: 'See the photo attached to a journal note by note id.',
+      parameters: {
+        type: 'object',
+        properties: { id: { type: 'string', description: 'note id' } },
+        required: ['id'],
+      },
+    },
+  },
+];
+
+const MAX_TOOL_ROUNDS = 6;
+
 const DOCTOR_SYSTEM_PROMPT =
   'You are a knowledgeable medical doctor assisting the owner of these health records. ' +
   'You are given THREE kinds of context:\n' +
@@ -105,7 +228,12 @@ const DOCTOR_SYSTEM_PROMPT =
   '- Format EVERY answer in Markdown: a short bold lead, then bullet points ' +
   'or small sections. Never return one plain-text wall.\n' +
   '- Prefer bullet lists over tables — the chat bubble is narrow. Use a ' +
-  'table only when the user explicitly asks for one.\n\n' +
+  'table only when the user explicitly asks for one.\n' +
+  '- You have TOOLS to query the owner\'s full health database: any ring ' +
+  'metric over any date range, sleep nights with stages, journal notes ' +
+  '(feelings/food/plans, with photos you can view), detected activities, ' +
+  'and the scanned documents\' text AND page images. When a question needs ' +
+  'historical data, USE THE TOOLS — never guess numbers you can look up.\n\n' +
   'IMPORTANT safety boundaries:\n' +
   '- You are NOT a replacement for a real physician. Always remind the user to consult ' +
   'their doctor before making medical decisions, changing medication, or acting on your ' +
@@ -116,6 +244,8 @@ const DOCTOR_SYSTEM_PROMPT =
 
 @Injectable()
 export class DocumentsService {
+  private readonly logger = new Logger(DocumentsService.name);
+
   constructor(
     @InjectRepository(HealthDocument)
     private readonly docRepo: Repository<HealthDocument>,
@@ -123,6 +253,12 @@ export class DocumentsService {
     private readonly pageRepo: Repository<HealthDocumentPage>,
     @InjectRepository(HealthDocChatMessage)
     private readonly chatRepo: Repository<HealthDocChatMessage>,
+    @InjectRepository(HealthReading)
+    private readonly readingRepo: Repository<HealthReading>,
+    @InjectRepository(HealthNote)
+    private readonly noteRepo: Repository<HealthNote>,
+    @InjectRepository(SleepSession)
+    private readonly sleepRepo: Repository<SleepSession>,
     private readonly storage: StorageService,
     private readonly health: HealthService,
   ) {}
@@ -303,12 +439,66 @@ export class DocumentsService {
     const context = await this.buildContext(message);
     const history = await this.recentHistory(normalizedSessionId);
 
-    const messages: GlmMessage[] = [
+    const messages: Array<Record<string, unknown>> = [
       { role: 'system', content: DOCTOR_SYSTEM_PROMPT },
-      { role: 'user', content: `Health context:\n${context}\n\nMy question:\n${message}` },
+      {
+        role: 'user',
+        content:
+          `Current date/time: ${new Date().toISOString().slice(0, 16)}Z (UTC). ` +
+          'Use it to resolve "this week", "last month", etc. into tool date ranges.\n\n' +
+          `Health context:\n${context}\n\nMy question:\n${message}`,
+      },
       ...history,
     ];
 
+    const answer = await this.answerWithTools(endpoint, apiKey, model, messages);
+    await this.saveChatMessage(normalizedSessionId, 'assistant', answer);
+    return answer;
+  }
+
+  /**
+   * Tool-calling loop: the model can query the full health database (any
+   * metric/range, sleep nights, notes, activities, document text and page
+   * images) before answering. Runs at most MAX_TOOL_ROUNDS lookups.
+   */
+  private async answerWithTools(
+    endpoint: string,
+    apiKey: string,
+    model: string,
+    messages: Array<Record<string, unknown>>,
+  ): Promise<string> {
+    let current = messages;
+    for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
+      const reply = await this.callDoctorModel(endpoint, apiKey, model, current);
+      const calls = reply.tool_calls ?? [];
+      if (calls.length === 0) {
+        const answer = reply.content?.trim();
+        if (!answer) throw new InternalServerErrorException('Empty AI response');
+        return answer;
+      }
+      current = [...current, { role: 'assistant', content: reply.content ?? '', tool_calls: calls }];
+      // Every tool_call MUST get a tool message, or the next round 400s.
+      // Execute up to 4 per round; extras get a skip notice.
+      for (const [index, call] of calls.entries()) {
+        this.logger.log(`doctor tool round ${round + 1}: ${call.function.name} ${call.function.arguments}`);
+        const content =
+          index < 4
+            ? await this.runDoctorTool(call.function.name, call.function.arguments)
+            : 'Skipped: too many parallel lookups — call the remaining tools one per round.';
+        current = [...current, { role: 'tool', tool_call_id: call.id, content }];
+      }
+    }
+    throw new InternalServerErrorException('The AI doctor made too many data lookups');
+  }
+
+  /** One chat completion round with the tool definitions attached. */
+  private async callDoctorModel(
+    endpoint: string,
+    apiKey: string,
+    model: string,
+    messages: Array<Record<string, unknown>>,
+  ) {
+    const isKimi = endpoint === KIMI_ENDPOINT;
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -318,8 +508,9 @@ export class DocumentsService {
       body: JSON.stringify({
         model,
         messages,
+        tools: DOCTOR_TOOLS,
         // k3 is a reasoning model and rejects any temperature ≠ 1.
-        ...(kimiKey ? {} : { temperature: 0.3 }),
+        ...(isKimi ? {} : { temperature: 0.3 }),
         // Generous ceiling so structured medical answers (bullets, ranges,
         // explanations) aren't cut off mid-sentence. k3's reasoning shares
         // this budget — do not lower it.
@@ -327,22 +518,220 @@ export class DocumentsService {
       }),
       signal: AbortSignal.timeout(180_000),
     });
-
     if (!response.ok) {
       const raw = await response.text();
       throw new BadGatewayException(`AI API error: ${response.status} ${raw.slice(0, 300)}`);
     }
-
     const payload = (await response.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
+      choices?: Array<{
+        message?: {
+          content?: string | null;
+          tool_calls?: Array<{ id: string; function: { name: string; arguments: string } }>;
+        };
+      }>;
     };
-    const answer = payload.choices?.[0]?.message?.content?.trim();
-    if (!answer) {
-      throw new InternalServerErrorException('Empty AI response');
-    }
+    const message = payload.choices?.[0]?.message;
+    if (!message) throw new InternalServerErrorException('Empty AI response');
+    return message;
+  }
 
-    await this.saveChatMessage(normalizedSessionId, 'assistant', answer);
-    return answer;
+  /** Executes one doctor tool; errors come back as text so the model can
+   *  recover instead of failing the whole answer. */
+  private async runDoctorTool(
+    name: string,
+    rawArgs: string,
+  ): Promise<string | Array<Record<string, unknown>>> {
+    try {
+      const args = rawArgs ? JSON.parse(rawArgs) : {};
+      return await this.dispatchDoctorTool(name, args);
+    } catch (error) {
+      return `Tool "${name}" failed: ${(error as Error).message}`;
+    }
+  }
+
+  private dispatchDoctorTool(
+    name: string,
+    args: Record<string, never>,
+  ): Promise<string | Array<Record<string, unknown>>> {
+    switch (name) {
+      case 'get_metric_series':
+        return this.toolMetricSeries(args);
+      case 'get_sleep_sessions':
+        return this.toolSleepSessions(args);
+      case 'get_notes':
+        return this.toolNotes(args);
+      case 'get_activities':
+        return this.toolActivities(args);
+      case 'list_documents':
+        return this.toolListDocuments();
+      case 'read_document':
+        return this.toolReadDocument(args);
+      case 'view_document_page':
+        return this.toolViewDocumentPage(args);
+      case 'view_note_photo':
+        return this.toolViewNotePhoto(args);
+      default:
+        return Promise.resolve(`Unknown tool "${name}"`);
+    }
+  }
+
+  // --- Doctor tools ----------------------------------------------------------
+
+  /** Parses from/to args into a bounded date range (defaults: last 30 days). */
+  private toolRange(args: { from?: string; to?: string }): { from: Date; to: Date } {
+    const to = args.to ? new Date(args.to) : new Date();
+    const from = args.from ? new Date(args.from) : new Date(to.getTime() - 30 * 86400000);
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from >= to) {
+      throw new BadRequestException('Invalid from/to dates');
+    }
+    const earliest = new Date(to.getTime() - 400 * 86400000);
+    return { from: from < earliest ? earliest : from, to };
+  }
+
+  private async toolMetricSeries(args: { metric?: string; from?: string; to?: string }): Promise<string> {
+    const metric = args.metric as HealthMetric;
+    if (!HEALTH_METRICS.includes(metric)) {
+      return `Unknown metric. Valid: ${HEALTH_METRICS.join(', ')}`;
+    }
+    const { from, to } = this.toolRange(args);
+    const rows = await this.readingRepo.find({
+      where: { metric, recordedAt: Between(from, to) },
+      order: { recordedAt: 'ASC' },
+    });
+    if (rows.length === 0) return `No ${metric} readings in that range.`;
+    const values = rows.map((r) => r.value);
+    const avg = values.reduce((a, v) => a + v, 0) / values.length;
+    const stride = Math.ceil(rows.length / 100);
+    const points = rows
+      .filter((_, i) => i % stride === 0)
+      .map((r) => `${r.recordedAt.toISOString().slice(0, 16)}=${r.value}`);
+    return JSON.stringify({
+      metric,
+      from: from.toISOString().slice(0, 10),
+      to: to.toISOString().slice(0, 10),
+      count: rows.length,
+      avg: Math.round(avg * 100) / 100,
+      min: Math.min(...values),
+      max: Math.max(...values),
+      points,
+    });
+  }
+
+  private async toolSleepSessions(args: { from?: string; to?: string }): Promise<string> {
+    const { from, to } = this.toolRange(args);
+    const rows = await this.sleepRepo.find({
+      where: { endedAt: Between(from, to) },
+      order: { endedAt: 'DESC' },
+    });
+    if (rows.length === 0) return 'No sleep sessions in that range.';
+    return JSON.stringify(
+      rows.map((r) => ({
+        night: `${r.startedAt.toISOString().slice(0, 16)} → ${r.endedAt.toISOString().slice(0, 16)}`,
+        durationH: Math.round((r.durationMin / 60) * 10) / 10,
+        score: r.score,
+        deepMin: r.deepMin,
+        remMin: r.remMin,
+        lightMin: r.lightMin,
+        awakeMin: r.awakeMin,
+      })),
+    );
+  }
+
+  private async toolNotes(args: { from?: string; to?: string }): Promise<string> {
+    const { from, to } = this.toolRange(args);
+    const rows = await this.noteRepo.find({
+      where: { recordedAt: Between(from, to) },
+      order: { recordedAt: 'ASC' },
+      take: 200,
+    });
+    if (rows.length === 0) return 'No notes in that range.';
+    return JSON.stringify(
+      rows.map((n) => ({
+        id: n.mediaType === 'photo' ? n.id : undefined,
+        at: n.recordedAt.toISOString().slice(0, 16),
+        content: n.content,
+        mood: n.mood,
+        photo: n.mediaNote ?? (n.mediaType === 'photo' ? 'attached (not analyzed)' : undefined),
+        video: n.mediaType === 'video' ? true : undefined,
+      })),
+    );
+  }
+
+  private async toolActivities(args: { from?: string; to?: string }): Promise<string> {
+    const { from, to } = this.toolRange(args);
+    const days = Math.min(365, Math.ceil((Date.now() - from.getTime()) / 86400000));
+    const activities = await this.health.getActivities(days);
+    const inRange = activities.filter((a) => {
+      const start = new Date(a.start);
+      return start >= from && start <= to;
+    });
+    if (inRange.length === 0) return 'No detected activities in that range.';
+    return JSON.stringify(inRange);
+  }
+
+  private async toolListDocuments(): Promise<string> {
+    const docs = await this.docRepo.find({
+      order: { recordedAt: 'DESC' },
+      take: 50,
+    });
+    if (docs.length === 0) return 'No scanned documents.';
+    return JSON.stringify(
+      docs.map((d) => ({
+        id: d.id,
+        title: d.title,
+        date: d.recordedAt.toISOString().slice(0, 10),
+        pages: d.pageCount,
+      })),
+    );
+  }
+
+  private async toolReadDocument(args: { id?: string }): Promise<string> {
+    const doc = await this.docRepo.findOne({ where: { id: args.id } });
+    if (!doc) return 'Document not found.';
+    const pages = await this.pageRepo.find({
+      where: { documentId: doc.id },
+      order: { pageNumber: 'ASC' },
+    });
+    const text = pages.length > 0 ? pages.map((p) => p.ocrText).join('\n\n') : doc.ocrText;
+    return `Document "${doc.title}" (${doc.recordedAt.toISOString().slice(0, 10)}):\n${text.slice(0, 9000)}`;
+  }
+
+  private async toolViewDocumentPage(args: { id?: string; page?: number }): Promise<Array<Record<string, unknown>>> {
+    const page = await this.pageRepo.findOne({
+      where: { documentId: args.id, pageNumber: args.page ?? 1 },
+    });
+    const doc = page ? null : await this.docRepo.findOne({ where: { id: args.id } });
+    const imageUrl = page?.imageUrl ?? doc?.imageUrl;
+    if (!imageUrl) return [{ type: 'text', text: 'Document page not found.' }];
+    const buffer = await this.fetchImage(imageUrl);
+    if (!buffer) return [{ type: 'text', text: 'Could not load the page image.' }];
+    return [
+      { type: 'text', text: `Scanned page ${args.page ?? 1} of document ${args.id}:` },
+      { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${buffer.toString('base64')}` } },
+    ];
+  }
+
+  private async toolViewNotePhoto(args: { id?: string }): Promise<Array<Record<string, unknown>>> {
+    const note = await this.noteRepo.findOne({ where: { id: args.id } });
+    if (!note?.mediaKey || note.mediaType !== 'photo') {
+      return [{ type: 'text', text: 'Note photo not found.' }];
+    }
+    const buffer = await this.storage.getPrivateBuffer(note.mediaKey);
+    if (buffer.length > 8 * 1024 * 1024) {
+      return [{ type: 'text', text: 'Photo is too large to analyze.' }];
+    }
+    return [
+      { type: 'text', text: `Photo attached to note "${note.content.slice(0, 80)}":` },
+      { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${buffer.toString('base64')}` } },
+    ];
+  }
+
+  /** Fetches a public-bucket image (document scans) with a size cap. */
+  private async fetchImage(url: string): Promise<Buffer | null> {
+    const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+    if (!response.ok) return null;
+    const buffer = Buffer.from(await response.arrayBuffer());
+    return buffer.length > 8 * 1024 * 1024 ? null : buffer;
   }
 
   // --- Helpers -----------------------------------------------------------
