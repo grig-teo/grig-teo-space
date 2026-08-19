@@ -14,6 +14,7 @@ struct RecordsChatView: View {
     @State private var isSending = false
     @State private var error: String?
     @State private var scrollProxy: ScrollViewProxy?
+    @FocusState private var inputFocused: Bool
 
     private let sessionId = DocumentsClient.chatSessionId
 
@@ -45,6 +46,9 @@ struct RecordsChatView: View {
                         }
                         .padding()
                     }
+                    // Tapping anywhere outside the input dismisses the keyboard.
+                    .onTapGesture { inputFocused = false }
+                    .scrollDismissesKeyboard(.interactively)
                     .onAppear { scrollProxy = proxy }
                     .onChange(of: messages.count) { _ in
                         // A fresh AI answer scrolls to its TOP so you read it
@@ -77,6 +81,7 @@ struct RecordsChatView: View {
             TextField("Ask about your health records…", text: $input, axis: .vertical)
                 .textFieldStyle(.roundedBorder)
                 .lineLimit(1...4)
+                .focused($inputFocused)
             Button {
                 send()
             } label: {
