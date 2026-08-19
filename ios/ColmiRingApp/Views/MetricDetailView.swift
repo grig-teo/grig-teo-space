@@ -18,6 +18,10 @@ struct MetricDetailView: View {
     /// Pinch-zoom state: 1 = full range, up to 16x (anchored at newest data).
     @State private var zoom: CGFloat = 1
     @State private var baseZoom: CGFloat = 1
+    /// Pan state: seconds the visible window is shifted back from the
+    /// newest reading (0 = latest data; grows as you drag left).
+    @State private var pan: TimeInterval = 0
+    @State private var basePan: TimeInterval = 0
     /// Compact vertical size class = iPhone in landscape.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
@@ -40,6 +44,8 @@ struct MetricDetailView: View {
         .onChange(of: range) { _ in
             zoom = 1
             baseZoom = 1
+            pan = 0
+            basePan = 0
         }
         .onAppear {
             OrientationManager.shared.set(.allButUpsideDown)
@@ -189,6 +195,18 @@ struct MetricDetailView: View {
             // contentShape first: a bare Chart only hit-tests near its
             // marks, so pinches on empty plot areas never reach the gesture.
             .contentShape(Rectangle())
+            .simultaneousGesture(
+                // Drag slides the window in time (only meaningful zoomed in).
+                // ~320pt ≈ one visible span of travel per full-width drag.
+                DragGesture()
+                    .onChanged { value in
+                        let span = currentSpan(for: points)
+                        pan = basePan - Double(value.translation.width) / 320 * span
+                    }
+                    .onEnded { _ in
+                        basePan = pan
+                    },
+            )
             .gesture(
                 MagnificationGesture()
                     .onChanged { scale in
@@ -201,19 +219,33 @@ struct MetricDetailView: View {
             .onTapGesture(count: 2) {
                 zoom = 1
                 baseZoom = 1
+                pan = 0
+                basePan = 0
             }
         }
     }
 
-    /** The visible time window: full range at zoom 1, narrowed around the
-     *  newest data as the user pinches in. */
+    /** Seconds currently on screen (full range ÷ zoom). */
+    private func currentSpan(for points: [Plot]) -> TimeInterval {
+        let dates = points.map(\.date)
+        guard let first = dates.first, let last = dates.last, last > first else { return 3600 }
+        return last.timeIntervalSince(first) / zoom
+    }
+
+    /** The visible time window: full range at zoom 1; pinch narrows it,
+     *  drag slides it back/forward (both clamped to the data). */
     private func visibleDomain(for points: [Plot]) -> ClosedRange<Date> {
         let dates = points.map(\.date)
         guard let first = dates.first, let last = dates.last, last > first else {
             return Date().addingTimeInterval(-3600)...Date()
         }
-        let span = last.timeIntervalSince(first) / zoom
-        return max(last - span, first)...last
+        let full = last.timeIntervalSince(first)
+        let span = full / zoom
+        let maxPan = max(0, full - span)
+        let clampedPan = min(max(pan, 0), maxPan)
+        let end = last - clampedPan
+        let start = max(end - span, first)
+        return start...max(end, start.addingTimeInterval(60))
     }
 
     private func format(_ value: Double?) -> String {
