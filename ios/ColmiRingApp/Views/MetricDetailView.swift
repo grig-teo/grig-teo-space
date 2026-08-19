@@ -186,6 +186,9 @@ struct MetricDetailView: View {
                         .font(.caption2)
                 }
             }
+            // contentShape first: a bare Chart only hit-tests near its
+            // marks, so pinches on empty plot areas never reach the gesture.
+            .contentShape(Rectangle())
             .gesture(
                 MagnificationGesture()
                     .onChanged { scale in
