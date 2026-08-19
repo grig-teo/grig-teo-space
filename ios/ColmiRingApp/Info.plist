@@ -59,13 +59,15 @@
 	<key>NSBluetoothPeripheralUsageDescription</key>
 	<string>The app uses Bluetooth to communicate with your COLMI smart ring.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>The app uses the camera to scan physical health documents (lab results, prescriptions) and extract their text.</string>
+	<string>The app uses the camera to scan physical health documents (lab results, prescriptions) and extract their text, and to take photos/videos for your health journal notes.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Face ID protects access to your personal health data.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>The app reads step counts from Apple Health to fill gaps when the ring is off. Data is only read, never written.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>The app shares your approximate location to fetch local weather and correlate it with your stress, HRV, and heart rate.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>The app records audio for voice notes in your health journal and captures sound when you film a video note.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>The app may save media back to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

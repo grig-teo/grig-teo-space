@@ -15,8 +15,10 @@ struct NoteComposerView: View {
     @State private var attachment: PickedMedia?
     @State private var isSaving = false
     @State private var showAudioPicker = false
+    @State private var showCamera = false
     @State private var photoItem: PhotosPickerItem?
     @State private var error: String?
+    @StateObject private var recorder = AudioRecorder()
 
     private let client = InsightsClient.shared
 
@@ -47,17 +49,26 @@ struct NoteComposerView: View {
 
                 HStack(spacing: 12) {
                     PhotosPicker(selection: $photoItem, matching: .any(of: [.images, .videos])) {
-                        Label("Photo / Video", systemImage: "photo.on.rectangle")
+                        Label("Library", systemImage: "photo.on.rectangle")
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button {
+                        showCamera = true
+                    } label: {
+                        Label("Camera", systemImage: "camera")
                     }
                     .buttonStyle(.bordered)
 
                     Button {
                         showAudioPicker = true
                     } label: {
-                        Label("Audio", systemImage: "waveform")
+                        Label("Audio", systemImage: "folder")
                     }
                     .buttonStyle(.bordered)
                 }
+
+                recordRow
 
                 if let error {
                     Text(error).font(.caption).foregroundColor(.red)
@@ -78,6 +89,13 @@ struct NoteComposerView: View {
             }
             .onChange(of: photoItem) { item in
                 if let item { loadPicked(item) }
+            }
+            .fullScreenCover(isPresented: $showCamera) {
+                CameraPicker { photoData, videoURL in
+                    showCamera = false
+                    handleCapture(photoData: photoData, videoURL: videoURL)
+                }
+                .ignoresSafeArea()
             }
             .fileImporter(
                 isPresented: $showAudioPicker,
@@ -101,6 +119,62 @@ struct NoteComposerView: View {
             case "audio": return "waveform"
             default: return "photo"
             }
+        }
+    }
+
+    /** Voice-recording row: red record button with a running timer. */
+    private var recordRow: some View {
+        HStack(spacing: 12) {
+            Button {
+                toggleRecording()
+            } label: {
+                Image(systemName: recorder.isRecording ? "stop.circle.fill" : "record.circle")
+                    .font(.system(size: 30))
+                    .foregroundStyle(.red)
+            }
+            Text(recorder.isRecording ? "Recording… \(recorder.seconds)s" : "Record a voice note")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            Spacer()
+        }
+    }
+
+    private func toggleRecording() {
+        Task {
+            if recorder.isRecording {
+                if let data = recorder.stop(), !data.isEmpty {
+                    attachment = PickedMedia(
+                        data: data,
+                        name: "voice-note.m4a",
+                        mime: "audio/m4a",
+                        kind: "audio",
+                        ext: "m4a",
+                    )
+                }
+            } else {
+                let started = await recorder.start()
+                if !started { error = "Microphone access is off — enable it in Settings" }
+            }
+        }
+    }
+
+    private func handleCapture(photoData: Data?, videoURL: URL?) {
+        if let videoURL, let data = try? Data(contentsOf: videoURL) {
+            attachment = PickedMedia(
+                data: data,
+                name: "video.mp4",
+                mime: "video/mp4",
+                kind: "video",
+                ext: "mp4",
+            )
+        } else if let photoData {
+            attachment = PickedMedia(
+                data: photoData,
+                name: "photo.jpg",
+                mime: "image/jpeg",
+                kind: "photo",
+                ext: "jpg",
+            )
         }
     }
 
