@@ -328,6 +328,8 @@ const ANOMALY_RULES: Array<{
 
 const MAX_READINGS_PER_REQUEST = 2000;
 const MAX_SERIES_POINTS = 1000;
+/** How long activity-suppressed alerts wait for the matching steps slot. */
+const ALERT_EVALUATION_DELAY_MS = 45 * 60 * 1000;
 
 // --- Hourly tip (DeepSeek) --------------------------------------------------
 
@@ -1893,6 +1895,15 @@ export class HealthService {
     for (const rule of ANOMALY_RULES) {
       const matching = readings
         .filter((r) => r.metric === rule.metric && rule.test(r.value))
+        // Activity-suppressed rules evaluate with a delay: the ring's step
+        // slots land up to ~an hour after realtime HR, so a fresh 125 bpm
+        // reading can't yet be known to be a walk. 45 min lets the matching
+        // slot arrive; the alert then fires only for genuinely still users.
+        .filter(
+          (r) =>
+            !rule.suppressWhenActive ||
+            Date.now() - r.recordedAt.getTime() > ALERT_EVALUATION_DELAY_MS,
+        )
         .filter((r) => !(rule.suppressWhenActive && this.wasActive(r, steps)))
         .slice(-3);
       for (const reading of matching) {
