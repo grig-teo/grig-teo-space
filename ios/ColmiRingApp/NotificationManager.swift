@@ -12,6 +12,36 @@ final class NotificationManager {
 
     private let stampKey = "alerts.lastNotifiedStamp"
     private let goalKey = "alerts.lastGoalNotifiedDay"
+    private let anomalyKey = "alerts.sentAnomalyKeys"
+
+    /** Anomaly alerts (elevated HR, low SpO2) — one notification per new
+     *  alert, deduped by a persisted key set. */
+    func notifyAnomalies(_ alerts: [(key: String, text: String)]) {
+        let sent = UserDefaults.standard.stringArray(forKey: anomalyKey) ?? []
+        let fresh = alerts.filter { !sent.contains($0.key) }
+        guard !fresh.isEmpty else { return }
+        let center = UNUserNotificationCenter.current()
+        center.getNotificationSettings { settings in
+            switch settings.authorizationStatus {
+            case .notDetermined:
+                center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+            case .authorized, .provisional, .ephemeral:
+                for alert in fresh.prefix(3) {
+                    let content = UNMutableNotificationContent()
+                    content.title = "Health alert"
+                    content.body = alert.text
+                    content.sound = .default
+                    center.add(UNNotificationRequest(identifier: alert.key, content: content, trigger: nil))
+                }
+                let updated = Array((sent + fresh.map(\.key)).suffix(200))
+                UserDefaults.standard.set(updated, forKey: self.anomalyKey)
+            case .denied:
+                break
+            @unknown default:
+                break
+            }
+        }
+    }
 
     /** Posts a local notification for new alerts (deduped by `stamp`). */
     func notifyNewAlerts(_ alerts: [String], stamp: String) {

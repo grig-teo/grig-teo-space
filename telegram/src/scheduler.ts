@@ -18,7 +18,8 @@ export class Scheduler {
   private readonly alertIntervalMs: number;
   private readonly digestHour: number;
   private lastDigestDate = '';
-  private lastAlertSignature = '';
+  /** Per-alert dedupe memory — a new alert must not resend older ones. */
+  private sentAlertKeys = new Set<string>();
   private lastTipHour = '';
   private lastTipText = '';
   private timers: NodeJS.Timeout[] = [];
@@ -64,17 +65,24 @@ export class Scheduler {
   private async checkAlerts(): Promise<void> {
     try {
       const summary = await this.client.getSummary(1);
-      if (summary.alerts.length === 0) {
-        this.lastAlertSignature = '';
-        return;
+      // Only fresh readings (last 2h) and only alerts never sent before —
+      // previously a single new reading re-sent the whole recent batch.
+      const fresh = summary.alerts.filter(
+        (a) => Date.now() - new Date(a.recordedAt).getTime() < 2 * 3600_000,
+      );
+      const newAlerts = fresh.filter((a) => {
+        const key = `${a.metric}:${a.value}@${a.recordedAt}`;
+        if (this.sentAlertKeys.has(key)) return false;
+        this.sentAlertKeys.add(key);
+        return true;
+      });
+      // Bound the memory.
+      if (this.sentAlertKeys.size > 300) {
+        this.sentAlertKeys = new Set([...this.sentAlertKeys].slice(-150));
       }
-      const signature = summary.alerts
-        .map((a) => `${a.metric}:${a.value}@${a.recordedAt}`)
-        .join('|');
-      if (signature === this.lastAlertSignature) return;
-      this.lastAlertSignature = signature;
+      if (newAlerts.length === 0) return;
 
-      const text = formatAlerts(summary.alerts);
+      const text = formatAlerts(newAlerts);
       if (text) {
         await this.bot.telegram.sendMessage(this.chatId, text, { parse_mode: 'Markdown' });
       }

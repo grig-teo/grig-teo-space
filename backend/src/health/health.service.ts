@@ -294,6 +294,9 @@ const ANOMALY_RULES: Array<{
   level: 'warning' | 'critical';
   message: string;
   test: (value: number) => boolean;
+  /** Suppress when the user was moving around the reading — e.g. a high HR
+   *  during a walk is exercise, not an anomaly. */
+  suppressWhenActive?: boolean;
 }> = [
   {
     metric: 'spo2',
@@ -306,6 +309,7 @@ const ANOMALY_RULES: Array<{
     level: 'warning',
     message: 'Elevated heart rate (above 120 bpm at rest)',
     test: (value) => value > 120,
+    suppressWhenActive: true,
   },
   {
     metric: 'heart_rate',
@@ -1725,9 +1729,11 @@ export class HealthService {
   private detectAlerts(readings: HealthReading[]): HealthAlert[] {
     const alerts: HealthAlert[] = [];
     const seen = new Set<string>();
+    const steps = readings.filter((r) => r.metric === 'steps');
     for (const rule of ANOMALY_RULES) {
       const matching = readings
         .filter((r) => r.metric === rule.metric && rule.test(r.value))
+        .filter((r) => !(rule.suppressWhenActive && this.wasActive(r, steps)))
         .slice(-3);
       for (const reading of matching) {
         const key = `${rule.metric}-${rule.level}-${reading.id}`;
@@ -1743,6 +1749,26 @@ export class HealthService {
       }
     }
     return alerts;
+  }
+
+  /** True when a step slot with real movement (≥100 steps) sits within
+   *  ±45 min of the reading — the "at rest" rules must not fire then. */
+  private wasActive(reading: HealthReading, steps: HealthReading[]): boolean {
+    const t = reading.recordedAt.getTime();
+    return steps.some(
+      (s) => Math.abs(s.recordedAt.getTime() - t) <= 45 * 60_000 && s.value >= 100,
+    );
+  }
+
+  /** Recent anomaly alerts for the iOS app (newest first). */
+  async getRecentAlerts(hours = 24): Promise<HealthAlert[]> {
+    const span = Math.max(1, Math.min(hours, 72));
+    const from = new Date(Date.now() - span * 3_600_000);
+    const readings = await this.readingRepo.find({
+      where: { recordedAt: MoreThan(from) },
+      order: { recordedAt: 'ASC' },
+    });
+    return this.detectAlerts(readings).reverse();
   }
 
   private downsample(points: MetricSeriesPoint[]): MetricSeriesPoint[] {

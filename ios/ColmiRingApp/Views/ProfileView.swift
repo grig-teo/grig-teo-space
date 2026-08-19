@@ -26,6 +26,7 @@ struct ProfileView: View {
                 VStack(spacing: 24) {
                     header
                     recoveryCard
+                    alertsCard
                     streakCard
                     weatherRow
                     StressChartView(client: stressClient)
@@ -54,6 +55,37 @@ struct ProfileView: View {
             await recoveryClient.load()
             await insightsClient.loadInsights()
             await insightsClient.loadDigest()
+            await insightsClient.loadAlerts()
+        }
+    }
+
+    /// Anomaly alerts from the last 24h (elevated HR at rest, low SpO2).
+    /// Hidden when empty — a quiet card is a good sign.
+    @ViewBuilder
+    private var alertsCard: some View {
+        let alerts = insightsClient.recentAlerts
+        if !alerts.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Alerts (24h)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                ForEach(alerts.prefix(5)) { alert in
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundColor(alert.level == "critical" ? .red : .orange)
+                        Text(alert.message)
+                            .font(.caption)
+                        Spacer()
+                        Text(alert.date?.time24 ?? "")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+            .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
         }
     }
 

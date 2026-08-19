@@ -149,6 +149,14 @@ export class HealthController {
     );
   }
 
+  /** Recent anomaly alerts, newest first (iOS alerts card + notifications). */
+  @Get('alerts')
+  @UseGuards(DeviceKeyGuard)
+  async recentAlerts(@Query('hours') hours?: string) {
+    const parsed = Number(hours ?? 24);
+    return this.health.getRecentAlerts(Number.isFinite(parsed) ? parsed : 24);
+  }
+
   /** Morning recovery score + deviation alerts (iOS Profile card). */
   @Get('recovery')
   @UseGuards(DeviceKeyGuard)

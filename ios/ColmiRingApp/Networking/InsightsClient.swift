@@ -14,6 +14,7 @@ final class InsightsClient: ObservableObject {
     @Published private(set) var digest: WeeklyDigest?
     @Published private(set) var activities: [Activity] = []
     @Published private(set) var year: YearReview?
+    @Published private(set) var recentAlerts: [HealthAlert] = []
 
     private let settings = AppSettings.shared
 
@@ -29,6 +30,17 @@ final class InsightsClient: ObservableObject {
     struct WeeklyDigest: Decodable {
         let text: String
         let generatedAt: String
+    }
+
+    struct HealthAlert: Decodable, Identifiable {
+        let metric: String
+        let level: String
+        let message: String
+        let value: Double
+        let recordedAt: String
+
+        var id: String { "\(metric)-\(value)-\(recordedAt)" }
+        var date: Date? { ISO8601DateFormatter.shared.date(from: recordedAt) }
     }
 
     struct Activity: Decodable, Identifiable {
@@ -75,6 +87,21 @@ final class InsightsClient: ObservableObject {
     /** The cached LLM weekly digest. */
     func loadDigest() async {
         digest = try? await fetch("/api/health/digest")
+    }
+
+    /** Recent anomaly alerts (24h); fresh ones fire local notifications. */
+    func loadAlerts() async {
+        let alerts: [HealthAlert] = (try? await fetch("/api/health/alerts?hours=24")) ?? []
+        recentAlerts = alerts
+        // Only readings from the last 2h notify — older ones are list-only.
+        let fresh = alerts.filter { alert in
+            guard let date = alert.date else { return false }
+            return Date().timeIntervalSince(date) < 2 * 3600
+        }
+        NotificationManager.shared.notifyAnomalies(fresh.map { alert in
+            let time = alert.date?.time24 ?? ""
+            return (key: alert.id, text: "\(alert.message) — \(Int(alert.value)) at \(time)")
+        })
     }
 
     /** Logs a quick note ("how I feel, what I ate, plans") — the tip
