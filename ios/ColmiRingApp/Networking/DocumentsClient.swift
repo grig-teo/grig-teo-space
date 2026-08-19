@@ -56,6 +56,12 @@ struct ChatMessage: Codable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case role, content, createdAt
     }
+
+    /// Parsed server timestamp (nil for locally appended, not yet stored).
+    var date: Date? {
+        guard let createdAt else { return nil }
+        return ISO8601DateFormatter.shared.date(from: createdAt)
+    }
 }
 
 struct ChatHistory: Codable {
@@ -71,7 +77,35 @@ struct ChatResponse: Codable {
 final class DocumentsClient: ObservableObject {
     static let shared = DocumentsClient()
 
+    /// Shared chat session id (RecordsChatView + the unread badge).
+    static let chatSessionId = "ios-records-chat"
+
+    /// Unread AI-doctor answers, shown as the FAB badge on the Health hub.
+    @Published private(set) var unreadCount = 0
+
     private let settings = AppSettings.shared
+
+    private var lastReadKey: String { "chat.lastReadAt.\(Self.chatSessionId)" }
+
+    /** When the user last had the chat open (drives the unread badge). */
+    var chatLastReadAt: Date {
+        UserDefaults.standard.object(forKey: lastReadKey) as? Date ?? .distantPast
+    }
+
+    /** Marks every message as read and clears the badge. */
+    func markChatRead() {
+        UserDefaults.standard.set(Date(), forKey: lastReadKey)
+        unreadCount = 0
+    }
+
+    /** Recounts assistant answers newer than the last chat visit. */
+    func refreshUnread() async {
+        guard let messages = try? await history(sessionId: Self.chatSessionId) else { return }
+        let lastRead = chatLastReadAt
+        unreadCount = messages.filter {
+            $0.role == "assistant" && ($0.date ?? .distantPast) > lastRead
+        }.count
+    }
 
     private func authHeaders() -> [String: String] {
         ["X-Device-Key": settings.deviceKey]

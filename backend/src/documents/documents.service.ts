@@ -83,6 +83,9 @@ const DEFAULT_PAGE_SIZE = 20;
 const MAX_HISTORY_MESSAGES = 50;
 const MAX_CONTEXT_CHARS = 24000;
 const DEEPSEEK_ENDPOINT = 'https://api.deepseek.com/chat/completions';
+/** Kimi (Moonshot) OpenAI-compatible endpoint; model `k3` is a reasoning
+ *  model — its reasoning shares the max_tokens budget, so keep it high. */
+const KIMI_ENDPOINT = 'https://api.kimi.com/coding/v1/chat/completions';
 
 const DOCTOR_SYSTEM_PROMPT =
   'You are a knowledgeable medical doctor assisting the owner of these health records. ' +
@@ -98,7 +101,9 @@ const DOCTOR_SYSTEM_PROMPT =
   '- Explain values, terms, and findings in clear, accessible language.\n' +
   '- Highlight anything that appears outside normal ranges or worth attention.\n' +
   '- Connect information across sources when relevant (e.g. trends over time).\n' +
-  '- Be concise and structured (use short paragraphs or bullet points).\n\n' +
+  '- Be concise and structured (use short paragraphs or bullet points).\n' +
+  '- Format EVERY answer in Markdown: a short bold lead, then bullet points ' +
+  'or small sections. Never return one plain-text wall.\n\n' +
   'IMPORTANT safety boundaries:\n' +
   '- You are NOT a replacement for a real physician. Always remind the user to consult ' +
   'their doctor before making medical decisions, changing medication, or acting on your ' +
@@ -281,10 +286,17 @@ export class DocumentsService {
     const normalizedSessionId = this.normalizeSessionId(sessionId);
     await this.saveChatMessage(normalizedSessionId, 'user', message);
 
-    const apiKey = process.env.DEEPSEEK_API_KEY?.trim();
+    // Kimi k3 (KIMI_API_KEY) is the primary model; DeepSeek is the fallback
+    // when no Kimi key is configured.
+    const kimiKey = process.env.KIMI_API_KEY?.trim();
+    const apiKey = kimiKey || process.env.DEEPSEEK_API_KEY?.trim();
     if (!apiKey) {
       throw new ServiceUnavailableException('Records AI chat is not configured');
     }
+    const endpoint = kimiKey ? KIMI_ENDPOINT : DEEPSEEK_ENDPOINT;
+    const model = kimiKey
+      ? process.env.KIMI_MODEL?.trim() || 'k3'
+      : process.env.DEEPSEEK_MODEL?.trim() || 'deepseek-chat';
 
     const context = await this.buildContext(message);
     const history = await this.recentHistory(normalizedSessionId);
@@ -295,8 +307,7 @@ export class DocumentsService {
       ...history,
     ];
 
-    const model = process.env.DEEPSEEK_MODEL?.trim() || 'deepseek-chat';
-    const response = await fetch(DEEPSEEK_ENDPOINT, {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -305,16 +316,19 @@ export class DocumentsService {
       body: JSON.stringify({
         model,
         messages,
-        temperature: 0.3,
+        // k3 is a reasoning model and rejects any temperature ≠ 1.
+        ...(kimiKey ? {} : { temperature: 0.3 }),
         // Generous ceiling so structured medical answers (bullets, ranges,
-        // explanations) aren't cut off mid-sentence.
+        // explanations) aren't cut off mid-sentence. k3's reasoning shares
+        // this budget — do not lower it.
         max_tokens: 4096,
       }),
+      signal: AbortSignal.timeout(180_000),
     });
 
     if (!response.ok) {
       const raw = await response.text();
-      throw new BadGatewayException(`DeepSeek API error: ${response.status} ${raw.slice(0, 300)}`);
+      throw new BadGatewayException(`AI API error: ${response.status} ${raw.slice(0, 300)}`);
     }
 
     const payload = (await response.json()) as {

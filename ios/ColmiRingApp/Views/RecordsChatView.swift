@@ -13,8 +13,9 @@ struct RecordsChatView: View {
     @State private var input: String = ""
     @State private var isSending = false
     @State private var error: String?
+    @State private var scrollProxy: ScrollViewProxy?
 
-    private let sessionId = "ios-records-chat"
+    private let sessionId = DocumentsClient.chatSessionId
 
     var body: some View {
         NavigationStack {
@@ -44,9 +45,14 @@ struct RecordsChatView: View {
                         }
                         .padding()
                     }
+                    .onAppear { scrollProxy = proxy }
                     .onChange(of: messages.count) { _ in
-                        if let last = messages.last {
-                            withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+                        // A fresh AI answer scrolls to its TOP so you read it
+                        // from the start; your own message scrolls to bottom.
+                        guard let last = messages.last else { return }
+                        let isAnswer = last.role == "assistant"
+                        withAnimation {
+                            proxy.scrollTo(last.id, anchor: isAnswer ? .top : .bottom)
                         }
                     }
                 }
@@ -56,7 +62,6 @@ struct RecordsChatView: View {
             }
             .navigationTitle("AI Doctor")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
@@ -64,6 +69,7 @@ struct RecordsChatView: View {
             }
         }
         .task { await loadHistory() }
+        .onDisappear { client.markChatRead() }
     }
 
     private var inputBar: some View {
@@ -91,6 +97,16 @@ struct RecordsChatView: View {
         } catch {
             // Silent — history just starts empty.
         }
+        // Open at the first unread AI answer (its top); fully read chats
+        // open at the bottom.
+        let lastRead = client.chatLastReadAt
+        let target = messages.first {
+            $0.role == "assistant" && ($0.date ?? .distantPast) > lastRead
+        } ?? messages.last
+        if let target {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            scrollProxy?.scrollTo(target.id, anchor: target.role == "assistant" ? .top : .bottom)
+        }
     }
 
     private func send() {
@@ -101,6 +117,10 @@ struct RecordsChatView: View {
         messages.append(ChatMessage(role: "user", content: text, createdAt: nil))
         isSending = true
 
+        // Keep the request alive if the app is backgrounded mid-answer; the
+        // backend also stores the answer, so a killed app still gets it via
+        // history + the unread badge.
+        let bgTask = UIApplication.shared.beginBackgroundTask()
         Task {
             do {
                 let answer = try await client.chat(message: text, sessionId: sessionId)
@@ -109,6 +129,7 @@ struct RecordsChatView: View {
                 self.error = error.localizedDescription
             }
             isSending = false
+            UIApplication.shared.endBackgroundTask(bgTask)
         }
     }
 }

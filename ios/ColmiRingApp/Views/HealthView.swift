@@ -7,6 +7,7 @@ import SwiftUI
  */
 struct HealthView: View {
     @ObservedObject var appState: AppState
+    @StateObject private var client = DocumentsClient.shared
     @State private var showingChat = false
 
     var body: some View {
@@ -102,6 +103,9 @@ struct HealthView: View {
                     }
                 }
                 .padding()
+                // Leave room for the floating AI-doctor button so it never
+                // covers the last hub item.
+                .padding(.bottom, 84)
             }
             .navigationTitle("")
             .overlay(alignment: .bottomTrailing) {
@@ -113,11 +117,28 @@ struct HealthView: View {
                         .foregroundColor(.white)
                         .frame(width: 56, height: 56)
                         .background(Circle().fill(Color.teal).shadow(radius: 4, y: 2))
+                        .overlay(alignment: .topTrailing) {
+                            if client.unreadCount > 0 {
+                                Text("\(client.unreadCount)")
+                                    .font(.caption2.bold())
+                                    .foregroundColor(.white)
+                                    .frame(minWidth: 20, minHeight: 20)
+                                    .background(Circle().fill(Color.red))
+                                    .offset(x: 4, y: -4)
+                            }
+                        }
                 }
                 .padding(20)
             }
             .sheet(isPresented: $showingChat) {
                 RecordsChatView()
+            }
+            // Badge stays fresh whenever the hub is visible.
+            .task { await client.refreshUnread() }
+            .onChange(of: showingChat) { shown in
+                if !shown {
+                    Task { await client.refreshUnread() }
+                }
             }
             .navigationDestination(isPresented: $appState.deepLinkTips) {
                 TipHistoryView()
