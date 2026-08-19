@@ -24,7 +24,8 @@ struct ActivitiesView: View {
             }
             .padding()
         }
-        .navigationTitle("")
+        .navigationTitle("Activities")
+        .navigationBarTitleDisplayMode(.inline)
         .task { await client.loadActivities(days: 7) }
     }
 

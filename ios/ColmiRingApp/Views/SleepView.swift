@@ -19,7 +19,8 @@ struct SleepView: View {
             }
             .padding()
         }
-        .navigationTitle("")
+        .navigationTitle("Sleep")
+        .navigationBarTitleDisplayMode(.inline)
         .task { await client.load(days: 7) }
     }
 

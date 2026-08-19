@@ -32,7 +32,8 @@ struct TipHistoryView: View {
                 tipList
             }
         }
-        .navigationTitle("")
+        .navigationTitle("Health Tips")
+            .navigationBarTitleDisplayMode(.inline)
         .navigationBarTitleDisplayMode(.inline)
         .task { if client.tips.isEmpty { await client.reload() } }
     }

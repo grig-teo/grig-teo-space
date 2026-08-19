@@ -54,7 +54,8 @@ struct RecordsChatView: View {
                 Divider()
                 inputBar
             }
-            .navigationTitle("")
+            .navigationTitle("AI Doctor")
+            .navigationBarTitleDisplayMode(.inline)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

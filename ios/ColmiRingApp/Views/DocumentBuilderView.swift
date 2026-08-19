@@ -48,7 +48,7 @@ struct DocumentBuilderView: View {
                 }
                 .padding()
             }
-            .navigationTitle("")
+            .navigationTitle(pages.isEmpty ? "New Document" : "\(pages.count) Page\(pages.count == 1 ? "" : "s")")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {

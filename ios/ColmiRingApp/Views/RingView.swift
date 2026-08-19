@@ -62,7 +62,8 @@ struct RingView: View {
             }
             .padding(.vertical)
         }
-        .navigationTitle("")
+        .navigationTitle("Ring")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     /// Cards show the slot-history totals (same data the server gets —

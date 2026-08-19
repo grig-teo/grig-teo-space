@@ -15,6 +15,9 @@ struct MetricDetailView: View {
 
     @StateObject private var client = MetricSeriesClient()
     @State private var range: TimeRange = .day
+    /// Pinch-zoom state: 1 = full range, up to 16x (anchored at newest data).
+    @State private var zoom: CGFloat = 1
+    @State private var baseZoom: CGFloat = 1
     /// Compact vertical size class = iPhone in landscape.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
@@ -28,11 +31,15 @@ struct MetricDetailView: View {
                 portraitLayout
             }
         }
-        .navigationTitle("")
+        .navigationTitle(metric.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(isLandscape ? .hidden : .visible, for: .navigationBar)
         .task(id: range) {
             await client.load(metric: metric, days: range.days)
+        }
+        .onChange(of: range) { _ in
+            zoom = 1
+            baseZoom = 1
         }
         .onAppear {
             OrientationManager.shared.set(.allButUpsideDown)
@@ -157,6 +164,10 @@ struct MetricDetailView: View {
                 .interpolationMethod(.catmullRom)
                 .foregroundStyle(Color.accentColor.opacity(0.12))
             }
+            // Pinch zooms the time window (anchored at the newest data);
+            // double-tap resets. chartXScale is iOS 16 — no scrollable-axes
+            // dependency needed.
+            .chartXScale(domain: visibleDomain(for: points))
             .chartXAxis {
                 AxisMarks { value in
                     AxisGridLine()
@@ -175,7 +186,31 @@ struct MetricDetailView: View {
                         .font(.caption2)
                 }
             }
+            .gesture(
+                MagnificationGesture()
+                    .onChanged { scale in
+                        zoom = max(1, min(16, baseZoom * scale))
+                    }
+                    .onEnded { _ in
+                        baseZoom = zoom
+                    },
+            )
+            .onTapGesture(count: 2) {
+                zoom = 1
+                baseZoom = 1
+            }
         }
+    }
+
+    /** The visible time window: full range at zoom 1, narrowed around the
+     *  newest data as the user pinches in. */
+    private func visibleDomain(for points: [Plot]) -> ClosedRange<Date> {
+        let dates = points.map(\.date)
+        guard let first = dates.first, let last = dates.last, last > first else {
+            return Date().addingTimeInterval(-3600)...Date()
+        }
+        let span = last.timeIntervalSince(first) / zoom
+        return max(last - span, first)...last
     }
 
     private func format(_ value: Double?) -> String {

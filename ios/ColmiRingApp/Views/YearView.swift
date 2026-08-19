@@ -36,7 +36,8 @@ struct YearView: View {
                 ProgressView().frame(maxWidth: .infinity).padding()
             }
         }
-        .navigationTitle("")
+        .navigationTitle("Year in Review")
+        .navigationBarTitleDisplayMode(.inline)
         .task { await client.loadYear() }
     }
 
