@@ -49,26 +49,27 @@ struct NoteComposerView: View {
 
                 HStack(spacing: 12) {
                     PhotosPicker(selection: $photoItem, matching: .any(of: [.images, .videos])) {
-                        Label("Library", systemImage: "photo.on.rectangle")
+                        Image(systemName: "photo.on.rectangle")
                     }
                     .buttonStyle(.bordered)
 
                     Button {
                         showCamera = true
                     } label: {
-                        Label("Camera", systemImage: "camera")
+                        Image(systemName: "camera")
                     }
                     .buttonStyle(.bordered)
 
                     Button {
                         showAudioPicker = true
                     } label: {
-                        Label("Audio", systemImage: "folder")
+                        Image(systemName: "waveform")
                     }
                     .buttonStyle(.bordered)
 
                     recordButton
                 }
+                .imageScale(.large)
 
                 if let error {
                     Text(error).font(.caption).foregroundColor(.red)
@@ -123,15 +124,12 @@ struct NoteComposerView: View {
     }
 
     /** Red record button, same style as the others; while recording it
-     *  morphs into a stop button with the elapsed seconds. */
+     *  morphs into a stop icon. */
     private var recordButton: some View {
         Button {
             toggleRecording()
         } label: {
-            Label(
-                recorder.isRecording ? "\(recorder.seconds)s" : "Record",
-                systemImage: recorder.isRecording ? "stop.fill" : "mic.fill",
-            )
+            Image(systemName: recorder.isRecording ? "stop.fill" : "mic.fill")
         }
         .buttonStyle(.bordered)
         .tint(.red)
