@@ -85,8 +85,15 @@ struct MetricDetailView: View {
                 .padding(.top, 4)
             }
             .overlay(alignment: .bottom) {
-                chartControls
-                    .padding(.bottom, 8)
+                VStack(spacing: 8) {
+                    MetricRangeBar(
+                        metric: metric,
+                        current: client.series?.summary.avg,
+                        compact: true,
+                    )
+                    chartControls
+                }
+                .padding(.bottom, 8)
             }
             .background(Color(.systemBackground))
     }
@@ -198,10 +205,13 @@ struct MetricDetailView: View {
     }
 
     private func chartCard(height: CGFloat) -> some View {
-        chart
-            .frame(height: height)
-            .padding()
-            .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
+        VStack(alignment: .leading, spacing: 12) {
+            chart
+                .frame(height: height)
+            MetricRangeBar(metric: metric, current: client.series?.summary.avg)
+        }
+        .padding()
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
     }
 
     @ViewBuilder
@@ -214,7 +224,20 @@ struct MetricDetailView: View {
                 .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            Chart(points) { point in
+            plottedChart
+        }
+    }
+
+    private var plottedChart: some View {
+        Chart {
+            ForEach(guidePlotBands) { band in
+                RectangleMark(
+                    yStart: .value("low", band.lower),
+                    yEnd: .value("high", band.upper),
+                )
+                .foregroundStyle(band.color.opacity(0.14))
+            }
+            ForEach(points) { point in
                 LineMark(
                     x: .value("Time", point.date),
                     y: .value(metric.displayName, point.value),
@@ -228,62 +251,39 @@ struct MetricDetailView: View {
                 .interpolationMethod(.catmullRom)
                 .foregroundStyle(Color.accentColor.opacity(0.12))
             }
-            // Pinch zooms the time window (anchored at the newest data);
-            // double-tap resets. chartXScale is iOS 16 — no scrollable-axes
-            // dependency needed.
-            .chartXScale(domain: visibleDomain(for: points))
-            .chartXAxis {
-                AxisMarks { value in
-                    AxisGridLine()
-                    AxisValueLabel {
-                        if let date = value.as(Date.self) {
-                            Text(date, format: range.axisFormat)
-                                .font(.caption2)
-                        }
+        }
+        // Pinch zooms the time window (anchored at the newest data);
+        // double-tap resets. chartXScale is iOS 16 — no scrollable-axes
+        // dependency needed.
+        .chartXScale(domain: visibleDomain(for: points))
+        .modifier(YScaleIfPresent(domain: yDomain(for: points)))
+        .chartXAxis {
+            AxisMarks { value in
+                AxisGridLine()
+                AxisValueLabel {
+                    if let date = value.as(Date.self) {
+                        Text(date, format: range.axisFormat)
+                            .font(.caption2)
                     }
                 }
-            }
-            .chartYAxis {
-                AxisMarks(position: .trailing) { _ in
-                    AxisGridLine()
-                    AxisValueLabel()
-                        .font(.caption2)
-                }
-            }
-            // Keep marks inside the plot while panning/zooming — otherwise
-            // the line/area draw past the frame for off-domain points.
-            .clipped()
-            // contentShape first: a bare Chart only hit-tests near its
-            // marks, so pinches on empty plot areas never reach the gesture.
-            .contentShape(Rectangle())
-            .simultaneousGesture(
-                // Drag slides the window in time (only meaningful zoomed in).
-                // ~320pt ≈ one visible span of travel per full-width drag.
-                DragGesture()
-                    .onChanged { value in
-                        let span = currentSpan(for: points)
-                        pan = basePan - Double(value.translation.width) / 320 * span
-                    }
-                    .onEnded { _ in
-                        basePan = pan
-                    },
-            )
-            .gesture(
-                MagnificationGesture()
-                    .onChanged { scale in
-                        zoom = max(1, min(16, baseZoom * scale))
-                    }
-                    .onEnded { _ in
-                        baseZoom = zoom
-                    },
-            )
-            .onTapGesture(count: 2) {
-                zoom = 1
-                baseZoom = 1
-                pan = 0
-                basePan = 0
             }
         }
+        .chartYAxis {
+            AxisMarks(position: .trailing) { _ in
+                AxisGridLine()
+                AxisValueLabel()
+                    .font(.caption2)
+            }
+        }
+        .clipped()
+        .contentShape(Rectangle())
+        .chartPanZoom(
+            zoom: $zoom,
+            baseZoom: $baseZoom,
+            pan: $pan,
+            basePan: $basePan,
+            span: currentSpan(for: points),
+        )
     }
 
     /** Seconds currently on screen (full range ÷ zoom). */
@@ -325,6 +325,119 @@ struct MetricDetailView: View {
         default:
             return String(Int(value))
         }
+    }
+
+    /** Horizontal colored bands for the typical ranges, clipped to the Y window. */
+    private var guidePlotBands: [PlotBand] {
+        guard let domain = metric.chartGuideDomain else { return [] }
+        let bands = metric.guideBands
+        return bands.enumerated().compactMap { index, band in
+            plotBand(band, nextLower: bands[safe: index + 1]?.lower, domain: domain)
+        }
+    }
+
+    private func plotBand(
+        _ band: MetricBand,
+        nextLower: Double?,
+        domain: ClosedRange<Double>,
+    ) -> PlotBand? {
+        let lo = max(band.lower.isFinite ? band.lower : domain.lowerBound, domain.lowerBound)
+        let rawHi = nextLower ?? domain.upperBound
+        let hi = min(rawHi.isFinite ? rawHi : domain.upperBound, domain.upperBound)
+        guard hi > lo else { return nil }
+        return PlotBand(id: band.id, lower: lo, upper: hi, color: band.tone.color)
+    }
+
+    /** Union of the data and the typical-range window so the bands stay visible. */
+    private func yDomain(for points: [Plot]) -> ClosedRange<Double>? {
+        guard let guide = metric.chartGuideDomain else { return nil }
+        let values = points.map(\.value)
+        let lo = min(values.min() ?? guide.lowerBound, guide.lowerBound)
+        let hi = max(values.max() ?? guide.upperBound, guide.upperBound)
+        return lo...max(hi, lo + 1)
+    }
+}
+
+/** Applies `chartYScale` only when a typical-range window exists. */
+private struct YScaleIfPresent: ViewModifier {
+    let domain: ClosedRange<Double>?
+
+    func body(content: Content) -> some View {
+        if let domain {
+            content.chartYScale(domain: domain)
+        } else {
+            content
+        }
+    }
+}
+
+/** Drag pans, pinch zooms, double-tap resets — same gestures as before the
+ *  range-band overlay was added. */
+private struct ChartPanZoom: ViewModifier {
+    @Binding var zoom: CGFloat
+    @Binding var baseZoom: CGFloat
+    @Binding var pan: TimeInterval
+    @Binding var basePan: TimeInterval
+    let span: TimeInterval
+
+    func body(content: Content) -> some View {
+        content
+            .simultaneousGesture(
+                DragGesture()
+                    .onChanged { value in
+                        pan = basePan - Double(value.translation.width) / 320 * span
+                    }
+                    .onEnded { _ in
+                        basePan = pan
+                    },
+            )
+            .gesture(
+                MagnificationGesture()
+                    .onChanged { scale in
+                        zoom = max(1, min(16, baseZoom * scale))
+                    }
+                    .onEnded { _ in
+                        baseZoom = zoom
+                    },
+            )
+            .onTapGesture(count: 2) {
+                zoom = 1
+                baseZoom = 1
+                pan = 0
+                basePan = 0
+            }
+    }
+}
+
+private extension View {
+    func chartPanZoom(
+        zoom: Binding<CGFloat>,
+        baseZoom: Binding<CGFloat>,
+        pan: Binding<TimeInterval>,
+        basePan: Binding<TimeInterval>,
+        span: TimeInterval,
+    ) -> some View {
+        modifier(ChartPanZoom(
+            zoom: zoom,
+            baseZoom: baseZoom,
+            pan: pan,
+            basePan: basePan,
+            span: span,
+        ))
+    }
+}
+
+/** One colored Y-band drawn behind the metric line. */
+private struct PlotBand: Identifiable {
+    let id: String
+    let lower: Double
+    let upper: Double
+    let color: Color
+}
+
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }
 
