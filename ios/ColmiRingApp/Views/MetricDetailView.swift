@@ -88,7 +88,7 @@ struct MetricDetailView: View {
                 VStack(spacing: 8) {
                     MetricRangeBar(
                         metric: metric,
-                        current: client.series?.summary.avg,
+                        current: statValues.avg,
                         compact: true,
                     )
                     chartControls
@@ -158,11 +158,11 @@ struct MetricDetailView: View {
 
     private var statsCard: some View {
         HStack {
-            stat("Avg", client.series?.summary.avg)
+            stat("Avg", statValues.avg)
             Spacer()
-            stat("Min", client.series?.summary.min)
+            stat("Min", statValues.min)
             Spacer()
-            stat("Max", client.series?.summary.max)
+            stat("Max", statValues.max)
         }
         .padding()
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
@@ -170,12 +170,43 @@ struct MetricDetailView: View {
 
     /** One-line stats used as an overlay in landscape. */
     private var statsLine: some View {
-        let s = client.series?.summary
-        return Text(
-            "avg \(format(s?.avg)) · \(format(s?.min))–\(format(s?.max)) \(metric.unit)",
+        Text(
+            "avg \(format(statValues.avg)) · \(format(statValues.min))–\(format(statValues.max)) \(metric.unit)",
         )
         .font(.caption)
         .foregroundColor(.secondary)
+    }
+
+    /** Count metrics (steps/calories/distance) are meaningless as per-slot
+     *  avg/min/max — stats are computed over DAILY totals instead. */
+    private var statValues: (avg: Double?, min: Double?, max: Double?) {
+        guard isCountMetric else {
+            let s = client.series?.summary
+            return (s?.avg, s?.min, s?.max)
+        }
+        let totals = dailyTotals(rawPoints).map(\.value)
+        guard !totals.isEmpty else { return (nil, nil, nil) }
+        return (
+            totals.reduce(0, +) / Double(totals.count),
+            totals.min(),
+            totals.max(),
+        )
+    }
+
+    /** Steps/calories/distance add up per day — everything else is a rate. */
+    private var isCountMetric: Bool {
+        metric == .steps || metric == .calories || metric == .distanceKm
+    }
+
+    /** Sums slot readings into daily totals (local days). */
+    private func dailyTotals(_ plots: [Plot]) -> [Plot] {
+        var byDay: [Date: Double] = [:]
+        for plot in plots {
+            let day = Calendar.current.startOfDay(for: plot.date)
+            byDay[day, default: 0] += plot.value
+        }
+        return byDay.map { Plot(date: $0.key, value: $0.value) }
+            .sorted { $0.date < $1.date }
     }
 
     private func stat(_ label: String, _ value: Double?) -> some View {
@@ -208,7 +239,7 @@ struct MetricDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             chart
                 .frame(height: height)
-            MetricRangeBar(metric: metric, current: client.series?.summary.avg)
+            MetricRangeBar(metric: metric, current: statValues.avg)
         }
         .padding()
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
@@ -293,8 +324,15 @@ struct MetricDetailView: View {
         return last.timeIntervalSince(first) / zoom
     }
 
-    /** Plottable points (parsed date + value) for the current range. */
+    /** Plottable points (parsed date + value) for the current range.
+     *  Count metrics show DAILY totals on 7d/30d (hourly on 24h). */
     private var points: [Plot] {
+        guard isCountMetric, range != .day else { return rawPoints }
+        return dailyTotals(rawPoints)
+    }
+
+    /** Raw slot readings as plottable points. */
+    private var rawPoints: [Plot] {
         (client.series?.points ?? []).compactMap { point in
             guard let date = point.date else { return nil }
             return Plot(date: date, value: point.value)
