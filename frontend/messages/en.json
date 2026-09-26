@@ -20,7 +20,13 @@
       "articles": "{value} articles"
     },
     "ctaProjects": "view projects",
-    "ctaContact": "get in touch →"
+    "ctaContact": "get in touch →",
+    "now": {
+      "walking": "currently: walking",
+      "working_out": "currently: working out",
+      "asleep": "currently: probably asleep",
+      "resting": "currently: resting"
+    }
   },
   "sections": {
     "blog": "/blog",

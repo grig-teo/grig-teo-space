@@ -20,7 +20,13 @@
       "articles": "{value} статьи"
     },
     "ctaProjects": "смотреть проекты",
-    "ctaContact": "связаться →"
+    "ctaContact": "связаться →",
+    "now": {
+      "walking": "сейчас: на прогулке",
+      "working_out": "сейчас: тренируюсь",
+      "asleep": "сейчас: скорее всего сплю",
+      "resting": "сейчас: отдыхаю"
+    }
   },
   "sections": {
     "blog": "/blog",

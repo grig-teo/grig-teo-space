@@ -20,7 +20,13 @@
       "articles": "{value} articole"
     },
     "ctaProjects": "vezi proiectele",
-    "ctaContact": "contactează-mă →"
+    "ctaContact": "contactează-mă →",
+    "now": {
+      "walking": "acum: la plimbare",
+      "working_out": "acum: mă antrenez",
+      "asleep": "acum: probabil dorm",
+      "resting": "acum: mă odihnesc"
+    }
   },
   "sections": {
     "blog": "/blog",
