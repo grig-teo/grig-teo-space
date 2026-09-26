@@ -97,7 +97,11 @@ export class AiService {
     locale: Locale,
   ): Promise<DeepseekMessage[]> {
     const docs = await this.buildContextDocs(locale);
-    const selectedDocs = this.rankDocs(message, docs).slice(0, 8);
+    // Ranking picks the most relevant documents, but the cap must stay above
+    // the number of content items (profile + projects + experience + blog),
+    // otherwise broad questions like "describe all your projects" cannot be
+    // answered completely: the dropped items are invisible to the model.
+    const selectedDocs = this.rankDocs(message, docs).slice(0, MAX_CONTEXT_DOCS);
     const context = selectedDocs
       .map((doc, index) => `[${index + 1}] ${doc.type}:${doc.id} "${doc.title}"\n${doc.content}`)
       .join('\n\n');
@@ -382,6 +386,13 @@ const DEFAULT_MAX_TOKENS = 8000;
 
 /** How many times a truncated answer is continued before giving up. */
 const MAX_CONTINUATIONS = 2;
+
+/**
+ * How many retrieved documents reach the model. Kept above the total number of
+ * content items so a question spanning the whole portfolio is not silently
+ * answered from a partial set.
+ */
+const MAX_CONTEXT_DOCS = 16;
 
 /** Answer budget, configurable so it can be raised without a rebuild. */
 function maxTokens(): number {
