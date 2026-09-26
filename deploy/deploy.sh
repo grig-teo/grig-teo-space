@@ -164,6 +164,12 @@ fi
 ln -sf ${NGINX_SITE} ${NGINX_ENABLED}
 nginx -t
 systemctl reload nginx
+
+# Purge the nginx page microcache. It holds HTML for 10 minutes
+# (proxy_cache_valid 200 10m), so without this every deploy keeps serving the
+# previous release's pages and the new build looks like it silently failed.
+# A reload alone does not clear it, since reloads keep the cache zone.
+rm -rf /var/cache/nginx/grig-teo-pages/*
 EOF
 
 # --- Install + (conditionally) enable the nightly backup systemd timer -----
