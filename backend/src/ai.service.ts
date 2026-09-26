@@ -370,10 +370,15 @@ export class AiService {
 }
 
 /**
- * Default answer budget. The previous cap of 700 tokens was reached part-way
- * through an answer, so replies arrived cut off mid-sentence.
+ * Default answer budget for the chat.
+ *
+ * deepseek-flash is a reasoning model: its chain of thought is billed against
+ * this same budget (typically ~1800 tokens before a single word of answer).
+ * The old cap of 700 was therefore consumed almost entirely by reasoning and
+ * replies arrived empty or cut off. Budget must cover the reasoning pass plus
+ * the answer, so it is deliberately generous.
  */
-const DEFAULT_MAX_TOKENS = 4000;
+const DEFAULT_MAX_TOKENS = 8000;
 
 /** How many times a truncated answer is continued before giving up. */
 const MAX_CONTINUATIONS = 2;
