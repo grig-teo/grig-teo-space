@@ -125,8 +125,11 @@ export class AiService {
 
     for (let attempt = 0; attempt <= MAX_CONTINUATIONS; attempt += 1) {
       const { content, truncated } = await requestCompletion(apiKey, conversation);
-      parts.push(content);
-      if (!truncated) {
+      if (content) {
+        parts.push(content);
+      }
+      // Nothing to continue from, or the model finished on its own.
+      if (!truncated || !content) {
         break;
       }
       conversation.push({ role: 'assistant', content });
@@ -433,10 +436,10 @@ async function requestCompletion(
     choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
   };
   const choice = payload.choices?.[0];
-  const content = choice?.message?.content?.trim();
-  if (!content) {
-    throw new InternalServerErrorException('Empty AI response');
-  }
-
-  return { content, truncated: choice?.finish_reason === 'length' };
+  // Content can legitimately come back empty when the whole budget went to a
+  // reasoning pass. Caller decides what to do with that rather than failing.
+  return {
+    content: choice?.message?.content?.trim() ?? '',
+    truncated: choice?.finish_reason === 'length',
+  };
 }
