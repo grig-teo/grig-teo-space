@@ -20,7 +20,9 @@ export function JsonLd({ profile, locale }: Props) {
     jobTitle: profile.title,
     url: `https://grig-teo.space/${locale}`,
     email: profile.contact.email,
-    sameAs: [profile.contact.github, profile.contact.linkedin],
+    sameAs: [profile.contact.github, profile.contact.gitverse, profile.contact.linkedin].filter(
+      Boolean,
+    ),
     knowsAbout: [
       'Full-stack development',
       'Remote software development',

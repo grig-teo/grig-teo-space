@@ -33,6 +33,7 @@ export class PortfolioController {
       contact: {
         email: this.portfolio.pick(data.contact.email, loc),
         github: data.contact.github,
+        ...(data.contact.gitverse ? { gitverse: data.contact.gitverse } : {}),
         linkedin: data.contact.linkedin,
         ...(phone ? { phone } : {}),
       },

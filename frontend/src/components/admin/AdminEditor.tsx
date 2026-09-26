@@ -622,6 +622,16 @@ export function AdminEditor() {
             }
           />
           <Field
+            label="GitVerse URL"
+            value={content.profile.contact.gitverse ?? ''}
+            onChange={(value) =>
+              updateProfile((profile) => ({
+                ...profile,
+                contact: { ...profile.contact, gitverse: value },
+              }))
+            }
+          />
+          <Field
             label="LinkedIn URL"
             value={content.profile.contact.linkedin}
             onChange={(value) =>

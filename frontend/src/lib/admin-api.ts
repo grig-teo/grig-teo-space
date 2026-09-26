@@ -41,6 +41,7 @@ export interface ExperienceAttachment {
 export interface ContactInfo {
   email: LocalizedString;
   github: string;
+  gitverse?: string;
   linkedin: string;
   phone?: LocalizedString;
 }

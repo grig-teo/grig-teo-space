@@ -8,6 +8,7 @@ export interface Profile {
   contact: {
     email: string;
     github: string;
+    gitverse?: string;
     linkedin: string;
     phone?: string;
   };

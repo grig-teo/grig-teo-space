@@ -44,6 +44,8 @@ export interface ExperienceItem {
 export interface ContactInfo {
   email: LocalizedString;
   github: string;
+  /** GitVerse is the Russian git host; shown next to GitHub in the footer. */
+  gitverse?: string;
   linkedin: string;
   phone?: LocalizedString;
 }
