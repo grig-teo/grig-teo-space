@@ -115,6 +115,13 @@ services:
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       DEVICE_API_KEY: ${DEVICE_API_KEY}
       TELEGRAM_BACKEND_URL: http://backend:3001
+      # Local hour (at the device's own location) for the daily digest.
+      DIGEST_HOUR: ${DIGEST_HOUR:-20}
+      ALERT_POLL_MINUTES: ${ALERT_POLL_MINUTES:-15}
+    volumes:
+      # Persists scheduler memory so "once per day" survives a restart. Without
+      # it, every deploy inside the digest hour re-sent the digest.
+      - telegram_state:/app/state
     depends_on:
       backend:
         condition: service_healthy
@@ -144,6 +151,7 @@ volumes:
   postgres_data:
   minio_data:
   whisper_models:
+  telegram_state:
   politrack_ollama_models:
     external: true
     name: politrack_politrack_ollama_data

@@ -29,7 +29,13 @@ function fmt(value: number | null, digits = 0): string {
   return value.toFixed(digits);
 }
 
-/** Formats the daily digest message (Telegram MarkdownV2-escaped). */
+/**
+ * Formats the daily digest message.
+ *
+ * Sent with `parse_mode: 'Markdown'` (legacy), so only `*bold*` is meaningful
+ * and parentheses must NOT be backslash-escaped. They used to be, which is why
+ * the range showed up in Telegram as a literal `\(62-124 bpm\)`.
+ */
 export function formatDigest(summary: HealthSummary, periodLabel: string): string {
   const lines: string[] = [`*📊 Health digest — ${periodLabel}*`, ''];
 
@@ -45,7 +51,7 @@ export function formatDigest(summary: HealthSummary, periodLabel: string): strin
       lines.push(
         `${emoji} *${m.metric.replace(/_/g, ' ')}*: avg ${fmt(m.avg, digits)}${unitStr}` +
           (m.min !== null && m.max !== null
-            ? ` \\(${fmt(m.min, digits)}–${fmt(m.max, digits)}${unitStr}\\)`
+            ? ` (${fmt(m.min, digits)}–${fmt(m.max, digits)}${unitStr})`
             : ''),
       );
     }

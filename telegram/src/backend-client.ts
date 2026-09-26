@@ -117,6 +117,19 @@ export class BackendClient {
     return this.request<HourlyTip>('/api/health/tip', { method: 'GET' });
   }
 
+  /**
+   * Last known device location, pushed by the iOS app. The scheduler uses it
+   * to work out which local clock the owner is on, so the daily digest lands
+   * at the configured local hour rather than a fixed UTC one.
+   */
+  async getLocation(): Promise<{ lat: number; lon: number } | null> {
+    const series = await this.request<{ location: { lat: number; lon: number } | null }>(
+      '/api/health/weather?days=1',
+      { method: 'GET' },
+    );
+    return series.location ?? null;
+  }
+
   /** LLM weekly digest (cached server-side, shared with the iOS app). */
   async getWeeklyDigest(): Promise<{ text: string }> {
     return this.request<{ text: string }>('/api/health/digest', { method: 'GET' });

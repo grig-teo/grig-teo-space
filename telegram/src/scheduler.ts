@@ -1,27 +1,36 @@
 import type { Telegraf } from 'telegraf';
 import type { BackendClient, HealthSummary } from './backend-client.js';
 import { formatAlerts, formatDigest, formatTip } from './digest.js';
+import { localNow, resolveZone } from './location-time.js';
+import { JobState } from './state.js';
 
 type Logger = (message: string) => void;
+
+/** How long a resolved timezone is trusted before it is looked up again. */
+const ZONE_TTL_MS = 3 * 60 * 60 * 1000;
 
 /**
  * Periodic background jobs:
  *  - Alerts: poll the summary every N minutes and forward any new anomaly.
- *  - Digest: once a day (at DIGEST_HOUR) send a recap to the configured chat.
+ *  - Digest: once per local day, at DIGEST_HOUR on the owner's own clock.
  *  - Hourly tip: at the top of each hour, fetch a one-sentence AI health tip
  *    based on the last hour of ring data and forward it.
  *
- * Uses setInterval + a "last sent" memory to avoid duplicate alerts.
- * Long-polling mode means the bot process is always alive, so this is fine.
+ * Runs on setInterval with "last sent" memory. That memory is persisted to a
+ * volume (see JobState) because an in-memory marker alone meant every restart
+ * during the digest hour re-sent the digest.
  */
 export class Scheduler {
   private readonly alertIntervalMs: number;
   private readonly digestHour: number;
-  private lastDigestDate = '';
+  private readonly state: JobState;
   /** Per-alert dedupe memory — a new alert must not resend older ones. */
   private sentAlertKeys = new Set<string>();
   private lastTipHour = '';
   private lastTipText = '';
+  /** Cached timezone for the owner's last known coordinates. */
+  private zone: string | null = null;
+  private zoneFetchedAt = 0;
   private timers: NodeJS.Timeout[] = [];
 
   constructor(
@@ -29,11 +38,15 @@ export class Scheduler {
     private readonly client: BackendClient,
     private readonly chatId: string,
     private readonly log: Logger,
+    statePath = process.env.SCHEDULER_STATE_PATH ?? '/app/state/scheduler.json',
   ) {
+    this.state = new JobState(statePath);
     this.alertIntervalMs =
       Math.max(1, Number(process.env.ALERT_POLL_MINUTES ?? 15)) * 60 * 1000;
-    // DIGEST_HOUR is interpreted as UTC — all health-pipeline day math is UTC.
-    this.digestHour = Math.min(23, Math.max(0, Number(process.env.DIGEST_HOUR ?? 9)));
+    // DIGEST_HOUR is the LOCAL hour at the owner's device location (the iOS app
+    // pushes lat/lon), not UTC: the digest should arrive at that time on their
+    // own clock, wherever they are.
+    this.digestHour = Math.min(23, Math.max(0, Number(process.env.DIGEST_HOUR ?? 20)));
   }
 
   start(): void {
@@ -45,7 +58,8 @@ export class Scheduler {
       }, 60 * 1000),
     );
     this.log(
-      `Scheduler started: alerts every ${this.alertIntervalMs / 60000}m, digest at ${this.digestHour}:00 UTC, hourly tip at :00`,
+      `Scheduler started: alerts every ${this.alertIntervalMs / 60000}m, ` +
+        `digest at ${this.digestHour}:00 local to the device location, hourly tip at :00`,
     );
   }
 
@@ -91,12 +105,43 @@ export class Scheduler {
     }
   }
 
+  /**
+   * Sends the daily digest once per local day, at the configured local hour.
+   *
+   * The guard is checked against persisted state, so a restart (a deploy, a
+   * crash) inside the digest hour cannot send it a second time.
+   */
   private async maybeSendDigest(): Promise<void> {
-    const now = new Date();
-    const today = now.toISOString().slice(0, 10);
-    if (now.getUTCHours() !== this.digestHour || today === this.lastDigestDate) return;
-    this.lastDigestDate = today;
+    const zone = await this.currentZone();
+    const { date, hour } = localNow(zone);
+    if (hour !== this.digestHour) return;
+    if (this.state.get('lastDigestDate') === date) return;
+
     await this.sendDigestNow(1, 'today');
+    this.state.write({ lastDigestDate: date });
+    this.log(`Digest sent for ${date} (${zone}, ${this.digestHour}:00 local)`);
+  }
+
+  /** The owner's timezone, refreshed occasionally from the device location. */
+  private async currentZone(): Promise<string> {
+    if (this.zone && Date.now() - this.zoneFetchedAt < ZONE_TTL_MS) {
+      return this.zone;
+    }
+    try {
+      const location = await this.client.getLocation();
+      if (location) {
+        this.zone = resolveZone(location.lat, location.lon);
+        this.zoneFetchedAt = Date.now();
+        this.state.write({ zone: this.zone });
+        return this.zone;
+      }
+    } catch (error) {
+      this.log(`Location lookup failed: ${(error as Error).message}`);
+    }
+    // Fall back to the last zone we resolved rather than jumping to UTC, which
+    // would shift the send time by hours for the rest of the day.
+    this.zone = this.state.get('zone') ?? 'UTC';
+    return this.zone;
   }
 
   /**
