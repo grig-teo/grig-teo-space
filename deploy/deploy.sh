@@ -130,8 +130,11 @@ mkdir -p ${REMOTE_DIR}/backups
 if [ -n "\$(docker compose --env-file .env.production -f ${COMPOSE_FILE} ps -q db 2>/dev/null)" ]; then
   PRE_TS="\$(date -u +%Y%m%dT%H%M%SZ)"
   echo "==> Pre-deploy pg_dump -> backups/pre-deploy-\${PRE_TS}.sql.gz"
+  # </dev/null is required: docker compose exec inherits stdin, and this
+  # script's stdin IS the heredoc, so without it pg_dump swallows the rest of
+  # the deploy (build, up -d, nginx reload) and the script ends silently.
   if docker compose --env-file .env.production -f ${COMPOSE_FILE} exec -T db \
-       pg_dump -U grigteo -d grigteo --no-owner --clean --if-exists 2>/dev/null \
+       pg_dump -U grigteo -d grigteo --no-owner --clean --if-exists </dev/null 2>/dev/null \
        | gzip -c > "${REMOTE_DIR}/backups/pre-deploy-\${PRE_TS}.sql.gz"; then
     ls -1t ${REMOTE_DIR}/backups/pre-deploy-*.sql.gz 2>/dev/null | tail -n +6 | xargs -r rm -f || true
   else
