@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ContentService } from './content/content.service';
 import { AiChatMessage, type AiChatRole } from './entities/ai-chat-message.entity';
+import { HUMANIZER_SKILL } from './humanizer/humanizer.skill';
 import { LinkedInService } from './linkedin.service';
 import type {
   BlogPost,
@@ -82,63 +83,63 @@ export class AiService {
       throw new ServiceUnavailableException('AI chat is not configured yet');
     }
 
+    const messages = await this.buildMessages(normalizedSessionId, message, locale);
+    const answer = await this.completeAnswer(apiKey, messages);
+
+    await this.saveChatMessage(normalizedSessionId, 'assistant', answer, locale);
+    return answer;
+  }
+
+  /** System persona, then recent history, then retrieved context and the question. */
+  private async buildMessages(
+    sessionId: string,
+    message: string,
+    locale: Locale,
+  ): Promise<DeepseekMessage[]> {
     const docs = await this.buildContextDocs(locale);
     const selectedDocs = this.rankDocs(message, docs).slice(0, 8);
     const context = selectedDocs
       .map((doc, index) => `[${index + 1}] ${doc.type}:${doc.id} "${doc.title}"\n${doc.content}`)
       .join('\n\n');
+    const history = await this.recentHistory(sessionId);
 
-    // Load recent conversation history so follow-up questions work (e.g.
-    // "what about the second one?"). The current user message is excluded
-    // — it appears separately as the final message below.
-    const history: DeepseekMessage[] = await this.recentHistory(normalizedSessionId);
-
-    const messages: DeepseekMessage[] = [
-      {
-        role: 'system',
-        content:
-          'You are Grigore Teodor speaking directly to the visitor in first person. ' +
-          'Answer only from the provided context about profile, projects, experience, and blog posts. ' +
-          'For personal questions (for example: name, role, location, contacts), always use profile context and answer as "I". ' +
-          'If the answer is not present in context, clearly say that you do not know based on available data. ' +
-          'Keep responses concise, factual, and avoid inventing details.',
-      },
+    return [
+      { role: 'system', content: buildChatSystemPrompt() },
       ...history,
       {
         role: 'user',
         content: `Locale: ${locale}\n\nContext:\n${context || 'No context found.'}\n\nQuestion:\n${message}`,
       },
     ];
+  }
 
-    const model = process.env.DEEPSEEK_MODEL?.trim() || 'deepseek-chat';
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        temperature: 0.2,
-        max_tokens: 700,
-      }),
-    });
+  /**
+   * Requests the answer and, when the model stops because it hit the token cap
+   * rather than finishing its thought, asks it to carry on and appends the
+   * rest. Without this a long answer reaches the visitor cut mid-sentence,
+   * which reads as a broken reply rather than a merely shortened one.
+   */
+  private async completeAnswer(apiKey: string, messages: DeepseekMessage[]): Promise<string> {
+    const conversation = [...messages];
+    const parts: string[] = [];
 
-    if (!response.ok) {
-      const raw = await response.text();
-      throw new BadGatewayException(`DeepSeek API error: ${response.status} ${raw}`);
+    for (let attempt = 0; attempt <= MAX_CONTINUATIONS; attempt += 1) {
+      const { content, truncated } = await requestCompletion(apiKey, conversation);
+      parts.push(content);
+      if (!truncated) {
+        break;
+      }
+      conversation.push({ role: 'assistant', content });
+      conversation.push({
+        role: 'user',
+        content: 'Continue from the exact point where you stopped. Do not repeat anything.',
+      });
     }
 
-    const payload = (await response.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const answer = payload.choices?.[0]?.message?.content?.trim();
+    const answer = parts.join(' ').trim();
     if (!answer) {
       throw new InternalServerErrorException('Empty AI response');
     }
-
-    await this.saveChatMessage(normalizedSessionId, 'assistant', answer, locale);
     return answer;
   }
 
@@ -363,4 +364,79 @@ export class AiService {
       }
     }
   }
+}
+
+/**
+ * Default answer budget. The previous cap of 700 tokens was reached part-way
+ * through an answer, so replies arrived cut off mid-sentence.
+ */
+const DEFAULT_MAX_TOKENS = 4000;
+
+/** How many times a truncated answer is continued before giving up. */
+const MAX_CONTINUATIONS = 2;
+
+/** Answer budget, configurable so it can be raised without a rebuild. */
+function maxTokens(): number {
+  const configured = Number(process.env.AI_CHAT_MAX_TOKENS);
+  return Number.isFinite(configured) && configured > 0 ? configured : DEFAULT_MAX_TOKENS;
+}
+
+/**
+ * Persona prompt with the vendored humanizer skill baked in.
+ *
+ * The skill is applied always-on rather than as a second rewriting pass: the
+ * model composes in that style directly, which keeps a chat reply to a single
+ * round trip and avoids a rewrite pass dropping facts.
+ */
+function buildChatSystemPrompt(): string {
+  return [
+    'You are Grigore Teodor speaking directly to the visitor in first person.',
+    'Answer only from the provided context about profile, projects, experience, and blog posts.',
+    'For personal questions (name, role, location, contacts) always use profile context and answer as "I".',
+    'If the answer is not present in context, clearly say that you do not know based on available data.',
+    '',
+    'Always finish what you started. Never stop mid-sentence, never trail off, and never leave a',
+    'dangling clause. Answer the whole question at whatever length it actually needs.',
+    '',
+    'Write like a person, not a chatbot. The rules below are the editing standard for every reply:',
+    'apply them while you compose, not as a separate pass.',
+    '',
+    HUMANIZER_SKILL,
+  ].join('\n');
+}
+
+/** One DeepSeek completion. Reports whether the model ran out of answer budget. */
+async function requestCompletion(
+  apiKey: string,
+  messages: DeepseekMessage[],
+): Promise<{ content: string; truncated: boolean }> {
+  const response = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: process.env.DEEPSEEK_MODEL?.trim() || 'deepseek-chat',
+      messages,
+      temperature: 0.4,
+      max_tokens: maxTokens(),
+    }),
+  });
+
+  if (!response.ok) {
+    const raw = await response.text();
+    throw new BadGatewayException(`DeepSeek API error: ${response.status} ${raw}`);
+  }
+
+  const payload = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
+  };
+  const choice = payload.choices?.[0];
+  const content = choice?.message?.content?.trim();
+  if (!content) {
+    throw new InternalServerErrorException('Empty AI response');
+  }
+
+  return { content, truncated: choice?.finish_reason === 'length' };
 }
