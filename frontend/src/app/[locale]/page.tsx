@@ -8,6 +8,7 @@ import { JsonLd } from '@/components/JsonLd';
 import { Reveal } from '@/components/Reveal';
 import { getBlogPosts, getExperience, getProfile, getProjects, getPublicHealth } from '@/lib/api';
 import type { BlogPost, ExperienceItem, Locale, Project } from '@/lib/api';
+import { SHOW_BLOG } from '@/lib/features';
 import { computeVitals } from '@/lib/health-vitals';
 
 type Props = {
@@ -43,7 +44,7 @@ export default async function HomePage({ params }: Props) {
 
   const [profile, blogPosts, projects, experience, health] = await Promise.all([
     getProfile(locale),
-    getBlogPosts(locale),
+    SHOW_BLOG ? getBlogPosts(locale) : Promise.resolve([] as BlogPost[]),
     getProjects(locale),
     getExperience(locale),
     getPublicHealth(),
@@ -69,9 +70,11 @@ export default async function HomePage({ params }: Props) {
       <Reveal>
         <ProjectsPreview projects={projects} />
       </Reveal>
-      <Reveal>
-        <BlogPreview posts={blogPosts} locale={locale} />
-      </Reveal>
+      {SHOW_BLOG && (
+        <Reveal>
+          <BlogPreview posts={blogPosts} locale={locale} />
+        </Reveal>
+      )}
     </main>
   );
 }

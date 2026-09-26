@@ -7,6 +7,7 @@ import { StressScene } from '@/components/StressScene';
 import { WalkerScene } from '@/components/WalkerScene';
 import type { Profile, PublicHealthPayload } from '@/lib/api';
 import { computeVitals, type HealthVitals } from '@/lib/health-vitals';
+import { SHOW_BLOG } from '@/lib/features';
 import { useEffect, useState } from 'react';
 
 /** How often the hero vitals refetch from the server (ms). */
@@ -52,11 +53,15 @@ function StatsStrip({ stats }: { stats: HeroStats }) {
     t('years', { value: stats.years }),
     t('roles', { value: stats.roles }),
     t('products', { value: stats.products }),
-    t('articles', { value: stats.articles }),
+    ...(SHOW_BLOG ? [t('articles', { value: stats.articles })] : []),
   ];
 
   return (
-    <div className="grid grid-cols-2 divide-x divide-border rounded-lg border border-border bg-surface md:grid-cols-4">
+    <div
+      className={`grid grid-cols-1 divide-y divide-border rounded-lg border border-border bg-surface sm:grid-cols-3 sm:divide-x sm:divide-y-0 ${
+        SHOW_BLOG ? 'md:grid-cols-4' : 'md:grid-cols-3'
+      }`}
+    >
       {cells.map((cell, index) => (
         <div key={index} className="px-4 py-3 text-center font-mono text-lg text-accent">
           {cell}

@@ -7,6 +7,7 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { routing } from '@/i18n/routing';
 import { getBlogPosts, getProfile, getPublicHealth } from '@/lib/api';
+import { SHOW_BLOG } from '@/lib/features';
 import type { Locale } from '@/lib/api';
 import '../globals.css';
 
@@ -82,7 +83,7 @@ export default async function LocaleLayout({ children, params }: Props) {
   // consistent regardless of which page is rendered.
   const [profile, blogPosts, publicHealth] = await Promise.all([
     getProfile(validLocale),
-    getBlogPosts(validLocale),
+    SHOW_BLOG ? getBlogPosts(validLocale) : Promise.resolve([]),
     getPublicHealth(),
   ]);
 
@@ -93,7 +94,7 @@ export default async function LocaleLayout({ children, params }: Props) {
         <Background />
         <div className="bg-grid" aria-hidden />
         <NextIntlClientProvider messages={messages}>
-          <Header showBlog={blogPosts.length > 0} showHealth={publicHealth !== null} />
+          <Header showBlog={SHOW_BLOG && blogPosts.length > 0} showHealth={publicHealth !== null} />
           {children}
           <Footer contact={profile.contact} />
           <AssistantChatWidget locale={validLocale} />
