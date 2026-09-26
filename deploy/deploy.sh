@@ -140,9 +140,12 @@ if [ -n "\$(docker compose --env-file .env.production -f ${COMPOSE_FILE} ps -q d
   fi
 fi
 
-# Build explicitly instead of `up --build`: twice already `up -d --build`
+# Build explicitly instead of "up --build": twice already "up -d --build"
 # reused fully-cached layers and left containers running stale code while
-# reporting success — the explicit build reliably invalidates the layers.
+# reporting success - the explicit build reliably invalidates the layers.
+# NOTE: this heredoc is unquoted so the local shell can inject the variables
+# above. Never use backticks in this block: they are command-substituted
+# locally before the script is sent.
 docker compose --env-file .env.production -f ${COMPOSE_FILE} build
 docker compose --env-file .env.production -f ${COMPOSE_FILE} up -d --remove-orphans
 docker compose --env-file .env.production -f ${COMPOSE_FILE} ps
