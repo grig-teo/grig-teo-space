@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CvService } from '../cv/cv.service';
 import { ContentKey, SiteContent } from '../entities/site-content.entity';
+import { HumanizerService } from '../humanizer/humanizer.service';
 import type { BlogPost, ExperienceItem, LocalizedString, Profile, Project } from '../types';
 
 @Injectable()
@@ -11,6 +12,7 @@ export class ContentService {
     @InjectRepository(SiteContent)
     private readonly repo: Repository<SiteContent>,
     private readonly cv: CvService,
+    private readonly humanizer: HumanizerService,
   ) {}
 
   async getProfile(): Promise<Profile> {
@@ -91,15 +93,19 @@ export class ContentService {
   }
 
   async updateProfile(profile: Profile): Promise<Profile> {
-    const normalized = this.normalizeProfile(profile);
+    const current = await this.readJson<Profile>('profile');
+    const humanized = await this.humanizer.humanizeProfile(profile, current);
+    const normalized = this.normalizeProfile(humanized);
     await this.saveJson('profile', normalized);
     await this.rebuildCv();
     return normalized;
   }
 
   async updateProjects(projects: Project[]): Promise<Project[]> {
+    const current = await this.readJson<Project[]>('projects');
+    const humanized = await this.humanizer.humanizeProjects(projects, current);
     const normalized = this.sortProjects(
-      projects.map((project, index, arr) => ({
+      humanized.map((project, index, arr) => ({
         ...this.normalizeProject(project),
         sortOrder: arr.length - index,
       })),
@@ -110,7 +116,9 @@ export class ContentService {
   }
 
   async updateExperience(experience: ExperienceItem[]): Promise<ExperienceItem[]> {
-    const normalized = experience.map((item) => this.normalizeExperienceItem(item));
+    const current = await this.readJson<ExperienceItem[]>('experience');
+    const humanized = await this.humanizer.humanizeExperience(experience, current);
+    const normalized = humanized.map((item) => this.normalizeExperienceItem(item));
     await this.saveJson('experience', normalized);
     await this.rebuildCv();
     return normalized;
@@ -133,6 +141,15 @@ export class ContentService {
       throw new NotFoundException(`Content "${key}" not found in database`);
     }
     return row.data as T;
+  }
+
+  /**
+   * Reads a key without throwing. The humanizer uses this to diff incoming text
+   * against what is already stored, so unchanged fields are not rewritten again.
+   */
+  private async readJson<T>(key: ContentKey): Promise<T | null> {
+    const row = await this.repo.findOne({ where: { key } });
+    return row?.data ? (row.data as T) : null;
   }
 
   private async saveJson(key: ContentKey, data: unknown): Promise<void> {

@@ -107,8 +107,10 @@ export class AdminContentController {
 
   @Put('profile')
   async updateProfile(@Body() profile: Profile) {
-    await this.content.updateProfile(profile);
-    return { profile, cvRebuilt: true };
+    // Return the stored result, not the request body: the humanizer may have
+    // rewritten the prose on the way in.
+    const result = await this.content.updateProfile(profile);
+    return { profile: result, cvRebuilt: true };
   }
 
   @Put('projects')
@@ -119,8 +121,8 @@ export class AdminContentController {
 
   @Put('experience')
   async updateExperience(@Body() experience: ExperienceItem[]) {
-    await this.content.updateExperience(experience);
-    return { experience, cvRebuilt: true };
+    const result = await this.content.updateExperience(experience);
+    return { experience: result, cvRebuilt: true };
   }
 
   @Put('blog')
