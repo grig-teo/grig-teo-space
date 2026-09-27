@@ -11,16 +11,19 @@ import { HealthController } from './health.controller';
 import { HealthService } from './health.service';
 import { StorageModule } from '../storage/storage.module';
 import { WeatherModule } from '../weather/weather.module';
+import { WhisperModule } from '../whisper/whisper.module';
 
 @Module({
   // HealthTip is registered here so HealthService can persist tips. HealthService
   // is exported so DocumentsService (the AI doctor) can read ring + body context.
   // WeatherModule feeds current conditions into the hourly tip context.
   // StorageModule stores note attachments in the private media bucket.
+  // WhisperModule turns note voice messages into text.
   imports: [
     TypeOrmModule.forFeature([HealthReading, HealthNote, HealthTip, SiteContent, SleepSession]),
     WeatherModule,
     StorageModule,
+    WhisperModule,
   ],
   controllers: [HealthController, HealthAdminController],
   providers: [HealthService, DeviceKeyGuard],

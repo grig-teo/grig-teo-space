@@ -30,6 +30,7 @@ import { PortfolioService } from './portfolio.service';
 import { StorageModule } from './storage/storage.module';
 import { WeatherModule } from './weather/weather.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { WhisperModule } from './whisper/whisper.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     MediaModule,
     WeatherModule,
     WebhooksModule,
+    WhisperModule,
   ],
   controllers: [PortfolioController, AiController, LinkedInController],
   providers: [

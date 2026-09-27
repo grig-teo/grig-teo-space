@@ -24,6 +24,7 @@ import { HealthTip } from '../entities/health-tip.entity';
 import { SleepSession } from '../entities/sleep-session.entity';
 import { StorageService } from '../storage/storage.service';
 import { WeatherService } from '../weather/weather.service';
+import { WhisperService } from '../whisper/whisper.service';
 
 const execFileAsync = promisify(execFile);
 
@@ -419,6 +420,7 @@ export class HealthService {
     private readonly sleepRepo: Repository<SleepSession>,
     private readonly weather: WeatherService,
     private readonly storage: StorageService,
+    private readonly whisper: WhisperService,
   ) {}
 
   // --- Ingest -------------------------------------------------------------
@@ -570,20 +572,10 @@ export class HealthService {
     }
   }
 
-  /** Speech-to-text via the compose-local faster-whisper sidecar. */
+  /** Speech-to-text for a note's locally extracted audio track. */
   private async transcribeAudio(path: string): Promise<string | null> {
     try {
-      const base = (process.env.WHISPER_BASE_URL?.trim() || 'http://whisper:8000').replace(/\/+$/, '');
-      const form = new FormData();
-      form.append('file', new Blob([await readFile(path)]), 'audio.wav');
-      const response = await fetch(`${base}/transcribe`, {
-        method: 'POST',
-        body: form,
-        signal: AbortSignal.timeout(300_000),
-      });
-      if (!response.ok) return null;
-      const payload = (await response.json()) as { text?: string };
-      return payload.text?.trim() || null;
+      return await this.whisper.transcribe(await readFile(path), 'audio.wav');
     } catch {
       return null;
     }

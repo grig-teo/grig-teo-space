@@ -11,6 +11,7 @@ import { ContentService } from './content/content.service';
 import { AiChatMessage, type AiChatRole } from './entities/ai-chat-message.entity';
 import { HUMANIZER_SKILL } from './humanizer/humanizer.skill';
 import { LinkedInService } from './linkedin.service';
+import { WhisperService } from './whisper/whisper.service';
 import type {
   BlogPost,
   ExperienceItem,
@@ -48,6 +49,9 @@ type SavedChatMessage = {
   createdAt: string;
 };
 
+/** Whether a turn was typed or spoken — spoken turns get shorter, plainer replies. */
+export type AnswerMode = 'text' | 'voice';
+
 @Injectable()
 export class AiService {
   private static readonly maxHistoryMessages = 100;
@@ -55,6 +59,7 @@ export class AiService {
   constructor(
     private readonly content: ContentService,
     private readonly linkedin: LinkedInService,
+    private readonly whisper: WhisperService,
     @InjectRepository(AiChatMessage)
     private readonly chatRepo: Repository<AiChatMessage>,
   ) {}
@@ -74,7 +79,34 @@ export class AiService {
     }));
   }
 
-  async answerQuestion(message: string, locale: Locale, sessionId: string): Promise<string> {
+  /**
+   * One voice turn: transcribe the clip, then answer from the same grounded
+   * context as a typed question, so speaking to the site and typing to it draw
+   * on exactly the same data.
+   *
+   * An empty transcript means the clip held no recognizable speech; the caller
+   * reports that to the visitor instead of asking the model about nothing.
+   */
+  async answerVoice(
+    audio: Buffer,
+    filename: string,
+    locale: Locale,
+    sessionId: string,
+  ): Promise<{ transcript: string; answer: string }> {
+    const transcript = await this.whisper.transcribe(audio, filename);
+    if (!transcript) {
+      return { transcript: '', answer: '' };
+    }
+    const answer = await this.answerQuestion(transcript, locale, sessionId, 'voice');
+    return { transcript, answer };
+  }
+
+  async answerQuestion(
+    message: string,
+    locale: Locale,
+    sessionId: string,
+    mode: AnswerMode = 'text',
+  ): Promise<string> {
     const normalizedSessionId = this.normalizeSessionId(sessionId);
     await this.saveChatMessage(normalizedSessionId, 'user', message, locale);
 
@@ -83,11 +115,15 @@ export class AiService {
       throw new ServiceUnavailableException('AI chat is not configured yet');
     }
 
-    const messages = await this.buildMessages(normalizedSessionId, message, locale);
+    const messages = await this.buildMessages(normalizedSessionId, message, locale, mode);
     const answer = await this.completeAnswer(apiKey, messages);
+    // A spoken reply is read aloud, so markdown would be pronounced as
+    // punctuation rather than shown. Strip it before storing or returning:
+    // the transcript of a voice turn should read like the transcript of a call.
+    const delivered = mode === 'voice' ? toSpokenText(answer) : answer;
 
-    await this.saveChatMessage(normalizedSessionId, 'assistant', answer, locale);
-    return answer;
+    await this.saveChatMessage(normalizedSessionId, 'assistant', delivered, locale);
+    return delivered;
   }
 
   /** System persona, then recent history, then retrieved context and the question. */
@@ -95,6 +131,7 @@ export class AiService {
     sessionId: string,
     message: string,
     locale: Locale,
+    mode: AnswerMode,
   ): Promise<DeepseekMessage[]> {
     const docs = await this.buildContextDocs(locale);
     // Ranking picks the most relevant documents, but the cap must stay above
@@ -108,7 +145,7 @@ export class AiService {
     const history = await this.recentHistory(sessionId);
 
     return [
-      { role: 'system', content: buildChatSystemPrompt() },
+      { role: 'system', content: buildChatSystemPrompt(mode) },
       ...history,
       {
         role: 'user',
@@ -400,6 +437,35 @@ function maxTokens(): number {
   return Number.isFinite(configured) && configured > 0 ? configured : DEFAULT_MAX_TOKENS;
 }
 
+/** Persona and rules shared by typed and spoken turns. */
+const CHAT_PERSONA_LINES = [
+  'You are Grigore Teodor speaking directly to the visitor in first person.',
+  'Answer only from the provided context about profile, projects, experience, and blog posts.',
+  'For personal questions (name, role, location, contacts) always use profile context and answer as "I".',
+  'If the answer is not present in context, clearly say that you do not know based on available data.',
+  '',
+  'Always finish what you started. Never stop mid-sentence, never trail off, and never leave a',
+  'dangling clause. Answer the whole question at whatever length it actually needs.',
+  '',
+  'Write like a person, not a chatbot. The rules below are the editing standard for every reply:',
+  'apply them while you compose, not as a separate pass.',
+];
+
+/**
+ * Extra rules for a spoken turn. The reply is converted to speech, so markdown
+ * is pronounced instead of seen, and a long answer cannot be skimmed the way a
+ * written one can.
+ */
+const VOICE_DELIVERY_RULES = [
+  '',
+  'This turn is SPOKEN: your reply is converted to speech and played to the visitor.',
+  'Answer in one to three short sentences (under about 60 words) of plain conversational',
+  'language, the way you would say it on a phone call. No markdown, no bullet points, no',
+  'headings, no code, no emoji, and never read a URL or an email address aloud. If a complete',
+  'answer would need a long list, give the two or three most important items and offer to go',
+  'deeper if the visitor asks.',
+];
+
 /**
  * Persona prompt with the vendored humanizer skill baked in.
  *
@@ -407,21 +473,43 @@ function maxTokens(): number {
  * model composes in that style directly, which keeps a chat reply to a single
  * round trip and avoids a rewrite pass dropping facts.
  */
-function buildChatSystemPrompt(): string {
+function buildChatSystemPrompt(mode: AnswerMode = 'text'): string {
   return [
-    'You are Grigore Teodor speaking directly to the visitor in first person.',
-    'Answer only from the provided context about profile, projects, experience, and blog posts.',
-    'For personal questions (name, role, location, contacts) always use profile context and answer as "I".',
-    'If the answer is not present in context, clearly say that you do not know based on available data.',
-    '',
-    'Always finish what you started. Never stop mid-sentence, never trail off, and never leave a',
-    'dangling clause. Answer the whole question at whatever length it actually needs.',
-    '',
-    'Write like a person, not a chatbot. The rules below are the editing standard for every reply:',
-    'apply them while you compose, not as a separate pass.',
+    ...CHAT_PERSONA_LINES,
+    ...(mode === 'voice' ? VOICE_DELIVERY_RULES : []),
     '',
     HUMANIZER_SKILL,
   ].join('\n');
+}
+
+/**
+ * Reduces a markdown reply to something that survives text-to-speech.
+ *
+ * The model is told to answer in plain speech for voice turns, but it does not
+ * always comply, and a stray `**` or `- ` read literally is worse than the
+ * formatting is worth. Falls back to the original when stripping leaves
+ * nothing behind.
+ */
+function toSpokenText(markdown: string): string {
+  const plain = markdown
+    // Fenced code blocks: keep the body, drop the fences.
+    .replace(/```[a-zA-Z0-9]*\n?/g, '')
+    // Emphasis, inline code and strikethrough markers.
+    .replace(/`{1,3}|[*_~]{1,3}/g, '')
+    // Headings and blockquote markers.
+    .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+    .replace(/^\s{0,3}>\s?/gm, '')
+    // Bullet and numbered list markers.
+    .replace(/^\s{0,3}(?:[-+*]|\d+\.)\s+/gm, '')
+    // Links and images: keep the label, drop the target.
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+    // Horizontal rules.
+    .replace(/^\s{0,3}(?:[-*_]\s*){3,}$/gm, '')
+    // Collapse the newlines speech does not need.
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return plain || markdown.trim();
 }
 
 /** One DeepSeek completion. Reports whether the model ran out of answer budget. */

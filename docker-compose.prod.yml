@@ -60,6 +60,9 @@ services:
       HUMANIZER_ENABLED: ${HUMANIZER_ENABLED:-}
       # Public AI chat answer budget. Must be listed here to reach the container.
       AI_CHAT_MAX_TOKENS: ${AI_CHAT_MAX_TOKENS:-}
+      # Voice turns per IP per day. Separate from the 3-question text quota,
+      # which would end a spoken conversation after three sentences.
+      AI_VOICE_MAX_TURNS: ${AI_VOICE_MAX_TURNS:-}
       KIMI_API_KEY: ${KIMI_API_KEY:-}
       KIMI_MODEL: ${KIMI_MODEL:-k3}
       LINKEDIN_CLIENT_ID: ${LINKEDIN_CLIENT_ID:-}
