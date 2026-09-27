@@ -169,7 +169,8 @@ export function Hero({
             <HeroCtas />
           </div>
         </div>
-        <div className="mt-10 flex justify-center lg:mt-0 lg:pt-4">
+        <div className="mt-10 flex flex-col items-center gap-4 lg:mt-0 lg:pt-4">
+          {now ? <NowBadge status={now} /> : null}
           <div className="flex scale-90 items-center gap-12 lg:scale-100">
             {bpm ? <HealthScene bpm={bpm} /> : null}
             {cadence ? (
@@ -186,23 +187,20 @@ export function Hero({
           </div>
         </div>
       </div>
-      {now ? <NowBadge status={now} /> : null}
     </section>
   );
 }
 
-/** Pulsing "currently: walking" pill under the hero vitals. */
+/** Pulsing "currently: walking" pill shown above the hero vitals. */
 function NowBadge({ status }: { status: string }) {
   const t = useTranslations('hero');
   return (
-    <div className="mt-6 flex justify-center lg:justify-end">
-      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 font-mono text-[11px] text-muted">
-        <span className="relative flex h-2 w-2">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
-        </span>
-        {t(`now.${status}`)}
+    <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 font-mono text-[11px] text-muted">
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
       </span>
-    </div>
+      {t(`now.${status}`)}
+    </span>
   );
 }
