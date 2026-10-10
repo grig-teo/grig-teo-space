@@ -515,12 +515,16 @@ export function ForceGraph({
     return best;
   };
 
+  /**
+   * `min-w-0` matters: a grid item defaults to `min-width: auto`, so a canvas
+   * still carrying the fullscreen width on exit would stretch the column, push
+   * the controls off-screen and hide the shrink from the ResizeObserver that
+   * would otherwise correct it. `max-w-full` on the canvas is the same guard.
+   */
   return (
     <div
       ref={wrapRef}
-      className={
-        expanded ? `fixed inset-0 z-50 bg-background ${className ?? ''}` : `relative ${className ?? ''}`
-      }
+      className={`min-w-0 ${expanded ? 'fixed inset-0 z-50 bg-background' : 'relative'} ${className ?? ''}`}
     >
       {expanded ? (
         <p className="pointer-events-none absolute left-4 top-4 z-10 rounded border border-border bg-surface/85 px-2 py-1 font-mono text-xs text-muted backdrop-blur">
@@ -551,7 +555,7 @@ export function ForceGraph({
       </div>
       <canvas
         ref={canvasRef}
-        className={`block w-full cursor-grab touch-none bg-surface ${expanded ? '' : 'rounded-lg border border-border'}`}
+        className={`block w-full max-w-full cursor-grab touch-none bg-surface ${expanded ? '' : 'rounded-lg border border-border'}`}
         onPointerDown={(event) => {
           const node = nodeAt(event);
           if (!node) {
