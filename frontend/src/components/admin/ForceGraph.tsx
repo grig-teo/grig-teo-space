@@ -160,10 +160,11 @@ function seedSimNodes(nodes: GraphNode[], previous: Map<string, SimNode>, width:
 
 /** One physics tick: pairwise repulsion, edge springs and a pull to the centre. */
 function simulate(nodes: SimNode[], edges: GraphEdge[], alpha: number, width: number, height: number): void {
-  // Repulsion is summed over every other node, so a 90-node graph feels roughly
-  // twenty times the push of a 10-node one at the same spacing. Scaling it down
-  // as the graph grows stops large graphs from piling against the container.
-  const repulsion = REPULSION * Math.min(1, 40 / Math.max(40, nodes.length));
+  // Repulsion is summed over every other node, so a 90-node graph feels far more
+  // push than a 10-node one at the same spacing. Damping it slowly with size keeps
+  // a big graph spread across the canvas instead of collapsing into a knot, while
+  // a small local graph keeps the full strength it needs to stay readable.
+  const repulsion = REPULSION * Math.min(1, 80 / Math.max(80, nodes.length));
   for (let i = 0; i < nodes.length; i += 1) {
     for (let j = i + 1; j < nodes.length; j += 1) {
       const a = nodes[i];
