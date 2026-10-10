@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ForceGraph } from '@/components/admin/ForceGraph';
 import { adminGetGraph, type GraphPayload } from '@/lib/admin-api';
@@ -47,17 +46,16 @@ export function LocalGraphCard({ focusId, title = 'Connections' }: { focusId: st
 
   return (
     <section className="rounded-lg border border-border bg-surface p-4">
-      <div className="mb-3 flex items-center gap-3">
-        <h3 className="font-mono text-sm text-foreground">{title}</h3>
-        <Link
-          href="/admin/dashboard/graph"
-          className="ml-auto font-mono text-xs text-muted transition-colors hover:text-accent"
-        >
-          open full graph →
-        </Link>
-      </div>
+      <h3 className="mb-3 font-mono text-sm text-foreground">{title}</h3>
       {payload ? (
-        <ForceGraph payload={payload} focusId={focusId} depth={1} height={240} selectedId={focusId} />
+        <ForceGraph
+          payload={payload}
+          focusId={focusId}
+          depth={1}
+          height={240}
+          selectedId={focusId}
+          expandHref="/admin/dashboard/graph"
+        />
       ) : (
         <p className="font-mono text-xs text-muted">Loading graph…</p>
       )}

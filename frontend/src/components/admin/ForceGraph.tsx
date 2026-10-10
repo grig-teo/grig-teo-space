@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
+import Link from 'next/link';
 import type { GraphEdge, GraphEdgeRel, GraphNode, GraphNodeType, GraphPayload } from '@/lib/admin-api';
 
 /** Base radius per node kind; technology nodes stay small so they read as texture. */
@@ -48,8 +49,31 @@ export type ForceGraphProps = {
   hiddenTypes?: GraphNodeType[];
   selectedId?: string | null;
   onSelect?: (nodeId: string | null) => void;
+  /** Renders an "open full page" affordance in the corner when provided. */
+  expandHref?: string;
   className?: string;
 };
+
+/** Diagonal arrows, the conventional "expand to full page" mark. */
+function ExpandIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className="h-3.5 w-3.5"
+    >
+      <path d="M15 3h6v6" />
+      <path d="M9 21H3v-6" />
+      <path d="M21 3l-7 7" />
+      <path d="M3 21l7-7" />
+    </svg>
+  );
+}
 
 /** Theme-aware colours; the graph is the one place where hues carry meaning. */
 function readPalette() {
@@ -250,6 +274,7 @@ export function ForceGraph({
   hiddenTypes = [],
   selectedId = null,
   onSelect,
+  expandHref,
   className,
 }: ForceGraphProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -353,7 +378,17 @@ export function ForceGraph({
   };
 
   return (
-    <div ref={wrapRef} className={className}>
+    <div ref={wrapRef} className={`relative ${className ?? ''}`}>
+      {expandHref ? (
+        <Link
+          href={expandHref}
+          aria-label="Open the full graph page"
+          title="Open the full graph page"
+          className="absolute right-2 top-2 z-10 rounded border border-border bg-surface/85 p-1.5 text-muted backdrop-blur transition-colors hover:border-accent hover:text-accent"
+        >
+          <ExpandIcon />
+        </Link>
+      ) : null}
       <canvas
         ref={canvasRef}
         className="block w-full cursor-grab touch-none rounded-lg border border-border bg-surface"
