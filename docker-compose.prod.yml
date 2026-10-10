@@ -76,6 +76,12 @@ services:
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:14b-instruct-q5_K_M}
       OLLAMA_VISION_MODEL: ${OLLAMA_VISION_MODEL:-qwen2.5vl:7b}
       WHISPER_BASE_URL: ${WHISPER_BASE_URL:-http://whisper:8000}
+      # Repository graph: read-only tokens for the two git hosts. Without them
+      # GitVerse rejects the request outright and GitHub is capped at 60/hour.
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITVERSE_TOKEN: ${GITVERSE_TOKEN:-}
+      # How long the repository/commit snapshot is cached (ms).
+      REPO_CACHE_TTL_MS: ${REPO_CACHE_TTL_MS:-}
       LEMNISCATE_WEBHOOK_SECRET: ${LEMNISCATE_WEBHOOK_SECRET:-}
       DEV_TELEGRAM_BOT_TOKEN: ${DEV_TELEGRAM_BOT_TOKEN:-}
       DEV_TELEGRAM_CHAT_ID: ${DEV_TELEGRAM_CHAT_ID:-}

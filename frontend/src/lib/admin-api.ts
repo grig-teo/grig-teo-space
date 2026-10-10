@@ -306,9 +306,21 @@ export type GraphNodeType =
   /** A scanned document. */
   | 'document'
   /** A coarse aggregate: tips, sleep sessions, media backup, AI chats, weather. */
-  | 'log';
+  | 'log'
+  /** A code repository on GitHub or GitVerse. */
+  | 'repo';
 
-export type GraphEdgeRel = 'tagged' | 'uses' | 'works_at' | 'indexes' | 'mentions' | 'feeds';
+export type GraphEdgeRel = 'tagged' | 'uses' | 'works_at' | 'indexes' | 'mentions' | 'feeds' | 'hosts';
+
+/** One commit, normalised across GitHub and GitVerse. */
+export interface GraphCommit {
+  sha: string;
+  message: string;
+  author: string;
+  /** ISO timestamp of the commit. */
+  date: string;
+  url: string;
+}
 
 export interface GraphNode {
   id: string;
@@ -318,6 +330,10 @@ export interface GraphNode {
   degree: number;
   aliases?: string[];
   inDevelopment?: boolean;
+  /** External page for this node (a repository, for instance). */
+  url?: string;
+  /** Recent commits, newest first — only set on repository nodes. */
+  commits?: GraphCommit[];
 }
 
 export interface GraphEdge {

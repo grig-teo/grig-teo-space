@@ -16,6 +16,7 @@ const RADIUS: Record<GraphNodeType, number> = {
   note: 6,
   document: 6,
   log: 5,
+  repo: 7,
 };
 
 /** Rest length per edge kind — index links are structural, so they stretch further. */
@@ -26,6 +27,7 @@ const SPRING_LENGTH: Record<GraphEdgeRel, number> = {
   indexes: 150,
   mentions: 120,
   feeds: 70,
+  hosts: 80,
 };
 
 /** Repulsion between every pair; scaled by node weight so hubs push harder. */
@@ -107,6 +109,8 @@ function readPalette() {
       note: '#b58a3c',
       document: '#6f7f96',
       log: '#9aa0a6',
+      // Source repositories.
+      repo: '#4f9d6a',
     } satisfies Record<GraphNodeType, string>,
   };
 }

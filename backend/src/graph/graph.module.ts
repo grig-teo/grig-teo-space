@@ -13,6 +13,7 @@ import { WeatherSample } from '../entities/weather-sample.entity';
 import { GraphController } from './graph.controller';
 import { GraphService } from './graph.service';
 import { HealthGraphService } from './health-graph.service';
+import { RepoGraphService } from './repo-graph.service';
 
 /**
  * Read-only graph view over the stored content and the health pipeline data
@@ -35,6 +36,6 @@ import { HealthGraphService } from './health-graph.service';
     ]),
   ],
   controllers: [GraphController],
-  providers: [GraphService, HealthGraphService],
+  providers: [GraphService, HealthGraphService, RepoGraphService],
 })
 export class GraphModule {}

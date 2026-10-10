@@ -6,6 +6,7 @@ import { ForceGraph } from '@/components/admin/ForceGraph';
 import {
   adminGetGraph,
   adminVerify,
+  type GraphCommit,
   type GraphNodeType,
   type GraphPayload,
 } from '@/lib/admin-api';
@@ -20,6 +21,7 @@ const NODE_TYPES: GraphNodeType[] = [
   'note',
   'document',
   'log',
+  'repo',
 ];
 
 const TYPE_LABEL: Record<GraphNodeType, string> = {
@@ -33,6 +35,7 @@ const TYPE_LABEL: Record<GraphNodeType, string> = {
   note: 'Notes',
   document: 'Documents',
   log: 'Data volumes',
+  repo: 'Repositories',
 };
 
 /** Keeps matching nodes plus their direct neighbours, so a hit keeps its context. */
@@ -52,6 +55,47 @@ function filterByQuery(payload: GraphPayload, query: string): GraphPayload {
   const nodes = payload.nodes.filter((node) => keep.has(node.id));
   const ids = new Set(nodes.map((node) => node.id));
   return { ...payload, nodes, edges: payload.edges.filter((edge) => ids.has(edge.source) && ids.has(edge.target)) };
+}
+
+/** "10 Oct 2026, 16:31" — the exact moment a commit landed, in local time. */
+function formatCommitDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
+/** Recent commits on a repository, newest first. */
+function CommitList({ commits }: { commits: GraphCommit[] }) {
+  return (
+    <div className="mt-4">
+      <p className="font-mono text-[10px] uppercase tracking-wider text-muted">
+        recent commits ({commits.length})
+      </p>
+      <ul className="mt-2 space-y-2">
+        {commits.map((commit) => (
+          <li key={commit.sha} className="font-mono text-[10px] leading-snug">
+            <a
+              href={commit.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent transition-colors hover:underline"
+            >
+              {commit.sha}
+            </a>
+            <span className="text-muted"> · {formatCommitDate(commit.date)}</span>
+            <p className="text-foreground/80">{commit.message}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
@@ -120,6 +164,17 @@ function Inspector({
       {node.aliases?.length ? (
         <p className="mt-1 font-mono text-xs text-muted">also written: {node.aliases.join(', ')}</p>
       ) : null}
+      {node.url ? (
+        <a
+          href={node.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-block font-mono text-xs text-accent transition-colors hover:underline"
+        >
+          open source →
+        </a>
+      ) : null}
+      {node.commits?.length ? <CommitList commits={node.commits} /> : null}
 
       <button
         type="button"

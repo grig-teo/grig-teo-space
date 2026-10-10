@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ContentService } from '../content/content.service';
 import { HealthGraphService } from './health-graph.service';
+import { RepoGraphService } from './repo-graph.service';
 import type { BlogPost, ExperienceItem, Locale, Profile, Project } from '../types';
 import type {
   GraphEdge,
@@ -220,6 +221,7 @@ export class GraphService {
   constructor(
     private readonly content: ContentService,
     private readonly healthGraph: HealthGraphService,
+    private readonly repoGraph: RepoGraphService,
   ) {}
 
   /** Builds the whole graph from the stored site content and health data. */
@@ -232,13 +234,17 @@ export class GraphService {
     ]);
     const sources: GraphSources = { profile, projects, experience, blog };
     const tech = buildTechIndex(collectTechEntries(projects, experience));
-    const health = await this.healthGraph.build();
+    const [health, repos] = await Promise.all([
+      this.healthGraph.build(),
+      this.repoGraph.build({ profile, projects, experience }),
+    ]);
 
-    const nodes = [...contentNodes(sources), ...techNodes(tech), ...health.nodes];
+    const nodes = [...contentNodes(sources), ...techNodes(tech), ...health.nodes, ...repos.nodes];
     const authored = [
       ...structuredEdges(sources, tech),
       ...indexEdges(sources),
       ...health.edges,
+      ...repos.edges,
     ];
     const edges = dedupeEdges([...authored, ...mentionEdges(nodes, sources, authored)]);
     const withDegrees = applyDegrees(nodes, edges);
@@ -471,7 +477,9 @@ function collectStats(
 ): GraphStats {
   const byType = countBy(nodes.map((node) => node.type)) as Record<GraphNodeType, number>;
   const byRel = countBy(edges.map((edge) => edge.rel)) as Record<GraphEdgeRel, number>;
-  const contentTypes: GraphNodeType[] = ['project', 'experience', 'blog'];
+  // Repositories count as content: a repo with no project or role is worth
+  // surfacing, since it means code that nothing on the site points at.
+  const contentTypes: GraphNodeType[] = ['project', 'experience', 'blog', 'repo'];
 
   const duplicates = [...tech.aliasesOf.entries()].map(([canonical, aliases]) => ({
     canonical,

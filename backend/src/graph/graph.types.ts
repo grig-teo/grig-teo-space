@@ -13,7 +13,9 @@ export type GraphNodeType =
   /** A scanned document. */
   | 'document'
   /** A coarse aggregate: tips, sleep sessions, media backup, AI chats, weather. */
-  | 'log';
+  | 'log'
+  /** A code repository on GitHub or GitVerse. */
+  | 'repo';
 
 /** How two nodes are connected. */
 export type GraphEdgeRel =
@@ -28,7 +30,21 @@ export type GraphEdgeRel =
   /** One item's prose names another item (derived, not authored). */
   | 'mentions'
   /** Data collected by the health pipeline that the project stores. */
-  | 'feeds';
+  | 'feeds'
+  /** A repository holds the code for a project or a role's product. */
+  | 'hosts';
+
+/** One commit, normalised across GitHub and GitVerse. */
+export type GraphCommit = {
+  /** Abbreviated sha. */
+  sha: string;
+  /** First line of the commit message. */
+  message: string;
+  author: string;
+  /** ISO timestamp of the commit. */
+  date: string;
+  url: string;
+};
 
 export type GraphNode = {
   id: string;
@@ -41,6 +57,10 @@ export type GraphNode = {
   /** Other spellings folded into this node (e.g. "Next.js 14"). */
   aliases?: string[];
   inDevelopment?: boolean;
+  /** External page for this node (a repository, for instance). */
+  url?: string;
+  /** Recent commits, newest first — only set on repository nodes. */
+  commits?: GraphCommit[];
 };
 
 export type GraphEdge = {
