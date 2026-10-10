@@ -10,7 +10,7 @@ import {
   type GraphPayload,
 } from '@/lib/admin-api';
 
-const NODE_TYPES: GraphNodeType[] = ['profile', 'project', 'experience', 'blog', 'company', 'tech'];
+const NODE_TYPES: GraphNodeType[] = ['profile', 'project', 'experience', 'blog', 'tech'];
 
 const TYPE_LABEL: Record<GraphNodeType, string> = {
   profile: 'Profile',
@@ -220,8 +220,10 @@ export default function GraphPage() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
-  const [hiddenTypes, setHiddenTypes] = useState<GraphNodeType[]>(['tech', 'company']);
-  const [showIndexEdges, setShowIndexEdges] = useState(false);
+  // Everything is drawn by default: the technology nodes carry most of the
+  // graph's edges, so hiding them leaves a scatter of unconnected dots.
+  const [hiddenTypes, setHiddenTypes] = useState<GraphNodeType[]>([]);
+  const [showIndexEdges, setShowIndexEdges] = useState(true);
   const [query, setQuery] = useState('');
 
   const load = useCallback(async () => {
@@ -345,7 +347,7 @@ export default function GraphPage() {
               payload={display}
               focusId={focusId}
               depth={1}
-              height={focusId ? 320 : 520}
+              height={focusId ? 320 : 620}
               hiddenTypes={hiddenTypes}
               selectedId={selected}
               onSelect={setSelected}

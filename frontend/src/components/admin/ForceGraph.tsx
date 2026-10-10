@@ -94,7 +94,9 @@ function readPalette() {
       experience: '#8b7ad6',
       blog: '#c96f90',
       company: `rgb(${muted})`,
-      tech: `rgb(${border})`,
+      // Technology nodes carry no label at rest, so they need enough contrast to
+      // read as texture rather than disappearing into the surface.
+      tech: `rgb(${muted})`,
     } satisfies Record<GraphNodeType, string>,
   };
 }
@@ -158,6 +160,10 @@ function seedSimNodes(nodes: GraphNode[], previous: Map<string, SimNode>, width:
 
 /** One physics tick: pairwise repulsion, edge springs and a pull to the centre. */
 function simulate(nodes: SimNode[], edges: GraphEdge[], alpha: number, width: number, height: number): void {
+  // Repulsion is summed over every other node, so a 90-node graph feels roughly
+  // twenty times the push of a 10-node one at the same spacing. Scaling it down
+  // as the graph grows stops large graphs from piling against the container.
+  const repulsion = REPULSION * Math.min(1, 40 / Math.max(40, nodes.length));
   for (let i = 0; i < nodes.length; i += 1) {
     for (let j = i + 1; j < nodes.length; j += 1) {
       const a = nodes[i];
@@ -165,7 +171,7 @@ function simulate(nodes: SimNode[], edges: GraphEdge[], alpha: number, width: nu
       const dx = b.x - a.x;
       const dy = b.y - a.y;
       const distanceSq = Math.max(dx * dx + dy * dy, 24);
-      const force = (REPULSION * alpha) / distanceSq;
+      const force = (repulsion * alpha) / distanceSq;
       const distance = Math.sqrt(distanceSq);
       const fx = (dx / distance) * force;
       const fy = (dy / distance) * force;
@@ -258,10 +264,25 @@ function draw(
   ctx.font = '11px ui-monospace, SFMono-Regular, Menlo, monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
+  // Greedy label placement: an inactive label that would sit on top of one
+  // already drawn is dropped, which keeps dense clusters readable. The hovered,
+  // selected and focused labels always draw.
+  const placed: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
   for (const node of labelled) {
     const active = node.id === state.hovered || node.id === state.selected || node.id === state.focusId;
-    ctx.fillStyle = active ? palette.foreground : palette.muted;
     const text = node.label.length > 26 ? `${node.label.slice(0, 25)}…` : node.label;
+    const halfWidth = ctx.measureText(text).width / 2;
+    const box = {
+      x1: node.x - halfWidth,
+      y1: node.y + RADIUS[node.type] + 3,
+      x2: node.x + halfWidth,
+      y2: node.y + RADIUS[node.type] + 15,
+    };
+    if (!active && placed.some((other) => box.x1 < other.x2 && box.x2 > other.x1 && box.y1 < other.y2 && box.y2 > other.y1)) {
+      continue;
+    }
+    placed.push(box);
+    ctx.fillStyle = active ? palette.foreground : palette.muted;
     ctx.fillText(text, node.x, node.y + RADIUS[node.type] + 3);
   }
 }

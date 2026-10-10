@@ -268,15 +268,6 @@ function contentNodes(sources: GraphSources): GraphNode[] {
       sublabel: `${localized(item.role)} · ${localized(item.period)}`,
       degree: 0,
     });
-    const company = localized(item.company).trim();
-    if (company) {
-      nodes.push({
-        id: `company:${company.toLowerCase()}`,
-        type: 'company',
-        label: company,
-        degree: 0,
-      });
-    }
   }
 
   for (const post of sources.blog) {
@@ -308,7 +299,13 @@ function techId(label: string, tech: TechIndex): string {
   return `tech:${canonical.toLowerCase()}`;
 }
 
-/** Edges the content states outright: tags, stack and employer. */
+/**
+ * Edges the content states outright: tags and stack.
+ *
+ * Employers are not separate nodes: a role already carries its company as its
+ * label, and every company currently has exactly one role, so a company node
+ * only duplicated its role's label without adding structure.
+ */
 function structuredEdges(sources: GraphSources, tech: TechIndex): GraphEdge[] {
   const edges: GraphEdge[] = [];
   for (const project of sources.projects) {
@@ -321,14 +318,6 @@ function structuredEdges(sources: GraphSources, tech: TechIndex): GraphEdge[] {
   for (const item of sources.experience) {
     for (const label of splitStack(localized(item.stack))) {
       edges.push({ source: `experience:${item.id}`, target: techId(label, tech), rel: 'uses' });
-    }
-    const company = localized(item.company).trim();
-    if (company) {
-      edges.push({
-        source: `experience:${item.id}`,
-        target: `company:${company.toLowerCase()}`,
-        rel: 'works_at',
-      });
     }
   }
   return edges;
