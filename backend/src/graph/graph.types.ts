@@ -1,5 +1,19 @@
 /** Node kinds the content graph can contain. */
-export type GraphNodeType = 'profile' | 'project' | 'experience' | 'blog' | 'company' | 'tech';
+export type GraphNodeType =
+  | 'profile'
+  | 'project'
+  | 'experience'
+  | 'blog'
+  | 'company'
+  | 'tech'
+  /** A ring metric the health pipeline ingests (heart rate, SpO2, ...). */
+  | 'metric'
+  /** A journal note. */
+  | 'note'
+  /** A scanned document. */
+  | 'document'
+  /** A coarse aggregate: tips, sleep sessions, media backup, AI chats, weather. */
+  | 'log';
 
 /** How two nodes are connected. */
 export type GraphEdgeRel =
@@ -12,7 +26,9 @@ export type GraphEdgeRel =
   /** The profile is the index that points at a piece of content. */
   | 'indexes'
   /** One item's prose names another item (derived, not authored). */
-  | 'mentions';
+  | 'mentions'
+  /** Data collected by the health pipeline that the project stores. */
+  | 'feeds';
 
 export type GraphNode = {
   id: string;

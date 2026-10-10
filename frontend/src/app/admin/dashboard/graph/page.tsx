@@ -10,7 +10,17 @@ import {
   type GraphPayload,
 } from '@/lib/admin-api';
 
-const NODE_TYPES: GraphNodeType[] = ['profile', 'project', 'experience', 'blog', 'tech'];
+const NODE_TYPES: GraphNodeType[] = [
+  'profile',
+  'project',
+  'experience',
+  'blog',
+  'tech',
+  'metric',
+  'note',
+  'document',
+  'log',
+];
 
 const TYPE_LABEL: Record<GraphNodeType, string> = {
   profile: 'Profile',
@@ -19,6 +29,10 @@ const TYPE_LABEL: Record<GraphNodeType, string> = {
   blog: 'Blog',
   company: 'Companies',
   tech: 'Technologies',
+  metric: 'Metrics',
+  note: 'Notes',
+  document: 'Documents',
+  log: 'Data volumes',
 };
 
 /** Keeps matching nodes plus their direct neighbours, so a hit keeps its context. */

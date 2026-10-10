@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ContentService } from '../content/content.service';
+import { HealthGraphService } from './health-graph.service';
 import type { BlogPost, ExperienceItem, Locale, Profile, Project } from '../types';
 import type {
   GraphEdge,
@@ -24,6 +25,12 @@ const SUGGESTION_MIN_SHARED = 2;
 
 /** A term used by more items than this is too common to imply a relationship. */
 const MAX_TERM_DOCUMENTS = 3;
+
+/** Node kinds whose own prose is scanned for mentions of other nodes. */
+const PROSE_TYPES: GraphNodeType[] = ['profile', 'project', 'experience', 'blog'];
+
+/** Node kinds contributed by the health pipeline. */
+const HEALTH_TYPES: GraphNodeType[] = ['metric', 'note', 'document', 'log'];
 
 const STOPWORDS = new Set([
   'about', 'after', 'again', 'against', 'along', 'among', 'another', 'because', 'before',
@@ -210,9 +217,12 @@ function mentionsText(haystack: string, label: string): boolean {
 
 @Injectable()
 export class GraphService {
-  constructor(private readonly content: ContentService) {}
+  constructor(
+    private readonly content: ContentService,
+    private readonly healthGraph: HealthGraphService,
+  ) {}
 
-  /** Builds the whole content graph from the stored site content. */
+  /** Builds the whole graph from the stored site content and health data. */
   async build(): Promise<GraphPayload> {
     const [profile, projects, experience, blog] = await Promise.all([
       this.content.getProfile(),
@@ -222,9 +232,14 @@ export class GraphService {
     ]);
     const sources: GraphSources = { profile, projects, experience, blog };
     const tech = buildTechIndex(collectTechEntries(projects, experience));
+    const health = await this.healthGraph.build();
 
-    const nodes = [...contentNodes(sources), ...techNodes(tech)];
-    const authored = [...structuredEdges(sources, tech), ...indexEdges(sources)];
+    const nodes = [...contentNodes(sources), ...techNodes(tech), ...health.nodes];
+    const authored = [
+      ...structuredEdges(sources, tech),
+      ...indexEdges(sources),
+      ...health.edges,
+    ];
     const edges = dedupeEdges([...authored, ...mentionEdges(nodes, sources, authored)]);
     const withDegrees = applyDegrees(nodes, edges);
 
@@ -340,8 +355,12 @@ function indexEdges(sources: GraphSources): GraphEdge[] {
  * parallel edge for the same relationship.
  */
 function mentionEdges(nodes: GraphNode[], sources: GraphSources, authored: GraphEdge[]): GraphEdge[] {
-  const content = nodes.filter((node) => node.type !== 'tech' && node.type !== 'company');
-  const candidates = nodes.filter((node) => node.type !== 'profile');
+  const content = nodes.filter((node) => PROSE_TYPES.includes(node.type));
+  // Health nodes are excluded as targets: their labels are generic ("Heart
+  // rate"), and their `feeds` edge already states how they relate.
+  const candidates = nodes.filter(
+    (node) => node.type !== 'profile' && !HEALTH_TYPES.includes(node.type),
+  );
   const connected = new Set(authored.flatMap((edge) => [`${edge.source}|${edge.target}`, `${edge.target}|${edge.source}`]));
   const edges: GraphEdge[] = [];
 

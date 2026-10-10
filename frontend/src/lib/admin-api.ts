@@ -292,9 +292,23 @@ export async function adminSaveHealthConfig(
 
 // --- Content graph --------------------------------------------------------
 
-export type GraphNodeType = 'profile' | 'project' | 'experience' | 'blog' | 'company' | 'tech';
+export type GraphNodeType =
+  | 'profile'
+  | 'project'
+  | 'experience'
+  | 'blog'
+  | 'company'
+  | 'tech'
+  /** A ring metric the health pipeline ingests. */
+  | 'metric'
+  /** A journal note. */
+  | 'note'
+  /** A scanned document. */
+  | 'document'
+  /** A coarse aggregate: tips, sleep sessions, media backup, AI chats, weather. */
+  | 'log';
 
-export type GraphEdgeRel = 'tagged' | 'uses' | 'works_at' | 'indexes' | 'mentions';
+export type GraphEdgeRel = 'tagged' | 'uses' | 'works_at' | 'indexes' | 'mentions' | 'feeds';
 
 export interface GraphNode {
   id: string;

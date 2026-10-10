@@ -12,6 +12,10 @@ const RADIUS: Record<GraphNodeType, number> = {
   blog: 7,
   company: 6,
   tech: 4,
+  metric: 6,
+  note: 6,
+  document: 6,
+  log: 5,
 };
 
 /** Rest length per edge kind — index links are structural, so they stretch further. */
@@ -21,6 +25,7 @@ const SPRING_LENGTH: Record<GraphEdgeRel, number> = {
   works_at: 58,
   indexes: 150,
   mentions: 120,
+  feeds: 70,
 };
 
 /** Repulsion between every pair; scaled by node weight so hubs push harder. */
@@ -97,6 +102,11 @@ function readPalette() {
       // Technology nodes carry no label at rest, so they need enough contrast to
       // read as texture rather than disappearing into the surface.
       tech: `rgb(${muted})`,
+      // Health pipeline data, in its own cooler family.
+      metric: '#3f8fd0',
+      note: '#b58a3c',
+      document: '#6f7f96',
+      log: '#9aa0a6',
     } satisfies Record<GraphNodeType, string>,
   };
 }
