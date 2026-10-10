@@ -18,6 +18,7 @@ import {
 import { attachmentType } from '@/lib/attachments';
 import { useAdminLocale } from '@/components/admin/AdminLocale';
 import { BlogBodyEditor } from '@/components/admin/BlogBodyEditor';
+import { LocalGraphCard } from '@/components/admin/LocalGraphCard';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -751,6 +752,7 @@ export function AdminEditor() {
       ) : null}
 
       {tab === 'projects' && project ? (
+        <div className="space-y-4">
         <section className="space-y-4 rounded-lg border border-border bg-surface p-6">
           <div className="flex flex-wrap items-center gap-2">
             {content.projects.map((item, index) => (
@@ -961,9 +963,12 @@ export function AdminEditor() {
             ) : null}
           </div>
         </section>
+        <LocalGraphCard focusId={`project:${project.id}`} />
+        </div>
       ) : null}
 
       {tab === 'experience' && experienceItem ? (
+        <div className="space-y-4">
         <section className="space-y-4 rounded-lg border border-border bg-surface p-6">
           <div className="flex flex-wrap items-center gap-2">
             {content.experience.map((item, index) => (
@@ -1167,6 +1172,8 @@ export function AdminEditor() {
             ) : null}
           </div>
         </section>
+        <LocalGraphCard focusId={`experience:${experienceItem.id}`} />
+        </div>
       ) : null}
     </main>
   );

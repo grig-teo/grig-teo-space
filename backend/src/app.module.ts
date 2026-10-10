@@ -21,6 +21,7 @@ import { SiteContent } from './entities/site-content.entity';
 import { SleepSession } from './entities/sleep-session.entity';
 import { WeatherSample } from './entities/weather-sample.entity';
 import { DocumentsModule } from './documents/documents.module';
+import { GraphModule } from './graph/graph.module';
 import { HealthModule } from './health/health.module';
 import { MediaModule } from './media/media.module';
 import { LinkedInController } from './linkedin.controller';
@@ -64,6 +65,7 @@ import { WhisperModule } from './whisper/whisper.module';
     AdminModule,
     HealthModule,
     DocumentsModule,
+    GraphModule,
     MediaModule,
     WeatherModule,
     WebhooksModule,

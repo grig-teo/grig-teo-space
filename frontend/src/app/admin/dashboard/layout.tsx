@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 const links: Array<{ href: string; label: string }> = [
   { href: '/admin/dashboard', label: 'Content' },
   { href: '/admin/dashboard/health', label: 'Health' },
+  { href: '/admin/dashboard/graph', label: 'Graph' },
 ];
 
 export default function DashboardLayout({

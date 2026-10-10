@@ -289,3 +289,55 @@ export async function adminSaveHealthConfig(
   if (!res.ok) throw new Error('Failed to save health config');
   return res.json();
 }
+
+// --- Content graph --------------------------------------------------------
+
+export type GraphNodeType = 'profile' | 'project' | 'experience' | 'blog' | 'company' | 'tech';
+
+export type GraphEdgeRel = 'tagged' | 'uses' | 'works_at' | 'indexes' | 'mentions';
+
+export interface GraphNode {
+  id: string;
+  type: GraphNodeType;
+  label: string;
+  sublabel?: string;
+  degree: number;
+  aliases?: string[];
+  inDevelopment?: boolean;
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+  rel: GraphEdgeRel;
+}
+
+export interface GraphSuggestion {
+  source: string;
+  target: string;
+  shared: string[];
+}
+
+export interface GraphPayload {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  stats: {
+    byType: Record<GraphNodeType, number>;
+    byRel: Record<GraphEdgeRel, number>;
+    orphans: Array<{ id: string; label: string; type: GraphNodeType }>;
+    duplicates: Array<{ canonical: string; aliases: string[] }>;
+    hubs: Array<{ id: string; label: string; degree: number }>;
+    suggestions: GraphSuggestion[];
+  };
+  generatedAt: string;
+}
+
+/** The derived content graph (admin-only). */
+export async function adminGetGraph(): Promise<GraphPayload> {
+  const res = await fetch(`${apiBase()}/api/admin/graph`, {
+    credentials: CREDENTIALS,
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to load graph');
+  return res.json();
+}
