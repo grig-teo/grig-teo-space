@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { GraphEdge, GraphEdgeRel, GraphNode, GraphNodeType, GraphPayload } from '@/lib/admin-api';
 
@@ -60,6 +60,38 @@ export type ForceGraphProps = {
   expandHref?: string;
   className?: string;
 };
+
+/** Corner brackets that point out to enter fullscreen and in to leave it. */
+function FullscreenIcon({ active }: { active: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className="h-3.5 w-3.5"
+    >
+      {active ? (
+        <>
+          <path d="M9 4v5H4" />
+          <path d="M15 20v-5h5" />
+          <path d="M20 9h-5V4" />
+          <path d="M4 15h5v5" />
+        </>
+      ) : (
+        <>
+          <path d="M4 9V4h5" />
+          <path d="M20 15v5h-5" />
+          <path d="M15 4h5v5" />
+          <path d="M9 20H4v-5" />
+        </>
+      )}
+    </svg>
+  );
+}
 
 /** Diagonal arrows, the conventional "expand to full page" mark. */
 function ExpandIcon() {
@@ -326,6 +358,54 @@ export function ForceGraph({
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
 
+  const [fullscreen, setFullscreen] = useState(false);
+  // Mirrored in a ref so the toggle never reads a stale value.
+  const fullscreenRef = useRef(false);
+
+  /**
+   * Fullscreen is a CSS overlay first and the native Fullscreen API second: the
+   * overlay fills the viewport on its own, so a browser that refuses the API
+   * (a sandboxed iframe, for instance) still gets a usable full-screen graph,
+   * while the API additionally hides the browser chrome where it is allowed.
+   */
+  const toggleFullscreen = useCallback(() => {
+    const next = !fullscreenRef.current;
+    fullscreenRef.current = next;
+    setFullscreen(next);
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    if (next) {
+      void wrap.requestFullscreen?.().catch(() => undefined);
+    } else if (document.fullscreenElement === wrap) {
+      void document.exitFullscreen?.().catch(() => undefined);
+    }
+  }, []);
+
+  // Escape closes the overlay; the native API also emits fullscreenchange.
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        fullscreenRef.current = false;
+        setFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [fullscreen]);
+
+  // Leaving fullscreen by keyboard (Esc/F11) must not strand the overlay.
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        fullscreenRef.current = false;
+        setFullscreen(false);
+      }
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, []);
+
   const hiddenKey = [...hiddenTypes].sort().join(',');
   const graph = useMemo(
     () => visibleGraph(payload, focusId, depth, hiddenTypes),
@@ -356,26 +436,32 @@ export function ForceGraph({
     if (!ctx) return;
     let frame = 0;
 
+    /** Fullscreen fills whatever the viewport gives the wrapper. */
+    const frameHeight = () => (fullscreen ? Math.max(wrap.clientHeight, 160) : height);
+
     const resize = () => {
       const ratio = window.devicePixelRatio || 1;
       const width = wrap.clientWidth;
+      const canvasHeight = frameHeight();
       canvas.width = width * ratio;
-      canvas.height = height * ratio;
+      canvas.height = canvasHeight * ratio;
       canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
+      canvas.style.height = `${canvasHeight}px`;
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       paletteRef.current = readPalette();
       alphaRef.current = Math.max(alphaRef.current, 0.35);
     };
+
     resize();
     const observer = new ResizeObserver(resize);
     observer.observe(wrap);
 
     const tick = () => {
       const width = wrap.clientWidth;
+      const currentHeight = frameHeight();
       const palette = paletteRef.current ?? (paletteRef.current = readPalette());
       if (alphaRef.current > ALPHA_FLOOR) {
-        simulate(simRef.current, graphRef.current.edges, alphaRef.current, width, height);
+        simulate(simRef.current, graphRef.current.edges, alphaRef.current, width, currentHeight);
         alphaRef.current *= 0.992;
       }
       draw(ctx, simRef.current, graphRef.current.edges, palette, {
@@ -384,7 +470,7 @@ export function ForceGraph({
         focusId,
         labelAll: labelAllRef.current,
         width,
-        height,
+        height: currentHeight,
       });
       frame = requestAnimationFrame(tick);
     };
@@ -394,7 +480,7 @@ export function ForceGraph({
       cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, [height, focusId]);
+  }, [height, focusId, fullscreen]);
 
   /** Nearest node under the pointer, within its own radius plus a small margin. */
   const nodeAt = (event: React.PointerEvent<HTMLCanvasElement>): SimNode | null => {
@@ -414,20 +500,42 @@ export function ForceGraph({
   };
 
   return (
-    <div ref={wrapRef} className={`relative ${className ?? ''}`}>
-      {expandHref ? (
-        <Link
-          href={expandHref}
-          aria-label="Open the full graph page"
-          title="Open the full graph page"
-          className="absolute right-2 top-2 z-10 rounded border border-border bg-surface/85 p-1.5 text-muted backdrop-blur transition-colors hover:border-accent hover:text-accent"
-        >
-          <ExpandIcon />
-        </Link>
+    <div
+      ref={wrapRef}
+      className={
+        fullscreen ? `fixed inset-0 z-50 bg-background ${className ?? ''}` : `relative ${className ?? ''}`
+      }
+    >
+      {fullscreen ? (
+        <p className="pointer-events-none absolute left-4 top-4 z-10 rounded border border-border bg-surface/85 px-2 py-1 font-mono text-xs text-muted backdrop-blur">
+          {graph.nodes.length} nodes · {graph.edges.length} edges · Esc to exit
+        </p>
       ) : null}
+      <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          aria-label={fullscreen ? 'Exit full screen' : 'Open the graph full screen'}
+          aria-pressed={fullscreen}
+          title={fullscreen ? 'Exit full screen (Esc)' : 'Open full screen'}
+          className="rounded border border-border bg-surface/85 p-1.5 text-muted backdrop-blur transition-colors hover:border-accent hover:text-accent"
+        >
+          <FullscreenIcon active={fullscreen} />
+        </button>
+        {expandHref ? (
+          <Link
+            href={expandHref}
+            aria-label="Open the full graph page"
+            title="Open the full graph page"
+            className="rounded border border-border bg-surface/85 p-1.5 text-muted backdrop-blur transition-colors hover:border-accent hover:text-accent"
+          >
+            <ExpandIcon />
+          </Link>
+        ) : null}
+      </div>
       <canvas
         ref={canvasRef}
-        className="block w-full cursor-grab touch-none rounded-lg border border-border bg-surface"
+        className={`block w-full cursor-grab touch-none bg-surface ${fullscreen ? '' : 'rounded-lg border border-border'}`}
         onPointerDown={(event) => {
           const node = nodeAt(event);
           if (!node) {
