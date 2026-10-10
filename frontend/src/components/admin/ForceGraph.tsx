@@ -36,6 +36,13 @@ const REPULSION = 1400;
 /** Below this the layout stops jittering and the loop idles. */
 const ALPHA_FLOOR = 0.006;
 
+/** Canvas area the base repulsion is tuned for (the graph page's normal size). */
+const REFERENCE_AREA = 780 * 620;
+
+/** Bounds on the area scaling, so a very short card or a huge screen stays sane. */
+const MIN_AREA_SCALE = 0.85;
+const MAX_AREA_SCALE = 2.2;
+
 type SimNode = GraphNode & {
   x: number;
   y: number;
@@ -210,7 +217,15 @@ function simulate(nodes: SimNode[], edges: GraphEdge[], alpha: number, width: nu
   // push than a 10-node one at the same spacing. Damping it slowly with size keeps
   // a big graph spread across the canvas instead of collapsing into a knot, while
   // a small local graph keeps the full strength it needs to stay readable.
-  const repulsion = REPULSION * Math.min(1, 80 / Math.max(80, nodes.length));
+  const countScale = Math.min(1, 80 / Math.max(80, nodes.length));
+  // Spacing follows the canvas too: equilibrium distance grows with the square
+  // root of the repulsion, so scaling by area keeps the same visual density when
+  // the graph goes full screen instead of leaving it huddled in the middle.
+  const areaScale = Math.min(
+    MAX_AREA_SCALE,
+    Math.max(MIN_AREA_SCALE, (width * height) / REFERENCE_AREA),
+  );
+  const repulsion = REPULSION * countScale * areaScale;
   for (let i = 0; i < nodes.length; i += 1) {
     for (let j = i + 1; j < nodes.length; j += 1) {
       const a = nodes[i];
