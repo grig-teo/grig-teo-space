@@ -1,3 +1,4 @@
+import { LOCALES } from '../types';
 import { Injectable, Logger } from '@nestjs/common';
 import { execFile } from 'child_process';
 import { createReadStream, existsSync } from 'fs';
@@ -9,7 +10,7 @@ import type { ExperienceItem, Locale, Profile, Project } from '../types';
 
 const execFileAsync = promisify(execFile);
 
-export const CV_LOCALES: Locale[] = ['en', 'ru', 'ro'];
+export const CV_LOCALES: Locale[] = [...LOCALES];
 
 const CV_LABELS: Record<
   Locale,
@@ -60,6 +61,21 @@ const CV_LABELS: Record<
       'Rusă — nativ sau bilingual',
       'Română — nativ sau bilingual',
       'Engleză — professional working',
+    ],
+  },
+  es: {
+    projects: 'PROYECTOS',
+    experience: 'EXPERIENCIA',
+    languages: 'IDIOMAS',
+    techStack: 'Stack:',
+    inDevelopment: '(en desarrollo)',
+    contact: { website: 'Web', github: 'GitHub', linkedin: 'LinkedIn', email: 'Email' },
+    // The site is available in Spanish; that says nothing about the owner's own
+    // languages, so the three real entries are translated rather than extended.
+    languageEntries: [
+      'Ruso — nativo o bilingüe',
+      'Rumano — nativo o bilingüe',
+      'Inglés — competencia profesional',
     ],
   },
 };

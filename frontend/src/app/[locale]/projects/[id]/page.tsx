@@ -1,3 +1,5 @@
+import { routing } from '@/i18n/routing';
+import { ogLocale } from '@/lib/locale';
 import { Link } from '@/i18n/navigation';
 import { AttachmentView } from '@/components/AttachmentView';
 import { getProjectDetail } from '@/lib/api';
@@ -33,15 +35,14 @@ export async function generateMetadata({ params }: Props) {
   try {
     const project = await getProjectDetail(id, locale);
     const t = await getTranslations({ locale, namespace: 'projectsPage' });
-    const ogLocale = locale === 'ru' ? 'ru_RU' : locale === 'ro' ? 'ro_RO' : 'en_US';
-
+  
     return {
       title: t('title'),
       description: project.overview || project.description,
       alternates: {
         canonical: `/${locale}/projects/${id}`,
         languages: Object.fromEntries(
-          (['en', 'ru', 'ro'] as Locale[]).map((alt) => [alt, `/${alt}/projects/${id}`]),
+          routing.locales.map((alt) => [alt, `/${alt}/projects/${id}`]),
         ),
       },
       openGraph: {
@@ -49,7 +50,7 @@ export async function generateMetadata({ params }: Props) {
         description: project.overview || project.description,
         url: `/${locale}/projects/${id}`,
         siteName: 'grig-teo',
-        locale: ogLocale,
+        locale: ogLocale(locale),
         type: 'article',
       },
     };

@@ -1,4 +1,5 @@
-export type Locale = 'en' | 'ru' | 'ro';
+export type { Locale } from './locale';
+import type { Locale } from './locale';
 
 export interface Profile {
   name: string;

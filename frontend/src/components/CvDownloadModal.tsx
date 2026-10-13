@@ -4,10 +4,11 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { getCvUrl, type Locale } from '@/lib/api';
 
-const locales: { id: Locale; labelKey: 'english' | 'russian' | 'romanian' }[] = [
+const locales: { id: Locale; labelKey: 'english' | 'russian' | 'romanian' | 'spanish' }[] = [
   { id: 'en', labelKey: 'english' },
   { id: 'ru', labelKey: 'russian' },
   { id: 'ro', labelKey: 'romanian' },
+  { id: 'es', labelKey: 'spanish' },
 ];
 
 type Props = {

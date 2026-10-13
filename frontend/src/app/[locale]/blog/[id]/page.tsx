@@ -1,3 +1,5 @@
+import { routing } from '@/i18n/routing';
+import { ogLocale } from '@/lib/locale';
 import { BlogPostingJsonLd } from '@/components/JsonLd';
 import { YoutubeEmbed } from '@/components/YoutubeEmbed';
 import { renderBlockNoteHtml } from '@/lib/blocknote-html';
@@ -35,8 +37,7 @@ export async function generateMetadata({ params }: Props) {
   try {
     const post = await getBlogPost(id, locale);
     const t = await getTranslations({ locale, namespace: 'blogPage' });
-    const ogLocale = locale === 'ru' ? 'ru_RU' : locale === 'ro' ? 'ro_RO' : 'en_US';
-
+  
     return {
       title: t('articleTitle', { title: post.title }),
       description: post.excerpt,
@@ -44,7 +45,7 @@ export async function generateMetadata({ params }: Props) {
         canonical: `/${locale}/blog/${id}`,
         languages: {
           ...Object.fromEntries(
-            (['en', 'ru', 'ro'] as Locale[]).map((alt) => [alt, `/${alt}/blog/${id}`]),
+            routing.locales.map((alt) => [alt, `/${alt}/blog/${id}`]),
           ),
           'x-default': `/en/blog/${id}`,
         },
@@ -54,7 +55,7 @@ export async function generateMetadata({ params }: Props) {
         description: post.excerpt,
         url: `/${locale}/blog/${id}`,
         siteName: 'grig-teo',
-        locale: ogLocale,
+        locale: ogLocale(locale),
         type: 'article',
       },
     };

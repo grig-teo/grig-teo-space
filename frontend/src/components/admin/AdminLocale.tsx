@@ -1,10 +1,10 @@
 'use client';
 
-import type { Locale } from '@/lib/admin-api';
+import { LOCALES, type Locale } from '@/lib/locale';
 import { createContext, useContext, useState, type ReactNode } from 'react';
 
-const locales: Locale[] = ['ro', 'ru', 'en'];
-const localeLabels: Record<Locale, string> = { ro: 'ro', ru: 'ру', en: 'en' };
+const locales: Locale[] = [...LOCALES];
+const localeLabels: Record<Locale, string> = { en: 'en', ru: 'ру', ro: 'ro', es: 'es' };
 
 const AdminLocaleContext = createContext<{
   locale: Locale;

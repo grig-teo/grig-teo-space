@@ -1,10 +1,11 @@
-import type {
-  ExperienceItem,
-  Locale,
-  LocalizedList,
-  LocalizedString,
-  Profile,
-  Project,
+import {
+  LOCALES,
+  type ExperienceItem,
+  type Locale,
+  type LocalizedList,
+  type LocalizedString,
+  type Profile,
+  type Project,
 } from '../types';
 
 /** One prose field queued for rewriting, addressed by a stable key. */
@@ -17,7 +18,7 @@ export type TextTask = {
 /** Rewritten text keyed by the task key it belongs to. */
 export type Rewrites = Map<string, string>;
 
-export const HUMANIZER_LOCALES: Locale[] = ['en', 'ru', 'ro'];
+export const HUMANIZER_LOCALES: Locale[] = [...LOCALES];
 
 /** Keep one request small enough to stay well inside the model context. */
 const MAX_TASKS_PER_REQUEST = 8;

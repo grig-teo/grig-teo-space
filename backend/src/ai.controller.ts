@@ -16,7 +16,7 @@ import type { Response } from 'express';
 import { memoryStorage } from 'multer';
 import { AiService } from './ai.service';
 import { AiRateLimiter, type AiQuotaKind } from './ai-rate-limiter';
-import type { Locale } from './types';
+import { LOCALES, type Locale } from './types';
 
 type ChatRequest = {
   message?: string;
@@ -116,5 +116,5 @@ export class AiController {
 
 /** Anything that is not a supported locale falls back to English. */
 function toLocale(value?: string): Locale {
-  return value === 'ru' || value === 'ro' ? value : 'en';
+  return LOCALES.includes(value as Locale) ? (value as Locale) : 'en';
 }

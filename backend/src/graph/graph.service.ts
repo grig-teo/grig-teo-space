@@ -2,7 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { ContentService } from '../content/content.service';
 import { HealthGraphService } from './health-graph.service';
 import { RepoGraphService } from './repo-graph.service';
-import type { BlogPost, ExperienceItem, Locale, Profile, Project } from '../types';
+import {
+  LOCALES,
+  type BlogPost,
+  type ExperienceItem,
+  type Locale,
+  type Profile,
+  type Project,
+} from '../types';
 import type {
   GraphEdge,
   GraphEdgeRel,
@@ -15,7 +22,7 @@ import type {
 
 /** Content is authored per locale; the graph is locale-agnostic, so match on
  *  every locale's prose to avoid missing a mention only the RU text carries. */
-const GRAPH_LOCALES: Locale[] = ['en', 'ru', 'ro'];
+const GRAPH_LOCALES: Locale[] = [...LOCALES];
 
 /** Technology labels shorter than this are skipped when scanning prose, because
  *  two- and three-letter tokens ("S3", "EAS") match far too much unrelated text. */

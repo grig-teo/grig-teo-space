@@ -1,3 +1,4 @@
+import { ogLocale } from '@/lib/locale';
 import { BlogList } from '@/components/Blog';
 import { BlogJsonLd } from '@/components/JsonLd';
 import { Link } from '@/i18n/navigation';
@@ -12,7 +13,6 @@ type Props = {
 export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'blogPage' });
-  const ogLocale = locale === 'ru' ? 'ru_RU' : locale === 'ro' ? 'ro_RO' : 'en_US';
 
   return {
     title: t('title'),
@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: Props) {
       description: t('description'),
       url: `/${locale}/blog`,
       siteName: 'grig-teo',
-      locale: ogLocale,
+      locale: ogLocale(locale),
       type: 'website',
     },
   };

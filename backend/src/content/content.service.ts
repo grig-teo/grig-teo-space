@@ -4,7 +4,15 @@ import { Repository } from 'typeorm';
 import { CvService } from '../cv/cv.service';
 import { ContentKey, SiteContent } from '../entities/site-content.entity';
 import { HumanizerService } from '../humanizer/humanizer.service';
-import type { BlogPost, ExperienceItem, LocalizedString, Profile, Project } from '../types';
+import {
+  localizedAll,
+  localizedFrom,
+  type BlogPost,
+  type ExperienceItem,
+  type LocalizedString,
+  type Profile,
+  type Project,
+} from '../types';
 
 @Injectable()
 export class ContentService {
@@ -158,14 +166,7 @@ export class ContentService {
 
   private normalizeProject(project: Project): Project {
     const url = project.url as LocalizedString | string;
-    const normalizedUrl: LocalizedString =
-      typeof url === 'string'
-        ? { en: url, ru: url, ro: url }
-        : {
-            en: url.en ?? '',
-            ru: url.ru ?? '',
-            ro: url.ro ?? '',
-          };
+    const normalizedUrl: LocalizedString = typeof url === 'string' ? localizedAll(url) : localizedFrom(url);
     return { ...project, url: normalizedUrl };
   }
 
@@ -173,21 +174,9 @@ export class ContentService {
     const email = profile.contact.email as LocalizedString | string;
     const about = (profile as Profile & { about?: LocalizedString | string }).about;
     const normalizedEmail: LocalizedString =
-      typeof email === 'string'
-        ? { en: email, ru: email, ro: email }
-        : {
-            en: email.en ?? '',
-            ru: email.ru ?? '',
-            ro: email.ro ?? '',
-          };
+      typeof email === 'string' ? localizedAll(email) : localizedFrom(email);
     const normalizedAbout: LocalizedString =
-      typeof about === 'string'
-        ? { en: about, ru: about, ro: about }
-        : {
-            en: about?.en ?? '',
-            ru: about?.ru ?? '',
-            ro: about?.ro ?? '',
-          };
+      typeof about === 'string' ? localizedAll(about) : localizedFrom(about);
 
     return {
       ...profile,
@@ -202,31 +191,17 @@ export class ContentService {
   private normalizeExperienceItem(item: ExperienceItem): ExperienceItem {
     const company = item.company as LocalizedString | string;
     const normalizedCompany: LocalizedString =
-      typeof company === 'string'
-        ? { en: company, ru: company, ro: company }
-        : {
-            en: company.en ?? '',
-            ru: company.ru ?? '',
-            ro: company.ro ?? '',
-          };
+      typeof company === 'string' ? localizedAll(company) : localizedFrom(company);
 
     const companyUrl = item.companyUrl as LocalizedString | string | undefined;
     let normalizedCompanyUrl: LocalizedString | undefined;
     if (companyUrl === undefined || companyUrl === null || companyUrl === '') {
       normalizedCompanyUrl = undefined;
     } else if (typeof companyUrl === 'string') {
-      normalizedCompanyUrl = companyUrl
-        ? { en: companyUrl, ru: companyUrl, ro: companyUrl }
-        : undefined;
+      normalizedCompanyUrl = companyUrl ? localizedAll(companyUrl) : undefined;
     } else {
-      const hasAny = Boolean(companyUrl.en || companyUrl.ru || companyUrl.ro);
-      normalizedCompanyUrl = hasAny
-        ? {
-            en: companyUrl.en ?? '',
-            ru: companyUrl.ru ?? '',
-            ro: companyUrl.ro ?? '',
-          }
-        : undefined;
+      const normalized = localizedFrom(companyUrl);
+      normalizedCompanyUrl = Object.values(normalized).some(Boolean) ? normalized : undefined;
     }
 
     return { ...item, company: normalizedCompany, companyUrl: normalizedCompanyUrl };

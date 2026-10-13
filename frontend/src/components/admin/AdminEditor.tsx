@@ -16,6 +16,7 @@ import {
   type SiteContent,
 } from '@/lib/admin-api';
 import { attachmentType } from '@/lib/attachments';
+import { localizedAll, localizedFrom, localizedList } from '@/lib/locale';
 import { useAdminLocale } from '@/components/admin/AdminLocale';
 import { BlogBodyEditor } from '@/components/admin/BlogBodyEditor';
 import { LocalGraphCard } from '@/components/admin/LocalGraphCard';
@@ -56,11 +57,11 @@ function listToLines(items: string[]): string {
 }
 
 function emptyLocalizedString(): LocalizedString {
-  return { en: '', ru: '', ro: '' };
+  return localizedFrom();
 }
 
 function emptyLocalizedList(): LocalizedList {
-  return { en: [], ru: [], ro: [] };
+  return localizedList();
 }
 
 function slugify(value: string): string {
@@ -74,15 +75,11 @@ function slugify(value: string): string {
 function normalizeProject(project: Project & { url?: LocalizedString | string }): Project {
   const url = project.url;
   if (typeof url === 'string') {
-    return { ...project, url: { en: url, ru: url, ro: url } };
+    return { ...project, url: localizedAll(url) };
   }
   return {
     ...project,
-    url: {
-      en: url.en ?? '',
-      ru: url.ru ?? '',
-      ro: url.ro ?? '',
-    },
+    url: localizedFrom(url),
   };
 }
 
@@ -106,28 +103,18 @@ function normalizeExperience(
   const company = item.company;
   const normalizedCompany: LocalizedString =
     typeof company === 'string'
-      ? { en: company, ru: company, ro: company }
-      : {
-          en: company?.en ?? '',
-          ru: company?.ru ?? '',
-          ro: company?.ro ?? '',
-        };
+      ? localizedAll(company)
+      : localizedFrom(company);
 
   const companyUrl = item.companyUrl;
   let normalizedCompanyUrl: LocalizedString | undefined;
   if (companyUrl === undefined || companyUrl === null || companyUrl === '') {
     normalizedCompanyUrl = undefined;
   } else if (typeof companyUrl === 'string') {
-    normalizedCompanyUrl = companyUrl ? { en: companyUrl, ru: companyUrl, ro: companyUrl } : undefined;
+    normalizedCompanyUrl = companyUrl ? localizedAll(companyUrl) : undefined;
   } else {
-    const hasAny = Boolean(companyUrl.en || companyUrl.ru || companyUrl.ro);
-    normalizedCompanyUrl = hasAny
-      ? {
-          en: companyUrl.en ?? '',
-          ru: companyUrl.ru ?? '',
-          ro: companyUrl.ro ?? '',
-        }
-      : undefined;
+    const normalized = localizedFrom(companyUrl);
+    normalizedCompanyUrl = Object.values(normalized).some(Boolean) ? normalized : undefined;
   }
 
   return { ...item, company: normalizedCompany, companyUrl: normalizedCompanyUrl };
@@ -650,7 +637,7 @@ export function AdminEditor() {
                 ...profile,
                 contact: {
                   ...profile.contact,
-                  phone: { en: '', ru: '', ro: '', ...profile.contact.phone, [locale]: value },
+                  phone: { ...localizedFrom(profile.contact.phone), [locale]: value },
                 },
               }))
             }
@@ -1037,7 +1024,7 @@ export function AdminEditor() {
             onChange={(value) =>
               updateExperienceItem(selectedExperience, (item) => ({
                 ...item,
-                companyUrl: { en: '', ru: '', ro: '', ...item.companyUrl, [locale]: value },
+                companyUrl: { ...localizedFrom(item.companyUrl), [locale]: value },
               }))
             }
           />
@@ -1058,7 +1045,7 @@ export function AdminEditor() {
             onChange={(value) =>
               updateExperienceItem(selectedExperience, (item) => ({
                 ...item,
-                summary: { en: '', ru: '', ro: '', ...item.summary, [locale]: value },
+                summary: { ...localizedFrom(item.summary), [locale]: value },
               }))
             }
             multiline
@@ -1080,7 +1067,7 @@ export function AdminEditor() {
             onChange={(value) =>
               updateExperienceItem(selectedExperience, (item) => ({
                 ...item,
-                stack: { en: '', ru: '', ro: '', ...item.stack, [locale]: value },
+                stack: { ...localizedFrom(item.stack), [locale]: value },
               }))
             }
           />

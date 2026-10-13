@@ -1,4 +1,10 @@
-export type Locale = 'en' | 'ru' | 'ro';
+/**
+ * The site's locales. Single source of truth: the CV generator, the humanizer,
+ * the graph and the locale resolvers all derive from this list.
+ */
+export const LOCALES = ['en', 'ru', 'ro', 'es'] as const;
+
+export type Locale = (typeof LOCALES)[number];
 
 export type LocalizedString = Record<Locale, string>;
 export type LocalizedList = Record<Locale, string[]>;
@@ -65,4 +71,14 @@ export interface BlogPost {
   body: LocalizedString;
   publishedAt: string;
   sortOrder?: number;
+}
+
+/** Every locale keyed to an empty string, or to `value` where it is present. */
+export function localizedFrom(value?: Partial<Record<Locale, string>>): LocalizedString {
+  return Object.fromEntries(LOCALES.map((code) => [code, value?.[code] ?? ''])) as LocalizedString;
+}
+
+/** The same string in every locale, for values saved before i18n existed. */
+export function localizedAll(value: string): LocalizedString {
+  return localizedFrom(Object.fromEntries(LOCALES.map((code) => [code, value])));
 }

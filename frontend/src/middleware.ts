@@ -23,5 +23,7 @@ export default function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/(ru|en|ro)/:path*', '/api/:path*'],
+  // Keep this in sync with LOCALES, or a new locale silently bypasses the
+  // middleware (no locale detection, no root redirect) for its paths.
+  matcher: ['/', '/(en|ru|ro|es)/:path*', '/api/:path*'],
 };

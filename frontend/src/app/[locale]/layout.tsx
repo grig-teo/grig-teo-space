@@ -1,3 +1,4 @@
+import { ogLocale } from '@/lib/locale';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -23,7 +24,6 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'meta' });
-  const ogLocale = locale === 'ru' ? 'ru_RU' : locale === 'ro' ? 'ro_RO' : 'en_US';
 
   return {
     metadataBase: new URL('https://grig-teo.space'),
@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: Props) {
       description: t('description'),
       url: `/${locale}`,
       siteName: 'grig-teo',
-      locale: ogLocale,
+      locale: ogLocale(locale as Locale),
       type: 'website',
     },
     twitter: {

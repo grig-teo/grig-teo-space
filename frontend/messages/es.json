@@ -1,0 +1,93 @@
+{
+  "nav": {
+    "about": "_about",
+    "blog": "_blog",
+    "projects": "_projects",
+    "experience": "_experience",
+    "contact": "_contact",
+    "health": "_health",
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú"
+  },
+  "hero": {
+    "prompt": "grig-teo:~$",
+    "whoami": "$ whoami",
+    "domains": "marketplaces · A/V en tiempo real · datos cívicos · health tech",
+    "stats": {
+      "years": "{value}+ años",
+      "roles": "{value} roles",
+      "products": "{value} productos",
+      "articles": "{value} artículos"
+    },
+    "ctaProjects": "ver proyectos",
+    "ctaContact": "contáctame →",
+    "now": {
+      "walking": "ahora: caminando",
+      "working_out": "ahora: entrenando",
+      "asleep": "ahora: probablemente durmiendo",
+      "resting": "ahora: descansando"
+    }
+  },
+  "sections": {
+    "blog": "/blog",
+    "projects": "/projects",
+    "experience": "/experience",
+    "viewAll": "ver todos los proyectos →",
+    "viewAllArticles": "ver todos los artículos →",
+    "readMore": "leer más →",
+    "featured": "destacado",
+    "eraFounder": "fundador",
+    "eraIndustry": "industria"
+  },
+  "footer": {
+    "downloadCv": "Descargar CV",
+    "phone": "Teléfono",
+    "cvModalTitle": "Descargar CV",
+    "cvModalDescription": "Elige el idioma de tu CV.",
+    "cvLanguage": "Idioma del CV",
+    "cvConfirm": "Descargar",
+    "cvCancel": "Cancelar",
+    "english": "English",
+    "russian": "Русский",
+    "romanian": "Română",
+    "spanish": "Español"
+  },
+  "projectsPage": {
+    "title": "Proyectos | Apps WebRTC, móviles y marketplace",
+    "heading": "/projects",
+    "description": "Plataforma de debates en tiempo real (WebRTC, iOS, Android, IA) y marketplace P2P de reparto de la compra (Next.js, NestJS, Stripe, mapas). Desarrollo full-stack de principio a fin.",
+    "back": "← volver al inicio",
+    "highlights": "Puntos clave",
+    "visit": "Ver proyecto",
+    "inDevelopment": "En desarrollo"
+  },
+  "experiencePage": {
+    "title": "{company} — Experiencia | grig-teo",
+    "back": "← volver a la experiencia",
+    "highlights": "Puntos clave",
+    "stack": "Stack tecnológico"
+  },
+  "blogPage": {
+    "title": "Blog | grig-teo",
+    "heading": "/blog",
+    "description": "Apuntes sobre cómo construir productos, sistemas en tiempo real y desarrollo full-stack.",
+    "back": "← volver al inicio",
+    "backToArticles": "← volver a los artículos",
+    "articleTitle": "{title} | grig-teo",
+    "empty": "Aún no hay artículos publicados."
+  },
+  "meta": {
+    "title": "Gregory Theodor | Desarrollador Full-Stack en remoto",
+    "description": "Desarrollador full-stack en remoto desde Moldavia — TypeScript, NestJS, Next.js, WebRTC, iOS y Android. Debate Room, Vecin2Vecin. Disponible para proyectos freelance. CV y proyectos.",
+    "keywords": "desarrollador full-stack en remoto, desarrollador freelance Moldavia, desarrollador TypeScript, desarrollador NestJS, desarrollador Next.js, desarrollador WebRTC, desarrollador iOS Android, desarrollador de apps móviles, desarrollador de marketplaces, Gregory Theodor, Grigore Teodoru"
+  },
+  "health": {
+    "title": "Salud",
+    "description": "Datos biométricos en vivo desde mi anillo inteligente COLMI.",
+    "notAvailable": "Los datos de salud no están disponibles en este momento.",
+    "avg": "media",
+    "range": "rango",
+    "lastDays": "Últimos {days} días",
+    "noData": "Aún no hay datos"
+  }
+}

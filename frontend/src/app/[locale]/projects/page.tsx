@@ -1,3 +1,4 @@
+import { ogLocale } from '@/lib/locale';
 import { ProjectCard } from '@/components/Projects';
 import { Link } from '@/i18n/navigation';
 import { getProjects } from '@/lib/api';
@@ -11,7 +12,6 @@ type Props = {
 export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'projectsPage' });
-  const ogLocale = locale === 'ru' ? 'ru_RU' : locale === 'ro' ? 'ro_RO' : 'en_US';
 
   return {
     title: t('title'),
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: Props) {
       description: t('description'),
       url: `/${locale}/projects`,
       siteName: 'grig-teo',
-      locale: ogLocale,
+      locale: ogLocale(locale),
       type: 'website',
     },
     twitter: {

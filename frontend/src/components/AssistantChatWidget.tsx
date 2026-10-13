@@ -119,6 +119,29 @@ function labels(locale: string) {
       voiceError: 'Nu am putut contacta asistentul vocal. Incearca din nou.',
     };
   }
+  if (locale === 'es') {
+    return {
+      title: 'Asistente AI',
+      input: 'Pregunta por proyectos, experiencia o blog...',
+      send: 'Enviar',
+      open: 'Abrir chat',
+      close: 'Cerrar',
+      welcome: 'Hola, soy Gregory AI y puedo responder a tus preguntas.',
+      limitReached: 'Has usado las 3 preguntas de hoy. Vuelve mañana.',
+      questionsLeft: (n: number) => `Preguntas restantes: ${n} de 3`,
+      voice: 'Preguntar por voz',
+      stopVoice: 'Detener la grabación',
+      recording: 'Escuchando... pulsa para enviar',
+      transcribing: 'Transcribiendo...',
+      speaking: 'Hablando...',
+      stopSpeaking: 'parar',
+      voiceLeft: (n: number) => `Preguntas de voz: ${n}`,
+      voiceLimitReached: 'Has agotado las preguntas de voz de hoy.',
+      micDenied: 'No pude acceder al micrófono. Revisa el permiso del navegador.',
+      notHeard: 'No te he entendido. Prueba otra vez, más cerca del micrófono.',
+      voiceError: 'No pude contactar con el asistente de voz. Inténtalo de nuevo.',
+    };
+  }
   return {
     title: 'AI Assistant',
     input: 'Ask about projects, experience, or blog...',
@@ -529,7 +552,9 @@ export function AssistantChatWidget({ locale }: Props) {
           ? 'Не удалось получить ответ от AI. Попробуйте еще раз.'
           : locale === 'ro'
             ? 'Nu am putut obtine raspunsul AI. Incearca din nou.'
-            : 'Could not get AI response. Please try again.',
+            : locale === 'es'
+              ? 'No pude obtener respuesta de la AI. Inténtalo de nuevo.'
+              : 'Could not get AI response. Please try again.',
       );
     } finally {
       setLoading(false);

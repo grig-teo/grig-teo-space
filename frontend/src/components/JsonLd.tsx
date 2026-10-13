@@ -9,6 +9,7 @@ const alternateNames: Record<string, string[]> = {
   en: ['Grigore Teodoru', 'Gregory Theodor'],
   ru: ['Grigore Teodoru', 'Gregory Theodor', 'Григорий Федоров'],
   ro: ['Gregory Theodor', 'Grigore Teodoru'],
+  es: ['Grigore Teodoru', 'Gregory Theodor'],
 };
 
 export function JsonLd({ profile, locale }: Props) {

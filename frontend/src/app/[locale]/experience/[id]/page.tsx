@@ -1,3 +1,5 @@
+import { routing } from '@/i18n/routing';
+import { ogLocale } from '@/lib/locale';
 import { Link } from '@/i18n/navigation';
 import { AttachmentView } from '@/components/AttachmentView';
 import { getExperienceDetail } from '@/lib/api';
@@ -17,15 +19,14 @@ export async function generateMetadata({ params }: Props) {
   try {
     const item = await getExperienceDetail(id, locale);
     const t = await getTranslations({ locale, namespace: 'experiencePage' });
-    const ogLocale = locale === 'ru' ? 'ru_RU' : locale === 'ro' ? 'ro_RO' : 'en_US';
-
+  
     return {
       title: t('title', { company: item.company }),
       description: item.summary ?? item.description,
       alternates: {
         canonical: `/${locale}/experience/${id}`,
         languages: Object.fromEntries(
-          (['en', 'ru', 'ro'] as Locale[]).map((alt) => [alt, `/${alt}/experience/${id}`]),
+          routing.locales.map((alt) => [alt, `/${alt}/experience/${id}`]),
         ),
       },
       openGraph: {
@@ -33,7 +34,7 @@ export async function generateMetadata({ params }: Props) {
         description: item.summary ?? item.description,
         url: `/${locale}/experience/${id}`,
         siteName: 'grig-teo',
-        locale: ogLocale,
+        locale: ogLocale(locale),
         type: 'article',
       },
     };

@@ -1,3 +1,4 @@
+import { LOCALES } from './types';
 import { Injectable } from '@nestjs/common';
 import { ContentService } from './content/content.service';
 import { CvService } from './cv/cv.service';
@@ -61,10 +62,7 @@ export class PortfolioService {
   }
 
   resolveLocale(locale?: string): Locale {
-    if (locale === 'ru' || locale === 'ro' || locale === 'en') {
-      return locale;
-    }
-    return 'en';
+    return LOCALES.includes(locale as Locale) ? (locale as Locale) : 'en';
   }
 
   pick<T extends Record<Locale, string>>(value: T, locale: Locale): string {
