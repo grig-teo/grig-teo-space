@@ -21,6 +21,12 @@
     },
     "ctaProjects": "смотреть проекты",
     "ctaContact": "связаться →",
+    "learning": {
+      "label": "учу {language}",
+      "language": "испанский",
+      "streak": "{days} дн. подряд",
+      "xp": "{value} XP"
+    },
     "now": {
       "walking": "сейчас: на прогулке",
       "working_out": "сейчас: тренируюсь",

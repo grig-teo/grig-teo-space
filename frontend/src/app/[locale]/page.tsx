@@ -6,7 +6,7 @@ import { ProjectsPreview } from '@/components/Projects';
 import { Experience } from '@/components/Experience';
 import { JsonLd } from '@/components/JsonLd';
 import { Reveal } from '@/components/Reveal';
-import { getBlogPosts, getExperience, getProfile, getProjects, getPublicHealth } from '@/lib/api';
+import { getBlogPosts, getExperience, getLearning, getProfile, getProjects, getPublicHealth } from '@/lib/api';
 import type { BlogPost, ExperienceItem, Locale, Project } from '@/lib/api';
 import { SHOW_BLOG } from '@/lib/features';
 import { computeVitals } from '@/lib/health-vitals';
@@ -42,12 +42,13 @@ function computeHeroStats(
 export default async function HomePage({ params }: Props) {
   const { locale } = await params;
 
-  const [profile, blogPosts, projects, experience, health] = await Promise.all([
+  const [profile, blogPosts, projects, experience, health, learning] = await Promise.all([
     getProfile(locale),
     SHOW_BLOG ? getBlogPosts(locale) : Promise.resolve([] as BlogPost[]),
     getProjects(locale),
     getExperience(locale),
     getPublicHealth(),
+    getLearning(),
   ]);
 
   const stats = computeHeroStats(experience, projects, blogPosts);
@@ -60,6 +61,7 @@ export default async function HomePage({ params }: Props) {
         profile={{ name: profile.name, title: profile.title, location: profile.location }}
         stats={stats}
         initialVitals={vitals}
+        learning={learning}
       />
       <div className="flex justify-center py-4">
         <HeroScene />

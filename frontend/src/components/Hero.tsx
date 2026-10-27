@@ -1,11 +1,11 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { HealthScene } from '@/components/HealthScene';
 import { StressScene } from '@/components/StressScene';
 import { WalkerScene } from '@/components/WalkerScene';
-import type { Profile, PublicHealthPayload } from '@/lib/api';
+import type { LearningSummary, Profile, PublicHealthPayload } from '@/lib/api';
 import { computeVitals, type HealthVitals } from '@/lib/health-vitals';
 import { SHOW_BLOG } from '@/lib/features';
 import { useEffect, useState } from 'react';
@@ -92,8 +92,40 @@ function DomainChips() {
   );
 }
 
-function HeroCtas() {
-  const t = useTranslations('hero');
+/** "learning Spanish · B1 · 12d streak · 3.874 XP" — hidden until a sync lands.
+ *  Only streak and XP are real Duolingo numbers; the level is self-declared. */
+function LearningChip({ learning }: { learning?: LearningSummary | null }) {
+  const t = useTranslations('hero.learning');
+  const locale = useLocale();
+  if (!learning) return null;
+
+  const xp = learning.xp ?? 0;
+  const formatXp = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(xp);
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 font-mono text-xs text-muted">
+        <span className="size-1.5 rounded-full bg-accent" aria-hidden />
+        {t('label', { language: t('language') })}
+        {learning.level ? <span className="font-bold text-accent">{learning.level}</span> : null}
+        {learning.streak > 0 ? (
+          <>
+            <span aria-hidden>·</span>
+            {t('streak', { days: learning.streak })}
+          </>
+        ) : null}
+        {xp > 0 ? (
+          <>
+            <span aria-hidden>·</span>
+            {t('xp', { value: formatXp })}
+          </>
+        ) : null}
+      </span>
+    </div>
+  );
+}
+
+function HeroCtas() {  const t = useTranslations('hero');
 
   return (
     <div className="flex flex-wrap gap-3">
@@ -117,6 +149,7 @@ export function Hero({
   profile,
   stats,
   initialVitals,
+  learning,
 }: {
   profile: HeroProfile;
   stats: HeroStats;
@@ -124,6 +157,8 @@ export function Hero({
    *  every minute so the figures track the server instead of the cached
    *  page render. */
   initialVitals: HealthVitals;
+  /** Spanish-learning progress; null hides the chip entirely. */
+  learning?: LearningSummary | null;
 }) {
   const [vitals, setVitals] = useState<HealthVitals>(initialVitals);
 
@@ -165,6 +200,11 @@ export function Hero({
           <div className="mt-6">
             <DomainChips />
           </div>
+          {learning ? (
+            <div className="mt-4">
+              <LearningChip learning={learning} />
+            </div>
+          ) : null}
           <div className="mt-8">
             <HeroCtas />
           </div>

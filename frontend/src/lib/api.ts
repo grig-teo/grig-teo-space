@@ -195,3 +195,34 @@ export async function getPublicHealth(): Promise<PublicHealthPayload | null> {
     return null;
   }
 }
+
+/**
+ * Spanish-learning progress, sourced from the public Duolingo profile.
+ *
+ * Only streak and XP exist in that payload; `level` is self-declared and may be
+ * absent. Returns null when no sync has run, the account has no Spanish course,
+ * or the endpoint is unreachable — callers hide the chip in that case.
+ */
+export type LearningSummary = {
+  streak: number;
+  xp?: number;
+  level?: string;
+  levelSince?: string;
+  syncedAt: string;
+};
+
+export async function getLearning(): Promise<LearningSummary | null> {
+  const base = apiBaseUrl();
+  const prefix = base ? `${base}/api` : '/api';
+  try {
+    const res = await fetch(`${prefix}/learning`, {
+      next: { revalidate: 900 },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as Partial<LearningSummary> | null;
+    if (typeof data?.streak !== 'number') return null;
+    return data as LearningSummary;
+  } catch {
+    return null;
+  }
+}

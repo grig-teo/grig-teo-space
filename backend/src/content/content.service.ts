@@ -23,6 +23,20 @@ export class ContentService {
     private readonly humanizer: HumanizerService,
   ) {}
 
+  /**
+   * Reads a key whose shape the caller owns (the learning snapshot is written
+   * by a sync job, not by the editor). Returns null instead of throwing, so a
+   * never-synced key degrades to "no data" rather than a 404.
+   */
+  async readKey<T>(key: ContentKey): Promise<T | null> {
+    return this.readJson<T>(key);
+  }
+
+  /** Persists a key whose shape the caller owns. */
+  async writeKey(key: ContentKey, data: unknown): Promise<void> {
+    await this.saveJson(key, data);
+  }
+
   async getProfile(): Promise<Profile> {
     const profile = await this.getJson<Profile>('profile');
     return this.normalizeProfile(profile);

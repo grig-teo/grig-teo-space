@@ -21,6 +21,12 @@
     },
     "ctaProjects": "ver proyectos",
     "ctaContact": "contáctame →",
+    "learning": {
+      "label": "aprendiendo {language}",
+      "language": "español",
+      "streak": "{days} d seguidos",
+      "xp": "{value} XP"
+    },
     "now": {
       "walking": "ahora: caminando",
       "working_out": "ahora: entrenando",

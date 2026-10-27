@@ -69,6 +69,9 @@ services:
       LINKEDIN_CLIENT_SECRET: ${LINKEDIN_CLIENT_SECRET:-}
       LINKEDIN_REDIRECT_URI: ${LINKEDIN_REDIRECT_URI:-}
       SITE_URL: ${SITE_URL:-}
+      # Duolingo public profile polled for the hero "learning Spanish" chip.
+      # Unset means the chip simply stays hidden.
+      DUOLINGO_USERNAME: ${DUOLINGO_USERNAME:-}
       DEVICE_API_KEY: ${DEVICE_API_KEY}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}

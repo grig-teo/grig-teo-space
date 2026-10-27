@@ -21,6 +21,12 @@
     },
     "ctaProjects": "vezi proiectele",
     "ctaContact": "contactează-mă →",
+    "learning": {
+      "label": "învăț {language}",
+      "language": "spaniola",
+      "streak": "{days} zile la rând",
+      "xp": "{value} XP"
+    },
     "now": {
       "walking": "acum: la plimbare",
       "working_out": "acum: mă antrenez",

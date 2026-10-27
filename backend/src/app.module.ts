@@ -23,6 +23,7 @@ import { WeatherSample } from './entities/weather-sample.entity';
 import { DocumentsModule } from './documents/documents.module';
 import { GraphModule } from './graph/graph.module';
 import { HealthModule } from './health/health.module';
+import { LearningModule } from './learning/learning.module';
 import { MediaModule } from './media/media.module';
 import { LinkedInController } from './linkedin.controller';
 import { LinkedInService } from './linkedin.service';
@@ -70,6 +71,7 @@ import { WhisperModule } from './whisper/whisper.module';
     WeatherModule,
     WebhooksModule,
     WhisperModule,
+    LearningModule,
   ],
   controllers: [PortfolioController, AiController, LinkedInController],
   providers: [
