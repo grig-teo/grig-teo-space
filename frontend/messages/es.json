@@ -29,7 +29,8 @@
       "pace": "≈{months} meses a este ritmo",
       "languageEs": "español",
       "languageIt": "italiano",
-      "justStarted": "recién empezado"
+      "justStarted": "recién empezado",
+      "languageEn": "inglés"
     },
     "now": {
       "walking": "ahora: caminando",

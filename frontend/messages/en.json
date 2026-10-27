@@ -29,7 +29,8 @@
       "pace": "~{months} months at this pace",
       "languageEs": "Spanish",
       "languageIt": "Italian",
-      "justStarted": "just started"
+      "justStarted": "just started",
+      "languageEn": "English"
     },
     "now": {
       "walking": "currently: walking",

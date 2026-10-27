@@ -105,6 +105,7 @@ function LearningGoals({ rows, streak }: { rows: LearningRow[]; streak: number }
     new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
 
   const languageName = (code: string, fallback: string) => {
+    if (code === 'en') return t('languageEn');
     if (code === 'es') return t('languageEs');
     if (code === 'it') return t('languageIt');
     return fallback;
