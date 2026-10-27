@@ -24,4 +24,6 @@ export type LearningSnapshot = {
   levelSince?: string;
   /** When the sync last ran successfully. */
   syncedAt: string;
+  /** When the Duolingo account was created (ISO), used to estimate a pace. */
+  createdAt?: string;
 };

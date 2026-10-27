@@ -13,6 +13,8 @@ type DuolingoUser = {
   streak?: number;
   totalXp?: number;
   fromLanguage?: string;
+  /** Unix seconds. */
+  creationDate?: number;
   courses?: DuolingoCourse[];
 };
 
@@ -90,6 +92,9 @@ export class LearningService implements OnModuleInit {
       xp: spanish?.xp,
       totalXp: user.totalXp,
       fromLanguage: user.fromLanguage,
+      createdAt: user.creationDate
+        ? new Date(user.creationDate * 1000).toISOString()
+        : previous?.createdAt,
       level: previous?.level,
       levelSince: previous?.levelSince,
       syncedAt: new Date().toISOString(),

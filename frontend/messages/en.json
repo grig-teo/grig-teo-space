@@ -22,10 +22,12 @@
     "ctaProjects": "view projects",
     "ctaContact": "get in touch →",
     "learning": {
-      "label": "learning {language}",
       "language": "Spanish",
+      "goalLabel": "{language} → {level}",
       "streak": "{days}d streak",
-      "xp": "{value} XP"
+      "hours": "est. {done} of {total} h",
+      "percentLabel": "{value}%",
+      "pace": "~{months} months at this pace"
     },
     "now": {
       "walking": "currently: walking",

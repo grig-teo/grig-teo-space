@@ -208,6 +208,8 @@ export type LearningSummary = {
   xp?: number;
   level?: string;
   levelSince?: string;
+  /** When the Duolingo account was created; drives the pace estimate. */
+  createdAt?: string;
   syncedAt: string;
 };
 

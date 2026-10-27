@@ -6,6 +6,7 @@ import { HealthScene } from '@/components/HealthScene';
 import { StressScene } from '@/components/StressScene';
 import { WalkerScene } from '@/components/WalkerScene';
 import type { LearningSummary, Profile, PublicHealthPayload } from '@/lib/api';
+import type { LearningGoal } from '@/lib/learning-goal';
 import { computeVitals, type HealthVitals } from '@/lib/health-vitals';
 import { SHOW_BLOG } from '@/lib/features';
 import { useEffect, useState } from 'react';
@@ -92,35 +93,55 @@ function DomainChips() {
   );
 }
 
-/** "learning Spanish · B1 · 12d streak · 3.874 XP" — hidden until a sync lands.
- *  Only streak and XP are real Duolingo numbers; the level is self-declared. */
-function LearningChip({ learning }: { learning?: LearningSummary | null }) {
+/** Progress towards B2, shown as time rather than XP. The bar fills on focused
+ *  hours estimated from XP, so it never implies that finishing it means B2. */
+function LearningGoalBar({ learning, goal }: { learning: LearningSummary; goal: LearningGoal }) {
   const t = useTranslations('hero.learning');
   const locale = useLocale();
-  if (!learning) return null;
+  const label = t('goalLabel', { language: t('language'), level: 'B2' });
 
-  const xp = learning.xp ?? 0;
-  const formatXp = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(xp);
+  const nf = (value: number) =>
+    new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
+  const percent = goal.percent < 10 ? goal.percent.toFixed(1) : String(Math.round(goal.percent));
+  const months = goal.monthsLeft === null ? null : Math.max(1, Math.round(goal.monthsLeft));
 
   return (
-    <div className="flex flex-wrap gap-2">
-      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 font-mono text-xs text-muted">
-        <span className="size-1.5 rounded-full bg-accent" aria-hidden />
-        {t('label', { language: t('language') })}
-        {learning.level ? <span className="font-bold text-accent">{learning.level}</span> : null}
-        {learning.streak > 0 ? (
+    <div className="max-w-[340px]">
+      <div className="flex items-baseline justify-between gap-3 font-mono text-xs text-muted">
+        <span className="inline-flex items-center gap-2">
+          <span className="size-1.5 shrink-0 rounded-full bg-accent" aria-hidden />
+          {label}
+        </span>
+        <span className="shrink-0">{t('streak', { days: learning.streak })}</span>
+      </div>
+      <div
+        className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-border"
+        role="progressbar"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(goal.percent)}
+      >
+        <div
+          className="h-full rounded-full bg-accent"
+          style={{ width: `${Math.max(goal.percent, 1.5)}%` }}
+        />
+      </div>
+      <p className="mt-2 font-mono text-[11px] text-muted">
+        {t('hours', { done: nf(Math.round(goal.hoursDone)), total: nf(goal.hoursTarget) })}
+        <span className="mx-1.5" aria-hidden>
+          ·
+        </span>
+        {t('percentLabel', { value: percent })}
+        {months !== null ? (
           <>
-            <span aria-hidden>·</span>
-            {t('streak', { days: learning.streak })}
+            <span className="mx-1.5" aria-hidden>
+              ·
+            </span>
+            {t('pace', { months: nf(months) })}
           </>
         ) : null}
-        {xp > 0 ? (
-          <>
-            <span aria-hidden>·</span>
-            {t('xp', { value: formatXp })}
-          </>
-        ) : null}
-      </span>
+      </p>
     </div>
   );
 }
@@ -150,6 +171,7 @@ export function Hero({
   stats,
   initialVitals,
   learning,
+  goal,
 }: {
   profile: HeroProfile;
   stats: HeroStats;
@@ -157,8 +179,10 @@ export function Hero({
    *  every minute so the figures track the server instead of the cached
    *  page render. */
   initialVitals: HealthVitals;
-  /** Spanish-learning progress; null hides the chip entirely. */
+  /** Spanish-learning progress; null hides the bar entirely. */
   learning?: LearningSummary | null;
+  /** B2 goal estimate derived from it; computed on the server so the markup is stable. */
+  goal?: LearningGoal | null;
 }) {
   const [vitals, setVitals] = useState<HealthVitals>(initialVitals);
 
@@ -200,9 +224,9 @@ export function Hero({
           <div className="mt-6">
             <DomainChips />
           </div>
-          {learning ? (
+          {learning && goal ? (
             <div className="mt-4">
-              <LearningChip learning={learning} />
+              <LearningGoalBar learning={learning} goal={goal} />
             </div>
           ) : null}
           <div className="mt-8">

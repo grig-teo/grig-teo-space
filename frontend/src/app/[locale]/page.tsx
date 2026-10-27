@@ -7,6 +7,7 @@ import { Experience } from '@/components/Experience';
 import { JsonLd } from '@/components/JsonLd';
 import { Reveal } from '@/components/Reveal';
 import { getBlogPosts, getExperience, getLearning, getProfile, getProjects, getPublicHealth } from '@/lib/api';
+import { computeGoal } from '@/lib/learning-goal';
 import type { BlogPost, ExperienceItem, Locale, Project } from '@/lib/api';
 import { SHOW_BLOG } from '@/lib/features';
 import { computeVitals } from '@/lib/health-vitals';
@@ -53,6 +54,7 @@ export default async function HomePage({ params }: Props) {
 
   const stats = computeHeroStats(experience, projects, blogPosts);
   const vitals = computeVitals(health);
+  const goal = learning ? computeGoal(learning) : null;
 
   return (
     <main className="min-h-screen">
@@ -62,6 +64,7 @@ export default async function HomePage({ params }: Props) {
         stats={stats}
         initialVitals={vitals}
         learning={learning}
+        goal={goal}
       />
       <div className="flex justify-center py-4">
         <HeroScene />

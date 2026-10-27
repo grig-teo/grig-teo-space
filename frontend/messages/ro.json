@@ -22,10 +22,12 @@
     "ctaProjects": "vezi proiectele",
     "ctaContact": "contactează-mă →",
     "learning": {
-      "label": "învăț {language}",
       "language": "spaniola",
+      "goalLabel": "{language} → {level}",
       "streak": "{days} zile la rând",
-      "xp": "{value} XP"
+      "hours": "≈{done} din {total} h",
+      "percentLabel": "{value}%",
+      "pace": "≈{months} luni în acest ritm"
     },
     "now": {
       "walking": "acum: la plimbare",
