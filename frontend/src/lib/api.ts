@@ -218,7 +218,7 @@ export async function getLearning(): Promise<LearningSummary | null> {
   const prefix = base ? `${base}/api` : '/api';
   try {
     const res = await fetch(`${prefix}/learning`, {
-      next: { revalidate: 900 },
+      next: { revalidate: 300 },
     });
     if (!res.ok) return null;
     // Nest serialises a null handler return as an empty body, so read the text

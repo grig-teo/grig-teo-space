@@ -5,14 +5,17 @@ import { Link } from '@/i18n/navigation';
 import { HealthScene } from '@/components/HealthScene';
 import { StressScene } from '@/components/StressScene';
 import { WalkerScene } from '@/components/WalkerScene';
-import type { LearningSummary, Profile, PublicHealthPayload } from '@/lib/api';
-import type { LearningGoal } from '@/lib/learning-goal';
+import { getLearning, type LearningSummary, type Profile, type PublicHealthPayload } from '@/lib/api';
+import { computeGoal, type LearningGoal } from '@/lib/learning-goal';
 import { computeVitals, type HealthVitals } from '@/lib/health-vitals';
 import { SHOW_BLOG } from '@/lib/features';
 import { useEffect, useState } from 'react';
 
 /** How often the hero vitals refetch from the server (ms). */
 const VITALS_REFRESH_MS = 60_000;
+/** How often the learning bar refetches (ms). The Duolingo sync runs hourly,
+ *  so polling faster than this would only add load. */
+const LEARNING_REFRESH_MS = 15 * 60_000;
 
 export type HeroStats = {
   years: number;
@@ -212,7 +215,34 @@ export function Hero({
     };
   }, []);
 
+  // The B2 bar is server-rendered, and nginx holds pages for 10 minutes, so a
+  // visitor could otherwise see a bar older than the last Duolingo sync. Refetch
+  // in the browser to bypass both caches; the sync itself runs hourly.
+  const [learningState, setLearningState] = useState<{
+    learning: LearningSummary | null;
+    goal: LearningGoal | null;
+  }>({ learning: learning ?? null, goal: goal ?? null });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refresh() {
+      const fresh = await getLearning();
+      if (!fresh || cancelled) return;
+      setLearningState({ learning: fresh, goal: computeGoal(fresh) });
+    }
+
+    refresh();
+    const timer = window.setInterval(refresh, LEARNING_REFRESH_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, []);
+
   const { bpm, cadence, stepsToday, stress, now } = vitals;
+  const learningNow = learningState.learning;
+  const goalNow = learningState.goal;
   return (
     <section id="about" className="px-4 py-20 sm:px-6 md:px-12 md:py-28">
       <div className="max-w-6xl lg:grid lg:grid-cols-[1fr_auto] lg:items-start lg:gap-12">
@@ -224,9 +254,9 @@ export function Hero({
           <div className="mt-6">
             <DomainChips />
           </div>
-          {learning && goal ? (
+          {learningNow && goalNow ? (
             <div className="mt-4">
-              <LearningGoalBar learning={learning} goal={goal} />
+              <LearningGoalBar learning={learningNow} goal={goalNow} />
             </div>
           ) : null}
           <div className="mt-8">

@@ -4,7 +4,8 @@ import type { LearningSnapshot } from './learning.types';
 
 /** Duolingo's public profile endpoint (unofficial, no SLA). */
 const PROFILE_URL = 'https://www.duolingo.com/2017-06-30/users';
-const SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000;
+/** Hourly keeps the chip close to current while staying polite: 24 requests a day. */
+const SYNC_INTERVAL_MS = 60 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 15_000;
 
 type DuolingoCourse = { learningLanguage?: string; xp?: number };
