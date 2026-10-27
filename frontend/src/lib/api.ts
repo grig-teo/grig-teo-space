@@ -219,7 +219,11 @@ export async function getLearning(): Promise<LearningSummary | null> {
       next: { revalidate: 900 },
     });
     if (!res.ok) return null;
-    const data = (await res.json()) as Partial<LearningSummary> | null;
+    // Nest serialises a null handler return as an empty body, so read the text
+    // first: an empty payload means "never synced", not a parse error.
+    const text = await res.text();
+    if (!text) return null;
+    const data = JSON.parse(text) as Partial<LearningSummary>;
     if (typeof data?.streak !== 'number') return null;
     return data as LearningSummary;
   } catch {
