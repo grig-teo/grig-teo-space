@@ -175,6 +175,7 @@ function LearningGoals({ rows, streak }: { rows: LearningRow[]; streak: number }
           </div>
         );
       })}
+      <p className="font-mono text-[10px] text-muted">{t('source')}</p>
     </div>
   );
 }
