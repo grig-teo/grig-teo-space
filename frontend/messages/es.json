@@ -22,12 +22,14 @@
     "ctaProjects": "ver proyectos",
     "ctaContact": "contáctame →",
     "learning": {
-      "language": "español",
       "goalLabel": "{language} → {level}",
       "streak": "{days} d seguidos",
       "hours": "≈{done} de {total} h",
       "percentLabel": "{value}%",
-      "pace": "≈{months} meses a este ritmo"
+      "pace": "≈{months} meses a este ritmo",
+      "languageEs": "español",
+      "languageIt": "italiano",
+      "justStarted": "recién empezado"
     },
     "now": {
       "walking": "ahora: caminando",

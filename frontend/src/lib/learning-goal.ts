@@ -1,4 +1,4 @@
-import type { LearningSummary } from './api';
+import type { LearningCourse } from './api';
 
 /**
  * How the B2 goal is estimated. These are assumptions, not measurements, so
@@ -7,8 +7,8 @@ import type { LearningSummary } from './api';
  * HOURS_TO_B2 — focused hours from zero to B2: 500 to 600 per the Cambridge
  *   guided-learning bands (A2 180-200, B1 350-400, B2 500-600), corroborated by
  *   the FSI's 600-750 hours to Spanish working proficiency. We take the floor of
- *   the range for a Romanian speaker, who starts closer to Spanish than an
- *   English speaker does.
+ *   the range for a Romanian speaker, who starts closer to a Romance language
+ *   than an English speaker does. The same band is applied to Italian.
  *
  * SECONDS_PER_XP — Duolingo bills 10 XP for a lesson of roughly four minutes,
  *   so about 24 seconds per XP (≈150 XP an hour). XP is inflated by streak
@@ -24,12 +24,14 @@ export type LearningGoal = {
   hoursDone: number;
   hoursLeft: number;
   hoursTarget: number;
-  /** Months left at the pace since the account was created; null if unknown. */
+  /** Months left at the pace since the course was first seen; null if unknown. */
   monthsLeft: number | null;
 };
 
 const MS_PER_DAY = 86_400_000;
 const DAYS_PER_MONTH = 30.4;
+/** Below this there is not enough history for a pace to mean anything. */
+const MIN_DAYS_FOR_PACE = 3;
 
 /** Hours of study implied by an XP total. */
 export function hoursFromXp(xp: number): number {
@@ -37,35 +39,45 @@ export function hoursFromXp(xp: number): number {
 }
 
 /**
- * Months still needed at the learner's own pace. Deliberately returns null
- * rather than a guess when the pace cannot be established: a two-day-old
- * account says nothing about how fast someone actually moves.
+ * Months still needed at the learner's own pace on this course. Returns null
+ * rather than a guess when the pace cannot be established: a course started
+ * today says nothing about how fast someone actually moves.
  */
 function monthsAtPace(hoursDone: number, hoursLeft: number, since?: string): number | null {
   if (!since || hoursDone <= 0) return null;
   const days = (Date.now() - Date.parse(since)) / MS_PER_DAY;
-  if (!Number.isFinite(days) || days < 3) return null;
+  if (!Number.isFinite(days) || days < MIN_DAYS_FOR_PACE) return null;
   const hoursPerDay = hoursDone / days;
   if (!Number.isFinite(hoursPerDay) || hoursPerDay <= 0) return null;
   return hoursLeft / hoursPerDay / DAYS_PER_MONTH;
 }
 
 /**
- * Turns a learning snapshot into progress towards B2.
+ * Turns one course into progress towards B2.
  *
  * The percent is time-based on purpose. An XP percentage would imply that
  * filling the bar means reaching B2, and it does not: Duolingo's own later
  * sections cover B1 content, and the app cannot rehearse the unscripted
  * speaking that decides B2.
  */
-export function computeGoal(snapshot: Pick<LearningSummary, 'xp' | 'createdAt'>): LearningGoal {
-  const hoursDone = hoursFromXp(snapshot.xp ?? 0);
+export function computeGoal(course: Pick<LearningCourse, 'xp' | 'firstSeenAt'>): LearningGoal {
+  const hoursDone = hoursFromXp(course.xp);
   const hoursLeft = Math.max(HOURS_TO_B2 - hoursDone, 0);
   return {
     percent: Math.min(100, (hoursDone / HOURS_TO_B2) * 100),
     hoursDone,
     hoursLeft,
     hoursTarget: HOURS_TO_B2,
-    monthsLeft: monthsAtPace(hoursDone, hoursLeft, snapshot.createdAt),
+    monthsLeft: monthsAtPace(hoursDone, hoursLeft, course.firstSeenAt),
   };
+}
+
+/** A course paired with its computed goal, ready to render. */
+export type LearningRow = { course: LearningCourse; goal: LearningGoal };
+
+/** Goals for every course, ordered by XP so the main language leads. */
+export function computeGoals(courses: LearningCourse[]): LearningRow[] {
+  return [...courses]
+    .sort((a, b) => b.xp - a.xp)
+    .map((course) => ({ course, goal: computeGoal(course) }));
 }

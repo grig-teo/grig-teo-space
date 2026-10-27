@@ -1,6 +1,6 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ContentService } from '../content/content.service';
-import type { LearningSnapshot } from './learning.types';
+import type { LearningCourse, LearningSnapshot } from './learning.types';
 
 /** Duolingo's public profile endpoint (unofficial, no SLA). */
 const PROFILE_URL = 'https://www.duolingo.com/2017-06-30/users';
@@ -8,7 +8,12 @@ const PROFILE_URL = 'https://www.duolingo.com/2017-06-30/users';
 const SYNC_INTERVAL_MS = 60 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 15_000;
 
-type DuolingoCourse = { learningLanguage?: string; xp?: number };
+type DuolingoCourse = {
+  learningLanguage?: string;
+  title?: string;
+  xp?: number;
+  fromLanguage?: string;
+};
 
 type DuolingoUser = {
   streak?: number;
@@ -19,13 +24,16 @@ type DuolingoUser = {
   courses?: DuolingoCourse[];
 };
 
+/** The pre-multi-course shape, still in the database on first deploy. */
+type LegacySnapshot = { xp?: number; createdAt?: string };
+
 @Injectable()
 export class LearningService implements OnModuleInit {
   private readonly logger = new Logger(LearningService.name);
 
   constructor(private readonly content: ContentService) {}
 
-  /** Sync on boot, then every six hours. Unconfigured username is a no-op. */
+  /** Sync on boot, then hourly. Unconfigured username is a no-op. */
   onModuleInit(): void {
     void this.sync();
     const timer = setInterval(() => void this.sync(), SYNC_INTERVAL_MS);
@@ -38,15 +46,24 @@ export class LearningService implements OnModuleInit {
     return snapshot?.available ? snapshot : null;
   }
 
-  /** Records a self-assessed level, leaving the synced numbers untouched. */
-  async setLevel(level: string, since?: string): Promise<LearningSnapshot> {
+  /** Records a self-assessed level for one course, leaving the XP untouched. */
+  async setLevel(code: string, level: string, since?: string): Promise<LearningSnapshot> {
     const current = await this.content.readKey<LearningSnapshot>('learning');
-    const now = new Date().toISOString();
-    const next: LearningSnapshot = {
-      ...(current ?? { available: false, source: 'duolingo' as const, syncedAt: now }),
-      level: level.trim().toUpperCase().slice(0, 2),
-      levelSince: since?.trim() || current?.levelSince || now.slice(0, 10),
-    };
+    if (!current?.courses?.length) {
+      throw new BadRequestException('No learning snapshot yet: wait for the first Duolingo sync');
+    }
+    const target = current.courses.find((course) => course.code === code);
+    if (!target) {
+      throw new BadRequestException(`Course "${code}" is not in the snapshot`);
+    }
+
+    const normalised = level.trim().toUpperCase().slice(0, 2);
+    const declared = since?.trim() || target.levelSince || new Date().toISOString().slice(0, 10);
+    const courses = current.courses.map((course) =>
+      course.code === code ? { ...course, level: normalised, levelSince: declared } : course,
+    );
+
+    const next: LearningSnapshot = { ...current, courses };
     await this.content.writeKey('learning', next);
     return next;
   }
@@ -61,7 +78,7 @@ export class LearningService implements OnModuleInit {
       const user = await this.fetchProfile(username);
       const previous = await this.content.readKey<LearningSnapshot>('learning');
       await this.content.writeKey('learning', this.toSnapshot(user, previous));
-      this.logger.log(`Duolingo sync ok for "${username}"`);
+      this.logger.log(`Duolingo sync ok for "${username}" (${user.courses?.length ?? 0} courses)`);
     } catch (error) {
       this.logger.warn(`Duolingo sync failed for "${username}": ${(error as Error).message}`);
     }
@@ -83,22 +100,50 @@ export class LearningService implements OnModuleInit {
     return user;
   }
 
-  /** Maps a Duolingo profile onto our snapshot, preserving a declared level. */
+  /** Maps a Duolingo profile onto our snapshot, preserving declared levels. */
   private toSnapshot(user: DuolingoUser, previous: LearningSnapshot | null): LearningSnapshot {
-    const spanish = user.courses?.find((course) => course.learningLanguage === 'es');
+    const courses = (user.courses ?? [])
+      .filter((course) => typeof course.learningLanguage === 'string')
+      .map((course) => this.toCourse(course, previous));
+
     return {
-      available: Boolean(spanish),
+      available: courses.length > 0,
       source: 'duolingo',
       streak: user.streak ?? 0,
-      xp: spanish?.xp,
       totalXp: user.totalXp,
       fromLanguage: user.fromLanguage,
       createdAt: user.creationDate
         ? new Date(user.creationDate * 1000).toISOString()
         : previous?.createdAt,
-      level: previous?.level,
-      levelSince: previous?.levelSince,
+      courses,
       syncedAt: new Date().toISOString(),
     };
+  }
+
+  private toCourse(course: DuolingoCourse, previous: LearningSnapshot | null): LearningCourse {
+    const code = String(course.learningLanguage);
+    const prior = previous?.courses?.find((entry) => entry.code === code);
+    return {
+      code,
+      title: course.title ?? code.toUpperCase(),
+      xp: course.xp ?? 0,
+      fromLanguage: course.fromLanguage,
+      firstSeenAt: prior?.firstSeenAt ?? this.firstSeenAt(previous, code),
+      level: prior?.level,
+      levelSince: prior?.levelSince,
+    };
+  }
+
+  /**
+   * Start date for a course we have not recorded before. A course added today
+   * starts today; the exception is the one-time migration from the single
+   * course shape, where the existing Spanish course began with the account.
+   */
+  private firstSeenAt(previous: LearningSnapshot | null, code: string): string {
+    const legacy = previous as (LearningSnapshot & LegacySnapshot) | null;
+    if (legacy?.xp !== undefined && !previous?.courses && code === 'es' && previous?.createdAt) {
+      return previous.createdAt;
+    }
+    return new Date().toISOString();
   }
 }

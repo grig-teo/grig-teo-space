@@ -203,12 +203,21 @@ export async function getPublicHealth(): Promise<PublicHealthPayload | null> {
  * absent. Returns null when no sync has run, the account has no Spanish course,
  * or the endpoint is unreachable — callers hide the chip in that case.
  */
-export type LearningSummary = {
-  streak: number;
-  xp?: number;
+export type LearningCourse = {
+  code: string;
+  title: string;
+  xp: number;
+  fromLanguage?: string;
+  /** First sync that saw this course; the pace baseline. */
+  firstSeenAt: string;
   level?: string;
   levelSince?: string;
-  /** When the Duolingo account was created; drives the pace estimate. */
+};
+
+export type LearningSummary = {
+  streak: number;
+  courses: LearningCourse[];
+  /** When the Duolingo account was created. */
   createdAt?: string;
   syncedAt: string;
 };
@@ -226,7 +235,7 @@ export async function getLearning(): Promise<LearningSummary | null> {
     const text = await res.text();
     if (!text) return null;
     const data = JSON.parse(text) as Partial<LearningSummary>;
-    if (typeof data?.streak !== 'number') return null;
+    if (typeof data?.streak !== 'number' || !Array.isArray(data?.courses)) return null;
     return data as LearningSummary;
   } catch {
     return null;

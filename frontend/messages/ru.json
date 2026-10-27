@@ -22,12 +22,14 @@
     "ctaProjects": "смотреть проекты",
     "ctaContact": "связаться →",
     "learning": {
-      "language": "испанский",
       "goalLabel": "{language} → {level}",
       "streak": "{days} дн. подряд",
       "hours": "≈{done} из {total} ч",
       "percentLabel": "{value}%",
-      "pace": "≈{months} мес. в таком темпе"
+      "pace": "≈{months} мес. в таком темпе",
+      "languageEs": "испанский",
+      "languageIt": "итальянский",
+      "justStarted": "только начал"
     },
     "now": {
       "walking": "сейчас: на прогулке",

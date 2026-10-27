@@ -6,7 +6,7 @@ import { HealthScene } from '@/components/HealthScene';
 import { StressScene } from '@/components/StressScene';
 import { WalkerScene } from '@/components/WalkerScene';
 import { getLearning, type LearningSummary, type Profile, type PublicHealthPayload } from '@/lib/api';
-import { computeGoal, type LearningGoal } from '@/lib/learning-goal';
+import { computeGoals, type LearningRow } from '@/lib/learning-goal';
 import { computeVitals, type HealthVitals } from '@/lib/health-vitals';
 import { SHOW_BLOG } from '@/lib/features';
 import { useEffect, useState } from 'react';
@@ -96,60 +96,90 @@ function DomainChips() {
   );
 }
 
-/** Progress towards B2, shown as time rather than XP. The bar fills on focused
- *  hours estimated from XP, so it never implies that finishing it means B2. */
-function LearningGoalBar({ learning, goal }: { learning: LearningSummary; goal: LearningGoal }) {
+/** One bar per course, filled on focused hours estimated from XP rather than on
+ *  XP itself, so finishing a bar never implies that B2 has been reached. */
+function LearningGoals({ rows, streak }: { rows: LearningRow[]; streak: number }) {
   const t = useTranslations('hero.learning');
   const locale = useLocale();
-  const label = t('goalLabel', { language: t('language'), level: 'B2' });
-
   const nf = (value: number) =>
     new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
-  const percent = goal.percent < 10 ? goal.percent.toFixed(1) : String(Math.round(goal.percent));
-  const months = goal.monthsLeft === null ? null : Math.max(1, Math.round(goal.monthsLeft));
+
+  const languageName = (code: string, fallback: string) => {
+    if (code === 'es') return t('languageEs');
+    if (code === 'it') return t('languageIt');
+    return fallback;
+  };
 
   return (
-    <div className="max-w-[340px]">
-      <div className="flex items-baseline justify-between gap-3 font-mono text-xs text-muted">
-        <span className="inline-flex items-center gap-2">
-          <span className="size-1.5 shrink-0 rounded-full bg-accent" aria-hidden />
-          {label}
-        </span>
-        <span className="shrink-0">{t('streak', { days: learning.streak })}</span>
-      </div>
-      <div
-        className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-border"
-        role="progressbar"
-        aria-label={label}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(goal.percent)}
-      >
-        <div
-          className="h-full rounded-full bg-accent"
-          style={{ width: `${Math.max(goal.percent, 1.5)}%` }}
-        />
-      </div>
-      <p className="mt-2 font-mono text-[11px] text-muted">
-        {t('hours', { done: nf(Math.round(goal.hoursDone)), total: nf(goal.hoursTarget) })}
-        <span className="mx-1.5" aria-hidden>
-          ·
-        </span>
-        {t('percentLabel', { value: percent })}
-        {months !== null ? (
-          <>
-            <span className="mx-1.5" aria-hidden>
-              ·
-            </span>
-            {t('pace', { months: nf(months) })}
-          </>
-        ) : null}
-      </p>
+    <div className="space-y-3">
+      {rows.map(({ course, goal }, index) => {
+        const label = t('goalLabel', {
+          language: languageName(course.code, course.title),
+          level: 'B2',
+        });
+        const percent =
+          goal.percent < 10 ? goal.percent.toFixed(1) : String(Math.round(goal.percent));
+        const months = goal.monthsLeft === null ? null : Math.max(1, Math.round(goal.monthsLeft));
+        // A course a day old has no meaningful hours yet; say so instead of "0 of 500".
+        const justStarted = goal.hoursDone < 1;
+
+        return (
+          <div key={course.code} className="max-w-[340px]">
+            <div className="flex items-baseline justify-between gap-3 font-mono text-xs text-muted">
+              <span className="inline-flex items-center gap-2">
+                <span className="size-1.5 shrink-0 rounded-full bg-accent" aria-hidden />
+                {label}
+              </span>
+              {index === 0 ? (
+                <span className="shrink-0">{t('streak', { days: streak })}</span>
+              ) : null}
+            </div>
+            <div
+              className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-border"
+              role="progressbar"
+              aria-label={label}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(goal.percent)}
+            >
+              <div
+                className="h-full rounded-full bg-accent"
+                style={{ width: `${Math.max(goal.percent, 1.5)}%` }}
+              />
+            </div>
+            <p className="mt-1.5 font-mono text-[11px] text-muted">
+              {justStarted ? (
+                t('justStarted')
+              ) : (
+                <>
+                  {t('hours', {
+                    done: nf(Math.round(goal.hoursDone)),
+                    total: nf(goal.hoursTarget),
+                  })}
+                  <span className="mx-1.5" aria-hidden>
+                    ·
+                  </span>
+                  {t('percentLabel', { value: percent })}
+                  {months !== null ? (
+                    <>
+                      <span className="mx-1.5" aria-hidden>
+                        ·
+                      </span>
+                      {t('pace', { months: nf(months) })}
+                    </>
+                  ) : null}
+                </>
+              )}
+            </p>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function HeroCtas() {  const t = useTranslations('hero');
+function HeroCtas() {
+  const t = useTranslations('hero');
 
   return (
     <div className="flex flex-wrap gap-3">
@@ -174,7 +204,7 @@ export function Hero({
   stats,
   initialVitals,
   learning,
-  goal,
+  rows,
 }: {
   profile: HeroProfile;
   stats: HeroStats;
@@ -182,10 +212,10 @@ export function Hero({
    *  every minute so the figures track the server instead of the cached
    *  page render. */
   initialVitals: HealthVitals;
-  /** Spanish-learning progress; null hides the bar entirely. */
+  /** Spanish-learning progress; null hides the bars entirely. */
   learning?: LearningSummary | null;
-  /** B2 goal estimate derived from it; computed on the server so the markup is stable. */
-  goal?: LearningGoal | null;
+  /** One B2 goal row per course, computed on the server so the markup is stable. */
+  rows?: LearningRow[] | null;
 }) {
   const [vitals, setVitals] = useState<HealthVitals>(initialVitals);
 
@@ -215,13 +245,13 @@ export function Hero({
     };
   }, []);
 
-  // The B2 bar is server-rendered, and nginx holds pages for 10 minutes, so a
-  // visitor could otherwise see a bar older than the last Duolingo sync. Refetch
+  // The B2 bars are server-rendered, and nginx holds pages for 10 minutes, so a
+  // visitor could otherwise see bars older than the last Duolingo sync. Refetch
   // in the browser to bypass both caches; the sync itself runs hourly.
   const [learningState, setLearningState] = useState<{
     learning: LearningSummary | null;
-    goal: LearningGoal | null;
-  }>({ learning: learning ?? null, goal: goal ?? null });
+    rows: LearningRow[];
+  }>({ learning: learning ?? null, rows: rows ?? [] });
 
   useEffect(() => {
     let cancelled = false;
@@ -229,7 +259,7 @@ export function Hero({
     async function refresh() {
       const fresh = await getLearning();
       if (!fresh || cancelled) return;
-      setLearningState({ learning: fresh, goal: computeGoal(fresh) });
+      setLearningState({ learning: fresh, rows: computeGoals(fresh.courses) });
     }
 
     refresh();
@@ -242,7 +272,7 @@ export function Hero({
 
   const { bpm, cadence, stepsToday, stress, now } = vitals;
   const learningNow = learningState.learning;
-  const goalNow = learningState.goal;
+  const rowsNow = learningState.rows;
   return (
     <section id="about" className="px-4 py-20 sm:px-6 md:px-12 md:py-28">
       <div className="max-w-6xl lg:grid lg:grid-cols-[1fr_auto] lg:items-start lg:gap-12">
@@ -254,9 +284,9 @@ export function Hero({
           <div className="mt-6">
             <DomainChips />
           </div>
-          {learningNow && goalNow ? (
+          {learningNow && rowsNow.length > 0 ? (
             <div className="mt-4">
-              <LearningGoalBar learning={learningNow} goal={goalNow} />
+              <LearningGoals rows={rowsNow} streak={learningNow.streak} />
             </div>
           ) : null}
           <div className="mt-8">
