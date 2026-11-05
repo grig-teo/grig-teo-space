@@ -9,6 +9,7 @@ import {
 } from '@/lib/youtube';
 import { Link } from '@/i18n/navigation';
 import { getBlogPost, getProfile } from '@/lib/api';
+import { pageMetadata } from '@/lib/seo';
 import type { Locale } from '@/lib/api';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -38,27 +39,13 @@ export async function generateMetadata({ params }: Props) {
     const post = await getBlogPost(id, locale);
     const t = await getTranslations({ locale, namespace: 'blogPage' });
   
-    return {
+    return pageMetadata({
+      locale,
+      path: `/blog/${id}`,
       title: t('articleTitle', { title: post.title }),
       description: post.excerpt,
-      alternates: {
-        canonical: `/${locale}/blog/${id}`,
-        languages: {
-          ...Object.fromEntries(
-            routing.locales.map((alt) => [alt, `/${alt}/blog/${id}`]),
-          ),
-          'x-default': `/en/blog/${id}`,
-        },
-      },
-      openGraph: {
-        title: post.title,
-        description: post.excerpt,
-        url: `/${locale}/blog/${id}`,
-        siteName: 'grig-teo',
-        locale: ogLocale(locale),
-        type: 'article',
-      },
-    };
+      type: 'article',
+    });
   } catch {
     return {};
   }

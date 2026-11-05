@@ -2,6 +2,7 @@ import { ogLocale } from '@/lib/locale';
 import { ProjectCard } from '@/components/Projects';
 import { Link } from '@/i18n/navigation';
 import { getProjects } from '@/lib/api';
+import { pageMetadata } from '@/lib/seo';
 import type { Locale } from '@/lib/api';
 import { getTranslations } from 'next-intl/server';
 
@@ -13,32 +14,12 @@ export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'projectsPage' });
 
-  return {
+  return pageMetadata({
+    locale,
+    path: '/projects',
     title: t('title'),
     description: t('description'),
-    alternates: {
-      canonical: `/${locale}/projects`,
-      languages: {
-        en: '/en/projects',
-        ru: '/ru/projects',
-        ro: '/ro/projects',
-        'x-default': '/en/projects',
-      },
-    },
-    openGraph: {
-      title: t('title'),
-      description: t('description'),
-      url: `/${locale}/projects`,
-      siteName: 'grig-teo',
-      locale: ogLocale(locale),
-      type: 'website',
-    },
-    twitter: {
-      card: 'summary',
-      title: t('title'),
-      description: t('description'),
-    },
-  };
+  });
 }
 
 export default async function ProjectsPage({ params }: Props) {

@@ -1,4 +1,5 @@
 import { ogLocale } from '@/lib/locale';
+import { alternatesFor } from '@/lib/seo';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -24,21 +25,14 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'meta' });
+  const verification = process.env.GOOGLE_SITE_VERIFICATION?.trim();
 
   return {
     metadataBase: new URL('https://grig-teo.space'),
     title: t('title'),
     description: t('description'),
     keywords: t('keywords'),
-    alternates: {
-      canonical: `/${locale}`,
-      languages: {
-        en: '/en',
-        ru: '/ru',
-        ro: '/ro',
-        'x-default': '/en',
-      },
-    },
+    alternates: alternatesFor(locale as Locale),
     openGraph: {
       title: t('title'),
       description: t('description'),
@@ -56,6 +50,9 @@ export async function generateMetadata({ params }: Props) {
       index: true,
       follow: true,
     },
+    // Search Console ownership proof. Set GOOGLE_SITE_VERIFICATION to the token
+    // from the console; nothing is rendered until it is present.
+    ...(verification ? { verification: { google: verification } } : {}),
     icons: {
       icon: [
         { url: '/favicon.ico' },

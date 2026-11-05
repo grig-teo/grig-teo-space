@@ -3,6 +3,7 @@ import { BlogList } from '@/components/Blog';
 import { BlogJsonLd } from '@/components/JsonLd';
 import { Link } from '@/i18n/navigation';
 import { getBlogPosts } from '@/lib/api';
+import { pageMetadata } from '@/lib/seo';
 import type { Locale } from '@/lib/api';
 import { getTranslations } from 'next-intl/server';
 
@@ -14,27 +15,12 @@ export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'blogPage' });
 
-  return {
+  return pageMetadata({
+    locale,
+    path: '/blog',
     title: t('title'),
     description: t('description'),
-    alternates: {
-      canonical: `/${locale}/blog`,
-      languages: {
-        en: '/en/blog',
-        ru: '/ru/blog',
-        ro: '/ro/blog',
-        'x-default': '/en/blog',
-      },
-    },
-    openGraph: {
-      title: t('title'),
-      description: t('description'),
-      url: `/${locale}/blog`,
-      siteName: 'grig-teo',
-      locale: ogLocale(locale),
-      type: 'website',
-    },
-  };
+  });
 }
 
 export default async function BlogPage({ params }: Props) {
