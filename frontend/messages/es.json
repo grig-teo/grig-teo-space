@@ -95,9 +95,9 @@
     "stack": "Stack tecnológico"
   },
   "blogPage": {
-    "title": "Blog | grig-teo",
+    "title": "Blog — agentes de IA, arquitectura backend y desarrollo móvil",
     "heading": "/blog",
-    "description": "Apuntes sobre cómo construir productos, sistemas en tiempo real y desarrollo full-stack.",
+    "description": "Notas prácticas sobre cómo construir agentes de IA, sistemas backend y aplicaciones móviles en producción, errores incluidos.",
     "back": "← volver al inicio",
     "backToArticles": "← volver a los artículos",
     "articleTitle": "{title} | grig-teo",

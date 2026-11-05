@@ -95,9 +95,9 @@
     "stack": "Стек"
   },
   "blogPage": {
-    "title": "Блог | grig-teo",
+    "title": "Блог — AI-агенты, backend-архитектура и мобильная разработка",
     "heading": "/blog",
-    "description": "Заметки о продуктах, realtime-системах и full-stack разработке.",
+    "description": "Практические заметки о том, как строить AI-агентов, backend-системы и мобильные приложения для продакшена, вместе с ошибками.",
     "back": "← на главную",
     "backToArticles": "← ко всем статьям",
     "articleTitle": "{title} | grig-teo",

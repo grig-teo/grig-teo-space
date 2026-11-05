@@ -95,9 +95,9 @@
     "stack": "Tech stack"
   },
   "blogPage": {
-    "title": "Blog | grig-teo",
+    "title": "Blog — AI Agents, Backend Architecture and Mobile Development",
     "heading": "/blog",
-    "description": "Notes on building products, real-time systems, and full-stack delivery.",
+    "description": "Practical notes from building AI agents, backend systems and mobile apps in production, mistakes included.",
     "back": "← back home",
     "backToArticles": "← back to articles",
     "articleTitle": "{title} | grig-teo",

@@ -95,9 +95,9 @@
     "stack": "Stack tehnologic"
   },
   "blogPage": {
-    "title": "Blog | grig-teo",
+    "title": "Blog — agenți AI, arhitectură backend și dezvoltare mobilă",
     "heading": "/blog",
-    "description": "Note despre produse, sisteme realtime și livrare full-stack.",
+    "description": "Note practice despre construirea agenților AI, a sistemelor backend și a aplicațiilor mobile pentru producție, cu greșelile incluse.",
     "back": "← înapoi acasă",
     "backToArticles": "← înapoi la articole",
     "articleTitle": "{title} | grig-teo",

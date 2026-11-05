@@ -8,7 +8,8 @@
 
 /**
  * Blog section: the landing-page block, its header nav link and the hero
- * "articles" stat all follow this flag. The /blog routes keep working, so
+ * "articles" stat all follow this flag. Enabled 2026-11-05: the blog now has 9
+ * published posts in four languages. The /blog routes keep working, so
  * existing links and the sitemap entry are unaffected.
  */
-export const SHOW_BLOG = false;
+export const SHOW_BLOG = true;
