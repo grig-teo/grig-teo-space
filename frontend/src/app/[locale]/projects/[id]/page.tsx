@@ -190,7 +190,10 @@ export default async function ProjectDetailPage({ params }: Props) {
           ) : null}
 
           <div className="mt-10 flex flex-wrap gap-3">
-            {project.url ? (
+            {/* Only an absolute URL can be a demo. A relative or partial value is
+                a content mistake, and rendering it produced a link to a 404 on
+                this site for two locales before the data was corrected. */}
+            {project.url?.startsWith('http') ? (
               <a
                 href={project.url}
                 target="_blank"
