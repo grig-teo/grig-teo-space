@@ -292,6 +292,10 @@ export function Hero({
       <div className="max-w-6xl lg:grid lg:grid-cols-[1fr_auto] lg:items-start lg:gap-12">
         <div>
           <HeroPanel profile={profile} />
+          {/* CTA first: it must be reachable without scrolling past the stats. */}
+          <div className="mt-6">
+            <HeroCtas />
+          </div>
           <div className="mt-8">
             <StatsStrip stats={stats} />
           </div>
@@ -299,13 +303,10 @@ export function Hero({
             <DomainChips />
           </div>
           {learningNow && rowsNow.length > 0 ? (
-            <div className="mt-4">
+            <div className="mt-6">
               <LearningGoals rows={rowsNow} streak={learningNow.streak} />
             </div>
           ) : null}
-          <div className="mt-8">
-            <HeroCtas />
-          </div>
         </div>
         <div className="mt-10 flex flex-col items-center gap-4 lg:mt-0 lg:pt-4">
           {now ? <NowBadge status={now} /> : null}
