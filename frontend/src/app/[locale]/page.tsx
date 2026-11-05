@@ -4,6 +4,7 @@ import { BlogPreview } from '@/components/Blog';
 import { HeroScene } from '@/components/HeroScene';
 import { ProjectsPreview } from '@/components/Projects';
 import { ServicesPreview } from '@/components/Services';
+import { ContactBand } from '@/components/ContactBand';
 import { Experience } from '@/components/Experience';
 import { JsonLd } from '@/components/JsonLd';
 import { Reveal } from '@/components/Reveal';
@@ -81,6 +82,9 @@ export default async function HomePage({ params }: Props) {
       </Reveal>
       <Reveal>
         <Experience items={experience} />
+      </Reveal>
+      <Reveal>
+        <ContactBand email={profile.contact.email} />
       </Reveal>
       {SHOW_BLOG && (
         <Reveal>

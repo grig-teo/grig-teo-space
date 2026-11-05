@@ -351,5 +351,9 @@
     "ctaBody": "The CV is available in English, Russian, Romanian and Spanish. Or skip it and tell me what you are trying to build.",
     "ctaButton": "Discuss a Project",
     "cvButton": "Download CV"
+  },
+  "homeCta": {
+    "title": "Have something that needs building?",
+    "body": "Tell me what it is and what is blocking it. I will tell you what it takes, including whether I am the right person for it."
   }
 }

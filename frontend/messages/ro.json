@@ -351,5 +351,9 @@
     "ctaBody": "CV-ul este disponibil în engleză, rusă, română și spaniolă. Sau sari peste el și spune-mi ce încerci să construiești.",
     "ctaButton": "Discută un proiect",
     "cvButton": "Descarcă CV"
+  },
+  "homeCta": {
+    "title": "Ai ceva de construit?",
+    "body": "Spune-mi ce este și ce îl blochează. Îți spun ce presupune, inclusiv dacă sunt persoana potrivită."
   }
 }
