@@ -7,7 +7,7 @@ import { LanguageSwitcher } from './LanguageSwitcher';
 import { ThemeSwitcher } from './ThemeSwitcher';
 
 const baseLinks = [
-  { key: 'about', href: '/#about' },
+  { key: 'about', href: '/about' },
   { key: 'services', href: '/services' },
   { key: 'blog', href: '/#blog' },
   { key: 'projects', href: '/#projects' },

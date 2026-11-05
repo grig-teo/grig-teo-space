@@ -259,5 +259,85 @@
         ]
       }
     ]
+  },
+  "about": {
+    "metaTitle": "About — Software Engineer, 8+ Years of Production Systems",
+    "metaDescription": "Eight years of backend, mobile and AI work: financial systems, distributed services, and complete products taken from idea to production.",
+    "eyebrow": "About",
+    "heading": "Eight years of shipping software that has to keep working",
+    "lead": "I started in 2018 on financial systems in Java, moved through distributed backends and marketplaces, and now build products end to end, with AI where it genuinely helps. I have stayed responsible for systems after release in every role, which changes how you build them.",
+    "storyHeading": "How I got here",
+    "story": [
+      "My first years were finance software at Crossinx, where a wrong number is a real problem. That is where I learned to design the schema before writing the feature, to treat a migration as something that has to be reversible, and to test the paths nobody clicks. Java and Spring Boot were the tools; care with data was the lesson.",
+      "Amdaris moved me into distributed systems: Kafka, GraphQL, services owned by different teams, and deployments to Azure. At FeelIT I worked closer to the product itself, including the first language model features I put into production. Today I am the only developer on three products at once, which means the design, the code, the releases and the support are all mine."
+    ],
+    "principlesHeading": "How I work",
+    "principles": [
+      {
+        "title": "Data first",
+        "body": "Most of the hard problems in a product live in its data, not in its screens. I spend the early part of a project on the schema, the states a record can be in, and what happens when two people change the same thing at once. That is what makes later features cheap instead of painful."
+      },
+      {
+        "title": "Own it after release",
+        "body": "I have been the only developer on three products at once: writing the features, running the builds, publishing the releases and answering the problems afterwards. That removes the gap where something counts as done but does not actually work, and it is why I care about release pipelines as much as about code."
+      },
+      {
+        "title": "AI with guardrails",
+        "body": "A model call is a dependency with unpredictable latency, real cost and a habit of being confidently wrong. So I put timeouts, output validation, a token budget and a fallback in front of every integration, and I measure what it costs before it has to scale."
+      },
+      {
+        "title": "Runnable by someone else",
+        "body": "Documentation, tests and a deployment another engineer can repeat are not extras. They are the difference between a project you can continue without me and one you cannot, and you should be able to leave whenever you want."
+      }
+    ],
+    "experienceHeading": "Where I have worked",
+    "stackHeading": "What I work with",
+    "stackLead": "Grouped by what it is for, because a list of names says nothing about how they get used.",
+    "stack": [
+      {
+        "title": "Backend and data",
+        "items": [
+          "Java and Spring Boot",
+          "Node.js: NestJS, Express, Fastify",
+          "Python and FastAPI",
+          "PostgreSQL, MongoDB, Oracle",
+          "Redis, Kafka, background job queues"
+        ]
+      },
+      {
+        "title": "Mobile",
+        "items": [
+          "Kotlin for Android",
+          "Swift and SwiftUI for iOS",
+          "React Native with Expo",
+          "Kotlin Multiplatform shared code",
+          "Bluetooth Low Energy integrations"
+        ]
+      },
+      {
+        "title": "AI and automation",
+        "items": [
+          "OpenAI and Azure OpenAI",
+          "Self-hosted models through Ollama and vLLM",
+          "Retrieval over private documents",
+          "Agent workflows with tool access",
+          "Speech to text, vision and document extraction"
+        ]
+      },
+      {
+        "title": "Product and operations",
+        "items": [
+          "Next.js and React in TypeScript",
+          "Docker and nginx",
+          "CI pipelines and signed releases",
+          "Monitoring, alerting and backups",
+          "Database migrations with a rollback path"
+        ]
+      }
+    ],
+    "ctaTitle": "Want the longer version, or a call?",
+    "ctaBody": "The CV is available in English, Russian, Romanian and Spanish. Or skip it and tell me what you are trying to build.",
+    "ctaButton": "Discuss a Project",
+    "cvButton": "Download CV"
   }
 }

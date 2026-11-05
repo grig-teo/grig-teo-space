@@ -259,5 +259,85 @@
         ]
       }
     ]
+  },
+  "about": {
+    "metaTitle": "Sobre mí: ingeniero de software, más de 8 años de sistemas en producción",
+    "metaDescription": "Ocho años de trabajo en backend, móvil e IA: sistemas financieros, servicios distribuidos y productos completos llevados de la idea a producción.",
+    "eyebrow": "Sobre mí",
+    "heading": "Ocho años entregando software que tiene que seguir funcionando",
+    "lead": "Empecé en 2018 con sistemas financieros en Java, pasé por backends distribuidos y marketplaces, y ahora construyo productos de principio a fin, con IA donde de verdad ayuda. En todos mis puestos he seguido siendo responsable de los sistemas después de publicarlos, y eso cambia la forma de construirlos.",
+    "storyHeading": "Cómo llegué hasta aquí",
+    "story": [
+      "Mis primeros años fueron en software financiero en Crossinx, donde un número equivocado es un problema real. Ahí aprendí a diseñar el esquema antes de escribir la funcionalidad, a tratar una migración como algo que tiene que poder revertirse y a probar los caminos por los que nadie hace clic. Java y Spring Boot eran las herramientas; el cuidado con los datos fue la lección.",
+      "Amdaris me llevó a los sistemas distribuidos: Kafka, GraphQL, servicios de distintos equipos y despliegues en Azure. En FeelIT trabajé más cerca del producto, incluidas las primeras funcionalidades con modelos de lenguaje que llevé a producción. Hoy soy el único desarrollador en tres productos a la vez, lo que significa que el diseño, el código, las versiones y el soporte son míos."
+    ],
+    "principlesHeading": "Cómo trabajo",
+    "principles": [
+      {
+        "title": "Primero los datos",
+        "body": "La mayoría de los problemas difíciles de un producto están en sus datos, no en sus pantallas. La primera parte de un proyecto la dedico al esquema, a los estados en los que puede estar un registro y a qué pasa cuando dos personas cambian lo mismo a la vez. Eso es lo que hace que las funcionalidades posteriores salgan baratas en vez de dolorosas."
+      },
+      {
+        "title": "Responsable después del lanzamiento",
+        "body": "He sido el único desarrollador en tres productos a la vez: escribiendo las funcionalidades, ejecutando las compilaciones, publicando las versiones y atendiendo los problemas que llegan después. Eso elimina el hueco en el que algo cuenta como terminado pero en realidad no funciona, y es la razón por la que me importan los procesos de publicación tanto como el código."
+      },
+      {
+        "title": "IA con salvaguardas",
+        "body": "Una llamada a un modelo es una dependencia con una latencia impredecible, un coste real y la costumbre de equivocarse con seguridad. Por eso pongo tiempos de espera, validación de la salida, un presupuesto de tokens y un respaldo delante de cada integración, y mido lo que cuesta antes de que tenga que escalar."
+      },
+      {
+        "title": "Ejecutable por otra persona",
+        "body": "La documentación, las pruebas y un despliegue que otro ingeniero pueda repetir no son extras. Son la diferencia entre un proyecto que puedes continuar sin mí y uno que no, y deberías poder dejarlo cuando quieras."
+      }
+    ],
+    "experienceHeading": "Dónde he trabajado",
+    "stackHeading": "Con qué trabajo",
+    "stackLead": "Agrupado por función, porque una lista de nombres no dice nada sobre cómo se usan.",
+    "stack": [
+      {
+        "title": "Backend y datos",
+        "items": [
+          "Java y Spring Boot",
+          "Node.js: NestJS, Express, Fastify",
+          "Python y FastAPI",
+          "PostgreSQL, MongoDB, Oracle",
+          "Redis, Kafka, colas de trabajos en segundo plano"
+        ]
+      },
+      {
+        "title": "Móvil",
+        "items": [
+          "Kotlin para Android",
+          "Swift y SwiftUI para iOS",
+          "React Native con Expo",
+          "Código compartido con Kotlin Multiplatform",
+          "Integraciones con Bluetooth Low Energy"
+        ]
+      },
+      {
+        "title": "IA y automatización",
+        "items": [
+          "OpenAI y Azure OpenAI",
+          "Modelos autoalojados con Ollama y vLLM",
+          "Recuperación de información sobre documentos privados",
+          "Flujos de agentes con acceso a herramientas",
+          "Voz a texto, visión y extracción de documentos"
+        ]
+      },
+      {
+        "title": "Producto y operaciones",
+        "items": [
+          "Next.js y React en TypeScript",
+          "Docker y nginx",
+          "Pipelines de CI y versiones firmadas",
+          "Monitorización, alertas y copias de seguridad",
+          "Migraciones de base de datos con vuelta atrás"
+        ]
+      }
+    ],
+    "ctaTitle": "¿Quieres la versión larga o prefieres una llamada?",
+    "ctaBody": "El CV está disponible en inglés, ruso, rumano y español. O pásalo por alto y cuéntame qué quieres construir.",
+    "ctaButton": "Hablemos de un proyecto",
+    "cvButton": "Descargar CV"
   }
 }

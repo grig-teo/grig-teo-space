@@ -259,5 +259,85 @@
         ]
       }
     ]
+  },
+  "about": {
+    "metaTitle": "Despre: inginer software, 8+ ani de sisteme în producție",
+    "metaDescription": "Opt ani de backend, mobil și AI: sisteme financiare, servicii distribuite și produse complete duse de la idee până în producție.",
+    "eyebrow": "Despre",
+    "heading": "Opt ani în care am livrat software ce trebuie să funcționeze în continuare",
+    "lead": "Am început în 2018 cu sisteme financiare în Java, am trecut prin backend-uri distribuite și marketplace-uri, iar acum construiesc produse de la un capăt la altul, cu AI acolo unde ajută cu adevărat. În fiecare rol am rămas responsabil de sisteme după lansare, iar asta schimbă felul în care le construiești.",
+    "storyHeading": "Cum am ajuns aici",
+    "story": [
+      "Primii ani au fost software financiar la Crossinx, unde o cifră greșită este o problemă reală. Acolo am învățat să proiectez schema înainte de a scrie funcționalitatea, să tratez o migrare ca pe ceva ce trebuie să fie reversibil și să testez căile pe care nu le apasă nimeni. Java și Spring Boot erau uneltele; grija pentru date a fost lecția.",
+      "La Amdaris am trecut la sisteme distribuite: Kafka, GraphQL, servicii deținute de echipe diferite și implementări în Azure. La FeelIT am lucrat mai aproape de produs, inclusiv primele funcționalități cu modele de limbaj pe care le-am dus în producție. Astăzi sunt singurul dezvoltator pe trei produse simultan, ceea ce înseamnă că designul, codul, lansările și suportul sunt toate ale mele."
+    ],
+    "principlesHeading": "Cum lucrez",
+    "principles": [
+      {
+        "title": "Datele pe primul loc",
+        "body": "Majoritatea problemelor grele dintr-un produs stau în date, nu în ecrane. Începutul unui proiect îl petrec pe schemă, pe stările în care poate fi o înregistrare și pe ce se întâmplă când două persoane modifică același lucru în același timp. Asta face ca funcționalitățile de mai târziu să coste puțin, în loc să doară."
+      },
+      {
+        "title": "Responsabil după lansare",
+        "body": "Am fost singurul dezvoltator pe trei produse simultan: scriam funcționalitățile, rulam build-urile, publicam lansările și rezolvam problemele de după. Asta elimină golul în care ceva e considerat gata, dar nu funcționează de fapt, și de aceea mă interesează la fel de mult pipeline-urile de lansare ca și codul."
+      },
+      {
+        "title": "AI cu protecții",
+        "body": "Un apel către un model este o dependență cu latență imprevizibilă, cost real și obiceiul de a se înșela cu convingere. De aceea pun timeout-uri, validarea răspunsului, un buget de tokeni și o variantă de rezervă în fața fiecărei integrări și măsor cât costă înainte ca integrarea să trebuiască să scaleze."
+      },
+      {
+        "title": "Poate fi preluat de altcineva",
+        "body": "Documentația, testele și un deployment pe care alt inginer îl poate repeta nu sunt un extra. Ele fac diferența dintre un proiect pe care poți continua fără mine și unul pe care nu poți, iar tu ar trebui să poți pleca oricând vrei."
+      }
+    ],
+    "experienceHeading": "Unde am lucrat",
+    "stackHeading": "Cu ce lucrez",
+    "stackLead": "Grupate după scop, pentru că o listă de nume nu spune nimic despre felul în care sunt folosite.",
+    "stack": [
+      {
+        "title": "Backend și date",
+        "items": [
+          "Java și Spring Boot",
+          "Node.js: NestJS, Express, Fastify",
+          "Python și FastAPI",
+          "PostgreSQL, MongoDB, Oracle",
+          "Redis, Kafka, cozi de joburi în background"
+        ]
+      },
+      {
+        "title": "Mobil",
+        "items": [
+          "Kotlin pentru Android",
+          "Swift și SwiftUI pentru iOS",
+          "React Native cu Expo",
+          "cod partajat cu Kotlin Multiplatform",
+          "integrări Bluetooth Low Energy"
+        ]
+      },
+      {
+        "title": "AI și automatizare",
+        "items": [
+          "OpenAI și Azure OpenAI",
+          "modele găzduite local prin Ollama și vLLM",
+          "recuperare de informații din documente private",
+          "fluxuri de agenți cu acces la unelte",
+          "transcriere vocală în text, vedere computerizată și extragere de date din documente"
+        ]
+      },
+      {
+        "title": "Produs și operațiuni",
+        "items": [
+          "Next.js și React în TypeScript",
+          "Docker și nginx",
+          "pipeline-uri CI și lansări semnate",
+          "monitorizare, alertare și backup-uri",
+          "migrări de bază de date cu posibilitate de rollback"
+        ]
+      }
+    ],
+    "ctaTitle": "Vrei versiunea lungă sau un apel?",
+    "ctaBody": "CV-ul este disponibil în engleză, rusă, română și spaniolă. Sau sari peste el și spune-mi ce încerci să construiești.",
+    "ctaButton": "Discută un proiect",
+    "cvButton": "Descarcă CV"
   }
 }
