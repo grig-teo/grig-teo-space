@@ -95,7 +95,7 @@ export function BlogPreview({ posts, locale }: { posts: BlogPost[]; locale: stri
       <div className="grid auto-rows-fr gap-6 md:grid-cols-2 lg:grid-cols-3">
         <BlogCard post={featured} locale={locale} featured />
         {rest.map((post) => (
-          <BlogCard key={post.id} post={post} locale={locale} titleAs="h2" />
+          <BlogCard key={post.id} post={post} locale={locale} />
         ))}
       </div>
     </section>
@@ -106,7 +106,7 @@ export function BlogList({ posts, locale }: { posts: BlogPost[]; locale: string 
   return (
     <div className="grid auto-rows-fr gap-6 sm:gap-8 lg:grid-cols-2">
       {posts.map((post) => (
-        <BlogCard key={post.id} post={post} locale={locale} />
+        <BlogCard key={post.id} post={post} locale={locale} titleAs="h2" />
       ))}
     </div>
   );

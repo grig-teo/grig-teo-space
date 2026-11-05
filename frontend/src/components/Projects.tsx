@@ -20,10 +20,20 @@ function ExternalIcon() {
   );
 }
 
-function HighlightsList({ items, label }: { items: string[]; label: string }) {
+function HighlightsList({
+  items,
+  label,
+  level,
+}: {
+  items: string[];
+  label: string;
+  /** One below the card title, so the outline never skips a level. */
+  level: 3 | 4;
+}) {
+  const Heading = level === 3 ? 'h3' : 'h4';
   return (
     <div className="mb-6">
-      <h4 className="mb-3 font-mono text-xs uppercase tracking-wide text-accent">{label}</h4>
+      <Heading className="mb-3 font-mono text-xs uppercase tracking-wide text-accent">{label}</Heading>
       <ul className="space-y-2">
         {items.map((item) => (
           <li key={item} className="font-sans text-sm leading-relaxed text-muted">
@@ -113,7 +123,11 @@ export function ProjectCard({
       </p>
 
       {detailed && project.highlights.length > 0 && (
-        <HighlightsList items={project.highlights} label={t('highlights')} />
+        <HighlightsList
+          items={project.highlights}
+          label={t('highlights')}
+          level={titleAs === 'h2' ? 3 : 4}
+        />
       )}
 
       <p className="mt-auto pt-2 font-mono text-xs text-muted/80">{project.tags.join(' · ')}</p>
