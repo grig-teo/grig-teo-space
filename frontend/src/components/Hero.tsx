@@ -73,13 +73,19 @@ function StatsStrip({ stats }: { stats: HeroStats }) {
   ];
 
   return (
+    // gap-px over a border-coloured background draws the hairlines between
+    // cells, so the strip stays joined at any column count. Stacking these into
+    // three full-width rows pushed the rest of the hero off a phone screen.
     <div
-      className={`grid grid-cols-1 divide-y divide-border rounded-lg border border-border bg-surface sm:grid-cols-3 sm:divide-x sm:divide-y-0 ${
-        SHOW_BLOG ? 'md:grid-cols-4' : 'md:grid-cols-3'
+      className={`grid gap-px overflow-hidden rounded-lg border border-border bg-border ${
+        cells.length > 3 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'
       }`}
     >
       {cells.map((cell, index) => (
-        <div key={index} className="px-4 py-3 text-center font-mono text-lg text-accent">
+        <div
+          key={index}
+          className="bg-surface px-3 py-3 text-center font-mono text-base text-accent sm:text-lg"
+        >
           {cell}
         </div>
       ))}
