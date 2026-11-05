@@ -115,7 +115,7 @@ export default async function AboutPage({ params }: Props) {
           >
             {t('experienceHeading')}
           </h2>
-          <Experience items={experience} />
+          <Experience items={experience} embedded />
         </div>
       </section>
 

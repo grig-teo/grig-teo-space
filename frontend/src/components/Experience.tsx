@@ -71,22 +71,41 @@ function ExperienceRow({ item }: { item: ExperienceItem }) {
   );
 }
 
-export function Experience({ items }: { items: ExperienceItem[] }) {
+/**
+ * Career timeline. `embedded` drops the section chrome and the component's own
+ * "## /experience" heading, for pages that already provide a heading above it
+ * (the About page does) and supply their own section padding.
+ */
+export function Experience({
+  items,
+  embedded = false,
+}: {
+  items: ExperienceItem[];
+  embedded?: boolean;
+}) {
   const t = useTranslations('sections');
+
+  const timeline = (
+    <div className="relative max-w-4xl">
+      <div className="absolute left-[5px] top-2 bottom-2 w-px bg-border" />
+      <div className="space-y-8 sm:space-y-10">
+        {items.map((item) => (
+          <ExperienceRow key={item.id} item={item} />
+        ))}
+      </div>
+    </div>
+  );
+
+  if (embedded) {
+    return timeline;
+  }
 
   return (
     <section id="experience" className="px-4 py-12 sm:px-6 sm:py-16 md:px-12">
       <h2 className="mb-8 font-mono text-sm text-muted sm:mb-10">
         <span className="text-accent">##</span> {t('experience')}
       </h2>
-      <div className="relative max-w-4xl">
-        <div className="absolute left-[5px] top-2 bottom-2 w-px bg-border" />
-        <div className="space-y-8 sm:space-y-10">
-          {items.map((item) => (
-            <ExperienceRow key={item.id} item={item} />
-          ))}
-        </div>
-      </div>
+      {timeline}
     </section>
   );
 }
