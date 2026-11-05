@@ -66,10 +66,14 @@ function StatusChip({ project }: { project: Project }) {
 export function ProjectCard({
   project,
   detailed = false,
+  titleAs = 'h3',
 }: {
   project: Project;
   detailed?: boolean;
+  /** h2 on the projects index, h3 inside the homepage section. */
+  titleAs?: 'h2' | 'h3';
 }) {
+  const Title = titleAs;
   const t = useTranslations('projectsPage');
 
   const card = (
@@ -88,9 +92,9 @@ export function ProjectCard({
       )}
       <div className="mb-4 flex items-start justify-between gap-4">
         <div className="min-w-0 space-y-2">
-          <h3 className={`font-mono font-semibold text-foreground ${detailed ? 'text-xl' : ''}`}>
+          <Title className={`font-mono font-semibold text-foreground ${detailed ? 'text-xl' : ''}`}>
             {project.title}
-          </h3>
+          </Title>
           <StatusChip project={project} />
         </div>
         {!detailed && (

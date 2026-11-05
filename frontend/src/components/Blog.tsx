@@ -20,11 +20,16 @@ function BlogCard({
   post,
   locale,
   featured = false,
+  titleAs = 'h3',
 }: {
   post: BlogPost;
   locale: string;
   featured?: boolean;
+  /** h2 on the blog index (where the page h1 is the only heading above it),
+   *  h3 inside the homepage section that already has one. */
+  titleAs?: 'h2' | 'h3';
 }) {
+  const Title = titleAs;
   const t = useTranslations('sections');
 
   return (
@@ -43,7 +48,7 @@ function BlogCard({
           {formatDate(post.publishedAt, locale)}
         </time>
       </div>
-      <h3
+      <Title
         className={`mt-3 font-mono font-semibold text-foreground group-hover:text-accent ${
           featured ? 'text-xl' : 'text-base'
         }`}
@@ -51,7 +56,7 @@ function BlogCard({
         <Link href={`/blog/${post.id}`} className="hover:underline underline-offset-4">
           {post.title}
         </Link>
-      </h3>
+      </Title>
       <p className="mt-3 flex-1 font-sans text-sm leading-relaxed text-muted line-clamp-4">
         {post.excerpt}
       </p>
@@ -90,7 +95,7 @@ export function BlogPreview({ posts, locale }: { posts: BlogPost[]; locale: stri
       <div className="grid auto-rows-fr gap-6 md:grid-cols-2 lg:grid-cols-3">
         <BlogCard post={featured} locale={locale} featured />
         {rest.map((post) => (
-          <BlogCard key={post.id} post={post} locale={locale} />
+          <BlogCard key={post.id} post={post} locale={locale} titleAs="h2" />
         ))}
       </div>
     </section>

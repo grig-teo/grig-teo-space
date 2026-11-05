@@ -664,6 +664,7 @@ export function AssistantChatWidget({ locale }: Props) {
                   }
                 }}
                 placeholder={limitReached ? text.limitReached : text.input}
+                aria-label={text.input}
                 disabled={limitReached}
                 className="flex-1 rounded border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted outline-none focus:border-accent/70 disabled:cursor-not-allowed disabled:opacity-50"
               />
