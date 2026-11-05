@@ -35,6 +35,34 @@ function HighlightsList({ items, label }: { items: string[]; label: string }) {
   );
 }
 
+/** Maturity chip shared by the project cards, so the list cannot drift from the
+ *  case study page. Unset falls back to the legacy `inDevelopment` boolean. */
+const STATUS_STYLE = {
+  production: 'border-accent/50 text-accent',
+  prototype: 'border-accent-2/50 text-accent-2',
+  'in-development': 'border-border text-muted',
+} as const;
+
+function StatusChip({ project }: { project: Project }) {
+  const t = useTranslations('projectsPage');
+  const status = project.status ?? (project.inDevelopment ? 'in-development' : 'prototype');
+  const label = t(
+    status === 'production'
+      ? 'statusProduction'
+      : status === 'prototype'
+        ? 'statusPrototype'
+        : 'statusDevelopment',
+  );
+
+  return (
+    <span
+      className={`inline-block rounded border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider ${STATUS_STYLE[status]}`}
+    >
+      {label}
+    </span>
+  );
+}
+
 export function ProjectCard({
   project,
   detailed = false,
@@ -63,11 +91,7 @@ export function ProjectCard({
           <h3 className={`font-mono font-semibold text-foreground ${detailed ? 'text-xl' : ''}`}>
             {project.title}
           </h3>
-          {project.inDevelopment && (
-            <span className="inline-block rounded border border-accent-2/50 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-accent-2">
-              {t('inDevelopment')}
-            </span>
-          )}
+          <StatusChip project={project} />
         </div>
         {!detailed && (
           <span className="shrink-0 text-accent opacity-0 transition-opacity group-hover:opacity-100">

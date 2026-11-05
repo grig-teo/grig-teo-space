@@ -18,6 +18,12 @@ export interface ExperienceAttachment {
   title?: string;
 }
 
+/**
+ * Three-state maturity for the case studies. `inDevelopment` is kept for older
+ * content; when `status` is absent the API derives it from that boolean.
+ */
+export type ProjectStatus = 'production' | 'prototype' | 'in-development';
+
 export interface Project {
   id: string;
   title: LocalizedString;
@@ -26,6 +32,8 @@ export interface Project {
   highlights: LocalizedList;
   url: LocalizedString;
   tags: string[];
+  /** Explicit maturity. Absent falls back to `inDevelopment`. */
+  status?: ProjectStatus;
   inDevelopment?: boolean;
   image?: string;
   /** Files attached to this project (demo videos, screenshots, docs…). */

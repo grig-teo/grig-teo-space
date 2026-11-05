@@ -74,7 +74,19 @@
     "back": "← înapoi acasă",
     "highlights": "Repere",
     "visit": "Vizitează proiectul",
-    "inDevelopment": "În dezvoltare"
+    "inDevelopment": "În dezvoltare",
+    "statusLabel": "Stare",
+    "statusProduction": "În producție",
+    "statusPrototype": "Prototip funcțional",
+    "statusDevelopment": "În dezvoltare",
+    "problem": "Problema",
+    "build": "Cum este construit",
+    "contribution": "Contribuția mea",
+    "contributionBody": "Proiectat și construit de mine: arhitectură, backend, interfață și deployment.",
+    "technologies": "Tehnologii",
+    "demo": "Demo live",
+    "caseCta": "Ai nevoie de ceva similar?",
+    "caseSuffix": "studiu de caz"
   },
   "experiencePage": {
     "title": "{company} — Experiență | grig-teo",

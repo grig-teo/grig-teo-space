@@ -74,7 +74,19 @@
     "back": "← back home",
     "highlights": "Highlights",
     "visit": "Visit project",
-    "inDevelopment": "In development"
+    "inDevelopment": "In development",
+    "statusLabel": "Status",
+    "statusProduction": "In production",
+    "statusPrototype": "Working prototype",
+    "statusDevelopment": "In development",
+    "problem": "The problem",
+    "build": "How it is built",
+    "contribution": "My contribution",
+    "contributionBody": "Designed and built by me: architecture, backend, interface and deployment.",
+    "technologies": "Technologies",
+    "demo": "Live demo",
+    "caseCta": "Need something similar?",
+    "caseSuffix": "case study"
   },
   "experiencePage": {
     "title": "{company} — Experience | grig-teo",

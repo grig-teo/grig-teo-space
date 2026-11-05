@@ -74,7 +74,19 @@
     "back": "← volver al inicio",
     "highlights": "Puntos clave",
     "visit": "Ver proyecto",
-    "inDevelopment": "En desarrollo"
+    "inDevelopment": "En desarrollo",
+    "statusLabel": "Estado",
+    "statusProduction": "En producción",
+    "statusPrototype": "Prototipo funcional",
+    "statusDevelopment": "En desarrollo",
+    "problem": "El problema",
+    "build": "Cómo está construido",
+    "contribution": "Mi aportación",
+    "contributionBody": "Diseñado y construido por mí: arquitectura, backend, interfaz y despliegue.",
+    "technologies": "Tecnologías",
+    "demo": "Demo en vivo",
+    "caseCta": "¿Necesitas algo parecido?",
+    "caseSuffix": "caso práctico"
   },
   "experiencePage": {
     "title": "{company} — Experiencia | grig-teo",

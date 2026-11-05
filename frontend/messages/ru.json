@@ -74,7 +74,19 @@
     "back": "← на главную",
     "highlights": "Ключевое",
     "visit": "Открыть проект",
-    "inDevelopment": "В разработке"
+    "inDevelopment": "В разработке",
+    "statusLabel": "Статус",
+    "statusProduction": "В продакшене",
+    "statusPrototype": "Рабочий прототип",
+    "statusDevelopment": "В разработке",
+    "problem": "Задача",
+    "build": "Как это устроено",
+    "contribution": "Мой вклад",
+    "contributionBody": "Спроектировал и сделал сам: архитектура, backend, интерфейс и деплой.",
+    "technologies": "Технологии",
+    "demo": "Живая демо",
+    "caseCta": "Нужно что-то похожее?",
+    "caseSuffix": "кейс"
   },
   "experiencePage": {
     "title": "{company} — Опыт | grig-teo",

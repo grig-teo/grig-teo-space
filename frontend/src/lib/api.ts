@@ -15,6 +15,9 @@ export interface Profile {
   };
 }
 
+/** Three-state maturity, so a live demo is not mistaken for a shipped product. */
+export type ProjectStatus = 'production' | 'prototype' | 'in-development';
+
 export interface Project {
   id: string;
   title: string;
@@ -23,6 +26,8 @@ export interface Project {
   highlights: string[];
   url: string;
   tags: string[];
+  /** Absent until the project is edited; the page falls back to `inDevelopment`. */
+  status?: ProjectStatus;
   inDevelopment?: boolean;
   image?: string;
   attachments?: ExperienceAttachment[];
