@@ -151,7 +151,8 @@
       "errorName": "Introdu numele.",
       "errorEmail": "Introdu o adresă de email validă.",
       "errorDescription": "O propoziție sau două despre proiect ajută."
-    }
+    },
+    "orMessage": "Sau scrie-mi pe"
   },
   "servicesPage": {
     "metaTitle": "Servicii: dezvoltare AI, backend, mobil și full-stack",

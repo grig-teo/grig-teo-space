@@ -151,7 +151,8 @@
       "errorName": "Escribe tu nombre.",
       "errorEmail": "Escribe una dirección de correo válida.",
       "errorDescription": "Con un par de frases sobre el proyecto es suficiente."
-    }
+    },
+    "orMessage": "O escríbeme por"
   },
   "servicesPage": {
     "metaTitle": "Servicios: desarrollo de IA, backend, móvil y full-stack",

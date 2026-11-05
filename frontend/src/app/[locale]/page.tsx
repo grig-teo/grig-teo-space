@@ -84,7 +84,7 @@ export default async function HomePage({ params }: Props) {
         <Experience items={experience} />
       </Reveal>
       <Reveal>
-        <ContactBand email={profile.contact.email} />
+        <ContactBand email={profile.contact.email} locale={locale as Locale} contact={profile.contact} />
       </Reveal>
       {SHOW_BLOG && (
         <Reveal>

@@ -1,4 +1,5 @@
 import { ContactForm } from '@/components/ContactForm';
+import { MessengerLinks } from '@/components/MessengerLinks';
 import { ProfileLinks } from '@/components/ProfileLinks';
 import { getProfile } from '@/lib/api';
 import type { Locale } from '@/lib/api';
@@ -51,6 +52,8 @@ export default async function ContactPage({ params }: Props) {
               {t('ctaHire')}
             </a>
           </div>
+
+          <MessengerLinks locale={locale} contact={profile.contact} className="mt-5" />
 
           <div id="inquiry" className="mt-12 scroll-mt-24 rounded-lg border border-border bg-surface p-6 sm:p-8">
             <h2 className="font-mono text-sm uppercase tracking-wide text-accent">

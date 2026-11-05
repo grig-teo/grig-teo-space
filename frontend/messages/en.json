@@ -151,7 +151,8 @@
       "errorName": "Please enter your name.",
       "errorEmail": "Please enter a valid email address.",
       "errorDescription": "A sentence or two about the project helps."
-    }
+    },
+    "orMessage": "Or message me on"
   },
   "servicesPage": {
     "metaTitle": "Services — AI, Backend, Mobile and Full-Stack Development",

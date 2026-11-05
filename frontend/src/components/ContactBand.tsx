@@ -1,5 +1,7 @@
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
+import { MessengerLinks } from '@/components/MessengerLinks';
+import type { Locale, Profile } from '@/lib/api';
 
 /**
  * Closing call to action for the homepage.
@@ -7,7 +9,15 @@ import { Link } from '@/i18n/navigation';
  * The footer already carries the CV and the social links, but a page that sells
  * work should end with the two actions it wants, not only with a contact list.
  */
-export function ContactBand({ email }: { email: string }) {
+export function ContactBand({
+  email,
+  locale,
+  contact,
+}: {
+  email: string;
+  locale: Locale;
+  contact: Profile['contact'];
+}) {
   const t = useTranslations('homeCta');
   const tc = useTranslations('contact');
 
@@ -32,6 +42,7 @@ export function ContactBand({ email }: { email: string }) {
             {tc('ctaHire')}
           </a>
         </div>
+        <MessengerLinks locale={locale} contact={contact} className="mt-4" />
       </div>
     </section>
   );
