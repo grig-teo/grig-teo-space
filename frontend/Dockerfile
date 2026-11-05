@@ -1,4 +1,4 @@
-FROM node:22-alpine AS builder
+FROM node:22.23.4-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -7,7 +7,7 @@ ARG NEXT_PUBLIC_API_URL=http://localhost:3001
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN npm run build
 
-FROM node:22-alpine
+FROM node:22.23.4-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
