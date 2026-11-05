@@ -53,6 +53,7 @@ export class PortfolioController {
       url: this.portfolio.pick(project.url, loc),
       tags: project.tags,
       inDevelopment: project.inDevelopment ?? false,
+      status: project.status,
       image: project.image,
       attachments: project.attachments,
     }));
@@ -79,6 +80,7 @@ export class PortfolioController {
       url: this.portfolio.pick(project.url, loc),
       tags: project.tags,
       inDevelopment: project.inDevelopment ?? false,
+      status: project.status,
       image: project.image,
       attachments: project.attachments?.length ? project.attachments : undefined,
     };
