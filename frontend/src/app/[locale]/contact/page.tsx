@@ -64,7 +64,7 @@ export default async function ContactPage({ params }: Props) {
             <h2 className="font-mono text-sm uppercase tracking-wide text-muted">{t('directHeading')}</h2>
             <p className="mt-2 font-sans text-sm leading-relaxed text-muted">{t('directBody')}</p>
             <div className="mt-4">
-              <ProfileLinks contact={profile.contact} emailLabel={t('emailLabel')} />
+              <ProfileLinks contact={profile.contact} emailLabel={t('emailLabel')} locale={locale} />
             </div>
             <p className="mt-6 font-sans text-xs leading-relaxed text-muted">{t('responseNote')}</p>
           </div>

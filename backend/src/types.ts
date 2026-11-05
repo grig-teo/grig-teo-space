@@ -62,6 +62,11 @@ export interface ContactInfo {
   gitverse?: string;
   linkedin: string;
   phone?: LocalizedString;
+  /** Messenger handles, typed into the admin form as a handle or a full URL.
+   *  Telegram serves the non-Russian locales, MAX the Russian one. */
+  telegram?: string;
+  max?: string;
+  whatsapp?: string;
 }
 
 export interface Profile {

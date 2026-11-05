@@ -36,6 +36,9 @@ export class PortfolioController {
         ...(data.contact.gitverse ? { gitverse: data.contact.gitverse } : {}),
         linkedin: data.contact.linkedin,
         ...(phone ? { phone } : {}),
+        ...(data.contact.telegram ? { telegram: data.contact.telegram } : {}),
+        ...(data.contact.max ? { max: data.contact.max } : {}),
+        ...(data.contact.whatsapp ? { whatsapp: data.contact.whatsapp } : {}),
       },
     };
   }

@@ -45,6 +45,11 @@ export interface ContactInfo {
   gitverse?: string;
   linkedin: string;
   phone?: LocalizedString;
+  /** Messenger handles, editable in the admin form. Telegram serves the
+   *  non-Russian locales and MAX the Russian one. */
+  telegram?: string;
+  max?: string;
+  whatsapp?: string;
 }
 
 export interface Profile {

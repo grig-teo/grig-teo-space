@@ -46,7 +46,9 @@ function HeroPanel({ profile }: { profile: HeroProfile }) {
         <span className="ml-2 text-xs text-muted">{t('prompt')}</span>
       </div>
       <div className="px-4 py-8 sm:px-6 sm:py-10">
-        <p className="font-mono text-sm text-accent">{profile.name}</p>
+        <p className="font-mono text-2xl font-bold leading-tight tracking-tight text-accent sm:text-3xl">
+          {profile.name}
+        </p>
         <h1 className="mt-3 max-w-2xl font-mono text-3xl font-bold leading-[1.15] text-foreground sm:text-4xl md:text-[2.9rem]">
           {t('headline')}
         </h1>

@@ -12,6 +12,10 @@ export interface Profile {
     gitverse?: string;
     linkedin: string;
     phone?: string;
+    telegram?: string;
+    /** Russian messenger, shown instead of Telegram on the /ru site. */
+    max?: string;
+    whatsapp?: string;
   };
 }
 

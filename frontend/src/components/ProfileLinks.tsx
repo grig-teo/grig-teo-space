@@ -1,9 +1,12 @@
-import type { Profile } from '@/lib/api';
+import type { Locale, Profile } from '@/lib/api';
+import { messengersFor } from '@/lib/messengers';
 
 type Props = {
   contact: Profile['contact'];
   /** "Email" (or its translation) is the only label that changes per locale. */
   emailLabel: string;
+  /** Decides whether Telegram or MAX is offered. */
+  locale: Locale;
 };
 
 const LINK =
@@ -14,7 +17,7 @@ const LINK =
  * crawler or a CTA should follow gets real text, which is also clearer for
  * screen readers than a bare icon.
  */
-export function ProfileLinks({ contact, emailLabel }: Props) {
+export function ProfileLinks({ contact, emailLabel, locale }: Props) {
   const items = [
     { key: 'email', href: `mailto:${contact.email}`, label: emailLabel, text: contact.email },
     { key: 'github', href: contact.github, label: 'GitHub', text: 'GitHub' },
@@ -22,6 +25,12 @@ export function ProfileLinks({ contact, emailLabel }: Props) {
     ...(contact.gitverse
       ? [{ key: 'gitverse', href: contact.gitverse, label: 'GitVerse', text: 'GitVerse' }]
       : []),
+    ...messengersFor(locale, contact).map((messenger) => ({
+      key: messenger.kind,
+      href: messenger.url,
+      label: messenger.label,
+      text: messenger.label,
+    })),
   ];
 
   return (

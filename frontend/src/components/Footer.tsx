@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { Profile } from '@/lib/api';
 import { CvDownloadModal } from '@/components/CvDownloadModal';
+import { messengerUrl, messengersFor, type MessengerKind } from '@/lib/messengers';
+import { useLocale } from 'next-intl';
 
 function GitHubIcon() {
   return (
@@ -56,9 +58,57 @@ function DownloadIcon() {
   );
 }
 
+
+/** Telegram paper plane. */
+function TelegramIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M21.9 4.3 19 19.1c-.2 1-.8 1.2-1.6.8l-4.5-3.3-2.2 2.1c-.2.2-.4.4-.9.4l.3-4.6 8.4-7.6c.4-.3-.1-.5-.6-.2L7.4 12.9l-4.4-1.4c-1-.3-1-.9.2-1.4L20.5 3c.8-.3 1.6.2 1.4 1.3z" />
+    </svg>
+  );
+}
+
+/** WhatsApp handset in a bubble. */
+function WhatsAppIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M12.04 2C6.6 2 2.2 6.4 2.2 11.84c0 1.74.46 3.44 1.32 4.94L2 22l5.36-1.4a9.85 9.85 0 0 0 4.68 1.2h.01c5.43 0 9.84-4.4 9.84-9.84C21.89 6.4 17.48 2 12.04 2zm5.76 14.03c-.24.68-1.4 1.32-1.94 1.4-.5.08-1.12.11-1.8-.11-.42-.13-.96-.31-1.65-.61-2.9-1.25-4.79-4.17-4.94-4.36-.14-.2-1.17-1.56-1.17-2.98 0-1.41.74-2.11 1-2.4.26-.29.57-.36.76-.36l.55.01c.18 0 .41-.07.64.49.24.57.81 1.98.88 2.12.07.14.12.31.02.5-.1.2-.15.32-.29.49l-.44.51c-.15.15-.3.31-.13.6.17.29.74 1.22 1.59 1.98 1.09.97 2.01 1.27 2.3 1.42.29.14.46.12.63-.07.17-.2.72-.84.91-1.13.19-.29.38-.24.64-.14.26.1 1.66.78 1.94.92.29.15.48.22.55.34.07.13.07.74-.17 1.42z" />
+    </svg>
+  );
+}
+
+/** MAX has no mark I can reproduce faithfully, so it is a monogram rather than
+ *  a logo I would be inventing. */
+function MaxIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
+      <rect x="2" y="2" width="20" height="20" rx="5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <text
+        x="12"
+        y="16.4"
+        textAnchor="middle"
+        fontSize="9"
+        fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+        fontWeight="700"
+        fill="currentColor"
+      >
+        M
+      </text>
+    </svg>
+  );
+}
+
+function MessengerIcon({ kind }: { kind: MessengerKind }) {
+  if (kind === 'telegram') return <TelegramIcon />;
+  if (kind === 'whatsapp') return <WhatsAppIcon />;
+  return <MaxIcon />;
+}
+
 export function Footer({ contact }: { contact: Profile['contact'] }) {
   const t = useTranslations('footer');
+  const locale = useLocale();
   const [cvModalOpen, setCvModalOpen] = useState(false);
+  const messengers = messengersFor(locale, contact);
 
   return (
     <>
@@ -118,6 +168,19 @@ export function Footer({ contact }: { contact: Profile['contact'] }) {
               <PhoneIcon />
             </a>
           )}
+          {messengers.map((messenger) => (
+            <a
+              key={messenger.kind}
+              href={messenger.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-colors hover:text-accent"
+              aria-label={messenger.label}
+              title={messenger.label}
+            >
+              <MessengerIcon kind={messenger.kind} />
+            </a>
+          ))}
         </div>
       </footer>
       <CvDownloadModal open={cvModalOpen} onClose={() => setCvModalOpen(false)} />

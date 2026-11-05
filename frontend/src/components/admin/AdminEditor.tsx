@@ -642,6 +642,41 @@ export function AdminEditor() {
               }))
             }
           />
+          <p className="font-sans text-xs leading-relaxed text-muted">
+            Messengers. A handle (grig_teo), a phone number or a full URL all work; leave a field
+            empty and its icon is not shown. Telegram appears on the English, Romanian and Spanish
+            site, MAX on the Russian one, WhatsApp everywhere.
+          </p>
+          <Field
+            label="Telegram (handle or URL)"
+            value={content.profile.contact.telegram ?? ''}
+            onChange={(value) =>
+              updateProfile((profile) => ({
+                ...profile,
+                contact: { ...profile.contact, telegram: value },
+              }))
+            }
+          />
+          <Field
+            label="MAX — Russian messenger (handle or URL)"
+            value={content.profile.contact.max ?? ''}
+            onChange={(value) =>
+              updateProfile((profile) => ({
+                ...profile,
+                contact: { ...profile.contact, max: value },
+              }))
+            }
+          />
+          <Field
+            label="WhatsApp (number or URL)"
+            value={content.profile.contact.whatsapp ?? ''}
+            onChange={(value) =>
+              updateProfile((profile) => ({
+                ...profile,
+                contact: { ...profile.contact, whatsapp: value },
+              }))
+            }
+          />
         </section>
       ) : null}
 
