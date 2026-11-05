@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 
-export const alt = 'Gregory Theodor — Remote Full-Stack Developer';
+export const alt = 'Gregory Theodor — AI & Full-Stack Software Engineer';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -28,8 +28,11 @@ export default function OpengraphImage() {
         <div style={{ fontSize: 72, fontWeight: 700, lineHeight: 1.1 }}>
           Gregory Theodor
         </div>
-        <div style={{ fontSize: 36, color: '#7d8a9b', marginTop: 24 }}>
-          Remote Full-Stack Developer
+        <div style={{ fontSize: 36, color: '#2dd4bf', marginTop: 20 }}>
+          AI &amp; Full-Stack Software Engineer
+        </div>
+        <div style={{ fontSize: 26, color: '#7d8a9b', marginTop: 18 }}>
+          Products from idea to production
         </div>
       </div>
     ),

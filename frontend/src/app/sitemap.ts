@@ -4,6 +4,15 @@ import { routing } from '@/i18n/routing';
 
 const baseUrl = 'https://grig-teo.space';
 
+/**
+ * Rendered per request, not baked into the image at build time.
+ *
+ * The ID lists come from the backend, which is not reachable while the Docker
+ * image is built, so a build-time sitemap silently lost every case study and
+ * blog URL. `revalidate` is ignored for this route, hence force-dynamic.
+ */
+export const dynamic = 'force-dynamic';
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let experienceIds: string[] = [];
   let projectIds: string[] = [];
