@@ -1,6 +1,7 @@
 {
   "nav": {
     "about": "_about",
+    "services": "_services",
     "blog": "_blog",
     "projects": "_projects",
     "experience": "_experience",
@@ -139,5 +140,124 @@
       "errorEmail": "Please enter a valid email address.",
       "errorDescription": "A sentence or two about the project helps."
     }
+  },
+  "servicesPage": {
+    "metaTitle": "Services — AI, Backend, Mobile and Full-Stack Development",
+    "metaDescription": "AI features, backend systems, mobile apps and complete products, built by one engineer who takes the whole thing from idea to production.",
+    "eyebrow": "Services",
+    "heading": "What I build for clients",
+    "lead": "Four kinds of work, and most projects end up needing more than one of them. I take the whole thing from an idea to something you can put in front of users.",
+    "problemsLabel": "Problems this solves",
+    "audienceLabel": "Who this is for",
+    "deliverablesLabel": "What you get",
+    "outcomesLabel": "What it ends with",
+    "ctaTitle": "Not sure which of these you need?",
+    "ctaBody": "Describe the problem instead of the solution. I will tell you what it actually takes, including if the answer is that you do not need me.",
+    "ctaButton": "Discuss a Project",
+    "previewHeading": "What I can build for you",
+    "previewLead": "Four kinds of work, often combined in one project.",
+    "previewLink": "All services",
+    "items": [
+      {
+        "id": "ai",
+        "title": "AI Development",
+        "summary": "Language model features that do real work in a product, rather than a demo nobody uses.",
+        "problems": [
+          "The AI demo impressed everyone, but it is not connected to your real data or your real workflow, so it stayed a demo.",
+          "Your team spends hours a week on repetitive work that a properly scoped model call could handle safely.",
+          "You want AI in the product, but your customer data cannot leave your own infrastructure."
+        ],
+        "audience": [
+          "Product teams adding an AI feature to an application that already has users.",
+          "Founders building an AI-first product from the beginning.",
+          "Teams with a manual process that keeps growing faster than the headcount."
+        ],
+        "deliverables": [
+          "A model integration behind a clean interface, with timeouts, retries, output validation and a hard cost ceiling.",
+          "Retrieval over your own documents and data, so answers come from your content instead of from the model's memory.",
+          "Agent workflows that run as background jobs and report what they did, including when they failed.",
+          "Provider abstraction, so the model can be swapped for a cheaper or self-hosted one without touching the product."
+        ],
+        "outcomes": [
+          "A working feature in production, with guardrails and a cost you can predict per month.",
+          "A clear answer on which parts of your process should be automated and which should stay human."
+        ]
+      },
+      {
+        "id": "backend",
+        "title": "Backend Development",
+        "summary": "The part that has to hold up: data model, APIs, background jobs, and the deployment that keeps them running.",
+        "problems": [
+          "The product works fine until traffic, data volume or a second developer arrives.",
+          "Nobody wants to change the database, because nobody is sure what will break.",
+          "Integrations with partners or older systems are still done by hand, by one person who knows how."
+        ],
+        "audience": [
+          "Companies whose backend has outgrown the design it started with.",
+          "Teams that need an API for a mobile app, a partner or an integration.",
+          "Products where correctness matters more than shipping features quickly."
+        ],
+        "deliverables": [
+          "Schema design and migrations that can be run repeatedly without a panic.",
+          "REST APIs documented well enough that another team can integrate without a call.",
+          "Background processing for anything that should not block a user request.",
+          "Containerised deployment with a reproducible build and a way back if a release goes wrong."
+        ],
+        "outcomes": [
+          "A backend another engineer can pick up without a long handover.",
+          "Deployments that are boring, which is the point."
+        ]
+      },
+      {
+        "id": "mobile",
+        "title": "Mobile Development",
+        "summary": "Apps for Android and iOS, built by someone who has shipped to both stores and dealt with what they reject.",
+        "problems": [
+          "The app exists as a prototype but has never been through a store review.",
+          "A cross-platform build is fighting the platform instead of using it.",
+          "The project stalled on device integration: Bluetooth, camera, sensors or offline storage."
+        ],
+        "audience": [
+          "Businesses that need an app alongside the product their customers already use.",
+          "Teams adding a mobile client to a backend that is already in place.",
+          "Founders who need one codebase covering both platforms."
+        ],
+        "deliverables": [
+          "Android in Kotlin and iOS in Swift, or one React Native codebase where that is the honest choice.",
+          "Offline-first storage and sync, for apps used where the connection is not reliable.",
+          "Release pipelines: signed builds, versioning, and a working path to the stores.",
+          "Device features, including Bluetooth, camera capture and document scanning."
+        ],
+        "outcomes": [
+          "An app in the stores, or a build you can install and test with real users straight away.",
+          "A native-or-cross-platform decision made from your feature list, not from fashion."
+        ]
+      },
+      {
+        "id": "product",
+        "title": "Full-Stack Product Development",
+        "summary": "The whole product: the idea, the architecture, the interface, the backend, the deployment and the first release.",
+        "problems": [
+          "The idea is clear, but the path from it to a running product is not.",
+          "The MVP was built by three people at different times and the pieces no longer fit together.",
+          "You need a technical partner who can make decisions and then build, without a team to manage."
+        ],
+        "audience": [
+          "Founders taking a product from an idea to its first real users.",
+          "Small companies replacing a spreadsheet-and-email process with software.",
+          "Businesses with an internal tool that nobody wants to be responsible for."
+        ],
+        "deliverables": [
+          "A working first version, cut down to the smallest feature set that proves the idea.",
+          "Architecture and infrastructure sized to the load you actually have, not to a hypothetical one.",
+          "A web application plus the admin side that always turns out to be needed.",
+          "Documentation and a handover that leaves you able to continue without me."
+        ],
+        "outcomes": [
+          "Something you can put in front of users and improve from there.",
+          "A codebase and a deployment you own, rather than one you rent."
+        ]
+      }
+    ]
   }
 }

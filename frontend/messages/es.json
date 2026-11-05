@@ -1,6 +1,7 @@
 {
   "nav": {
     "about": "_about",
+    "services": "_servicios",
     "blog": "_blog",
     "projects": "_projects",
     "experience": "_experience",
@@ -139,5 +140,124 @@
       "errorEmail": "Escribe una dirección de correo válida.",
       "errorDescription": "Con un par de frases sobre el proyecto es suficiente."
     }
+  },
+  "servicesPage": {
+    "metaTitle": "Servicios: desarrollo de IA, backend, móvil y full-stack",
+    "metaDescription": "Funciones de IA, sistemas backend, aplicaciones móviles y productos completos, hechos por un solo ingeniero que lleva todo el proyecto de la idea a producción.",
+    "eyebrow": "Servicios",
+    "heading": "Lo que construyo para mis clientes",
+    "lead": "Cuatro tipos de trabajo, y la mayoría de los proyectos acaban necesitando más de uno. Llevo todo el proceso desde una idea hasta algo que puedes poner delante de tus usuarios.",
+    "problemsLabel": "Problemas que resuelve",
+    "audienceLabel": "Para quién es",
+    "deliverablesLabel": "Qué te llevas",
+    "outcomesLabel": "Cómo termina",
+    "ctaTitle": "¿No sabes cuál de estos necesitas?",
+    "ctaBody": "Cuéntame el problema en vez de la solución. Te diré qué hace falta de verdad, aunque la respuesta sea que no me necesitas.",
+    "ctaButton": "Hablemos de tu proyecto",
+    "previewHeading": "Lo que puedo construir para ti",
+    "previewLead": "Cuatro tipos de trabajo, a menudo combinados en un mismo proyecto.",
+    "previewLink": "Todos los servicios",
+    "items": [
+      {
+        "id": "ai",
+        "title": "Desarrollo de IA",
+        "summary": "Funciones con modelos de lenguaje que hacen trabajo real en un producto, no una demo que no usa nadie.",
+        "problems": [
+          "La demo de IA impresionó a todo el mundo, pero no está conectada a tus datos reales ni a tu flujo de trabajo, así que se quedó en eso, en una demo.",
+          "Tu equipo dedica horas cada semana a tareas repetitivas que una llamada al modelo bien acotada podría resolver de forma segura.",
+          "Quieres IA en el producto, pero los datos de tus clientes no pueden salir de tu propia infraestructura."
+        ],
+        "audience": [
+          "Equipos de producto que añaden una función de IA a una aplicación que ya tiene usuarios.",
+          "Fundadores que construyen un producto centrado en la IA desde el principio.",
+          "Equipos con un proceso manual que crece más rápido que la plantilla."
+        ],
+        "deliverables": [
+          "Una integración del modelo detrás de una interfaz limpia, con tiempos de espera, reintentos, validación de la salida y un tope de coste estricto.",
+          "Búsqueda sobre tus propios documentos y datos, para que las respuestas salgan de tu contenido y no de la memoria del modelo.",
+          "Flujos de agentes que se ejecutan como tareas en segundo plano y dejan constancia de lo que han hecho, también cuando fallan.",
+          "Una abstracción sobre el proveedor, para poder cambiar el modelo por uno más barato o autoalojado sin tocar el producto."
+        ],
+        "outcomes": [
+          "Una función operativa en producción, con límites de seguridad y un coste mensual que puedes prever.",
+          "Una respuesta clara sobre qué partes de tu proceso conviene automatizar y cuáles deben seguir en manos de personas."
+        ]
+      },
+      {
+        "id": "backend",
+        "title": "Desarrollo backend",
+        "summary": "La parte que tiene que aguantar: modelo de datos, APIs, tareas en segundo plano y el despliegue que las mantiene en marcha.",
+        "problems": [
+          "El producto funciona bien hasta que llega el tráfico, el volumen de datos o un segundo desarrollador.",
+          "Nadie quiere tocar la base de datos, porque nadie tiene claro qué se va a romper.",
+          "Las integraciones con socios o con sistemas antiguos siguen haciéndose a mano, y las hace una sola persona que sabe cómo."
+        ],
+        "audience": [
+          "Empresas cuyo backend ya no encaja en el diseño con el que nació.",
+          "Equipos que necesitan una API para una app móvil, para un socio o para una integración.",
+          "Productos en los que la corrección importa más que sacar funciones deprisa."
+        ],
+        "deliverables": [
+          "Diseño de esquema y migraciones que se pueden ejecutar varias veces sin sustos.",
+          "APIs REST documentadas lo bastante bien como para que otro equipo integre sin necesidad de una llamada.",
+          "Procesamiento en segundo plano para todo lo que no debe bloquear la petición de un usuario.",
+          "Despliegue en contenedores con una compilación reproducible y una vuelta atrás si una versión sale mal."
+        ],
+        "outcomes": [
+          "Un backend que otro ingeniero puede retomar sin un traspaso largo.",
+          "Despliegues aburridos, que es justo lo que se busca."
+        ]
+      },
+      {
+        "id": "mobile",
+        "title": "Desarrollo móvil",
+        "summary": "Aplicaciones para Android y iOS, hechas por alguien que ha publicado en las dos tiendas y sabe lo que rechazan.",
+        "problems": [
+          "La app existe como prototipo, pero nunca ha pasado por una revisión de tienda.",
+          "Una solución multiplataforma que se pelea con la plataforma en vez de aprovecharla.",
+          "El proyecto se atascó en la integración con el dispositivo: Bluetooth, cámara, sensores o almacenamiento sin conexión."
+        ],
+        "audience": [
+          "Empresas que necesitan una app junto al producto que sus clientes ya usan.",
+          "Equipos que añaden un cliente móvil a un backend que ya está en marcha.",
+          "Fundadores que necesitan una sola base de código para las dos plataformas."
+        ],
+        "deliverables": [
+          "Android en Kotlin e iOS en Swift, o una sola base de código en React Native cuando esa es la opción honesta.",
+          "Almacenamiento y sincronización que funcionan sin conexión, pensados para apps que se usan donde la red no es fiable.",
+          "Canales de publicación: compilaciones firmadas, versionado y un camino que funciona para llegar a las tiendas.",
+          "Funciones del dispositivo: Bluetooth, captura con cámara y escaneo de documentos."
+        ],
+        "outcomes": [
+          "Una app en las tiendas, o una compilación que puedes instalar y probar con usuarios reales desde el primer día.",
+          "Una decisión sobre nativo o multiplataforma tomada a partir de tu lista de funciones, y no de la moda."
+        ]
+      },
+      {
+        "id": "product",
+        "title": "Desarrollo de producto full-stack",
+        "summary": "El producto completo: la idea, la arquitectura, la interfaz, el backend, el despliegue y la primera versión.",
+        "problems": [
+          "La idea está clara, pero el camino de ahí a un producto funcionando no.",
+          "El MVP lo construyeron tres personas en momentos distintos y las piezas ya no encajan.",
+          "Necesitas un socio técnico que tome decisiones y luego las construya, sin un equipo que gestionar."
+        ],
+        "audience": [
+          "Fundadores que llevan un producto de la idea a sus primeros usuarios reales.",
+          "Pequeñas empresas que sustituyen un proceso de hojas de cálculo y correo por software.",
+          "Empresas con una herramienta interna de la que nadie quiere hacerse responsable."
+        ],
+        "deliverables": [
+          "Una primera versión que funciona, reducida al conjunto de funciones mínimo que demuestra la idea.",
+          "Arquitectura e infraestructura dimensionadas para la carga que tienes de verdad, no para una hipotética.",
+          "Una aplicación web y la parte de administración que siempre acaba haciendo falta.",
+          "Documentación y un traspaso que te deja seguir sin mí."
+        ],
+        "outcomes": [
+          "Algo que puedes poner delante de tus usuarios y mejorar a partir de ahí.",
+          "Una base de código y un despliegue propios, no alquilados."
+        ]
+      }
+    ]
   }
 }

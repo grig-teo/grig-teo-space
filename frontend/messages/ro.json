@@ -1,6 +1,7 @@
 {
   "nav": {
     "about": "_about",
+    "services": "_servicii",
     "blog": "_blog",
     "projects": "_projects",
     "experience": "_experience",
@@ -139,5 +140,124 @@
       "errorEmail": "Introdu o adresă de email validă.",
       "errorDescription": "O propoziție sau două despre proiect ajută."
     }
+  },
+  "servicesPage": {
+    "metaTitle": "Servicii: dezvoltare AI, backend, mobil și full-stack",
+    "metaDescription": "Funcții AI, sisteme backend, aplicații mobile și produse complete, construite de un singur inginer care duce totul de la idee la producție.",
+    "eyebrow": "Servicii",
+    "heading": "Ce construiesc pentru clienți",
+    "lead": "Patru tipuri de lucru, iar majoritatea proiectelor ajung să aibă nevoie de mai mult de unul. Duc totul de la idee la ceva ce poți pune în fața utilizatorilor.",
+    "problemsLabel": "Ce probleme rezolvă",
+    "audienceLabel": "Cui se adresează",
+    "deliverablesLabel": "Ce primești",
+    "outcomesLabel": "Cu ce rămâi",
+    "ctaTitle": "Nu ești sigur care dintre ele îți trebuie?",
+    "ctaBody": "Descrie problema, nu soluția. Îți spun ce presupune de fapt, inclusiv dacă răspunsul este că nu ai nevoie de mine.",
+    "ctaButton": "Discută un proiect",
+    "previewHeading": "Ce pot construi pentru tine",
+    "previewLead": "Patru tipuri de lucru, adesea combinate într-un singur proiect.",
+    "previewLink": "Toate serviciile",
+    "items": [
+      {
+        "id": "ai",
+        "title": "Dezvoltare AI",
+        "summary": "Funcții cu modele de limbaj care fac treabă reală într-un produs, mai degrabă decât un demo pe care nu-l folosește nimeni.",
+        "problems": [
+          "Demo-ul AI a impresionat pe toată lumea, dar nu este legat de datele tale reale și nici de felul în care lucrezi, așa că a rămas un demo.",
+          "Echipa ta pierde ore întregi pe săptămână cu muncă repetitivă pe care un apel la model, definit corect, ar putea să o ducă la capăt în siguranță.",
+          "Vrei AI în produs, dar datele clienților tăi nu pot ieși din infrastructura ta."
+        ],
+        "audience": [
+          "Echipe de produs care adaugă o funcție AI într-o aplicație ce are deja utilizatori.",
+          "Fondatori care construiesc de la început un produs în jurul AI-ului.",
+          "Echipe cu un proces manual care crește mai repede decât numărul de oameni."
+        ],
+        "deliverables": [
+          "O integrare de model în spatele unei interfețe curate, cu timeout-uri, reîncercări, validarea răspunsului și un plafon de cost clar.",
+          "Căutare în documentele și datele tale, ca răspunsurile să vină din conținutul tău, nu din memoria modelului.",
+          "Fluxuri de agenți care rulează ca joburi în fundal și raportează ce au făcut, inclusiv când au eșuat.",
+          "Abstractizare față de furnizor, ca modelul să poată fi schimbat cu unul mai ieftin sau găzduit local fără să atingi produsul."
+        ],
+        "outcomes": [
+          "O funcție care merge în producție, cu limite de siguranță și un cost pe care îl poți anticipa lunar.",
+          "Un răspuns clar despre ce părți din procesul tău merită automatizate și care ar trebui să rămână la oameni."
+        ]
+      },
+      {
+        "id": "backend",
+        "title": "Dezvoltare backend",
+        "summary": "Partea care trebuie să reziste: model de date, API-uri, joburi în fundal și deploy-ul care le ține în funcțiune.",
+        "problems": [
+          "Produsul merge bine până când apar traficul, volumul de date sau al doilea dezvoltator.",
+          "Nimeni nu vrea să schimbe baza de date, pentru că nimeni nu e sigur ce se strică.",
+          "Integrările cu parteneri sau cu sisteme vechi se fac încă manual, de o singură persoană care știe cum."
+        ],
+        "audience": [
+          "Companii al căror backend a depășit proiectarea cu care a pornit.",
+          "Echipe care au nevoie de un API pentru o aplicație mobilă, un partener sau o integrare.",
+          "Produse în care corectitudinea contează mai mult decât livrarea rapidă de funcții."
+        ],
+        "deliverables": [
+          "Proiectarea schemei și migrări care pot fi rulate repetat fără panică.",
+          "API-uri REST documentate destul de bine încât altă echipă să se integreze fără să te sune.",
+          "Procesare în fundal pentru tot ce nu ar trebui să blocheze o cerere a utilizatorului.",
+          "Deploy containerizat, cu build reproductibil și o cale de întoarcere dacă o versiune iese prost."
+        ],
+        "outcomes": [
+          "Un backend pe care alt inginer îl poate prelua fără o perioadă lungă de predare.",
+          "Deploy-uri plictisitoare, și exact asta e ideea."
+        ]
+      },
+      {
+        "id": "mobile",
+        "title": "Dezvoltare mobilă",
+        "summary": "Aplicații pentru Android și iOS, construite de cineva care a livrat în ambele magazine de aplicații și s-a confruntat cu ce resping ele.",
+        "problems": [
+          "Aplicația există ca prototip, dar nu a trecut niciodată prin procesul de aprobare al unui magazin.",
+          "O variantă cross-platform se luptă cu platforma în loc să o folosească.",
+          "Proiectul s-a blocat la integrarea cu dispozitivul: Bluetooth, cameră, senzori sau stocare offline."
+        ],
+        "audience": [
+          "Firme care au nevoie de o aplicație alături de produsul pe care clienții lor îl folosesc deja.",
+          "Echipe care adaugă un client mobil la un backend deja existent.",
+          "Fondatori care au nevoie de un singur cod sursă pentru ambele platforme."
+        ],
+        "deliverables": [
+          "Android în Kotlin și iOS în Swift, sau un singur cod React Native acolo unde asta este alegerea onestă.",
+          "Stocare și sincronizare offline-first, pentru aplicații folosite unde conexiunea nu este stabilă.",
+          "Pipeline-uri de release: build-uri semnate, versionare și o cale funcțională către magazine.",
+          "Funcții de dispozitiv, inclusiv Bluetooth, captură foto și scanare de documente."
+        ],
+        "outcomes": [
+          "O aplicație în magazine sau un build pe care îl poți instala și testa imediat cu utilizatori reali.",
+          "O decizie nativ sau cross-platform luată pe baza listei tale de funcții, nu a modei."
+        ]
+      },
+      {
+        "id": "product",
+        "title": "Dezvoltare de produs full-stack",
+        "summary": "Tot produsul: ideea, arhitectura, interfața, backendul, deploy-ul și prima versiune.",
+        "problems": [
+          "Ideea este clară, dar drumul de la ea la un produs care rulează nu este.",
+          "MVP-ul a fost construit de trei oameni în momente diferite, iar piesele nu se mai potrivesc.",
+          "Ai nevoie de un partener tehnic care poate lua decizii și apoi construi, fără o echipă de coordonat."
+        ],
+        "audience": [
+          "Fondatori care duc un produs de la idee la primii utilizatori reali.",
+          "Companii mici care înlocuiesc un proces bazat pe foi de calcul și email cu un software.",
+          "Firme cu un instrument intern de care nimeni nu vrea să răspundă."
+        ],
+        "deliverables": [
+          "O primă versiune funcțională, redusă la setul minim de funcții care demonstrează ideea.",
+          "Arhitectură și infrastructură dimensionate pentru încărcarea pe care o ai de fapt, nu pentru una ipotetică.",
+          "O aplicație web plus partea de administrare care se dovedește mereu necesară.",
+          "Documentație și o predare care te lasă în stare să continui fără mine."
+        ],
+        "outcomes": [
+          "Ceva ce poți pune în fața utilizatorilor și îmbunătăți de acolo.",
+          "Un cod sursă și un deploy care sunt ale tale, nu închiriate."
+        ]
+      }
+    ]
   }
 }

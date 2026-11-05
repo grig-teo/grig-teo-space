@@ -119,3 +119,58 @@ export function BlogJsonLd({ posts, locale }: BlogProps) {
     />
   );
 }
+
+type ServiceSchemaInput = {
+  providerName: string;
+  providerUrl: string;
+  catalogName: string;
+  services: { name: string; description: string }[];
+};
+
+/**
+ * Service catalogue markup for /services.
+ *
+ * Offered as an OfferCatalog of Service items rather than the more flattering
+ * aggregateRating shape: there are no ratings to report, and inventing them is
+ * both a lie and a structured-data violation.
+ */
+export function ServicesJsonLd({
+  providerName,
+  providerUrl,
+  catalogName,
+  services,
+}: ServiceSchemaInput) {
+  const data = {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    serviceType: catalogName,
+    provider: {
+      '@type': 'Person',
+      name: providerName,
+      url: providerUrl,
+    },
+    areaServed: {
+      '@type': 'Place',
+      name: 'Worldwide (remote)',
+    },
+    hasOfferCatalog: {
+      '@type': 'OfferCatalog',
+      name: catalogName,
+      itemListElement: services.map((service) => ({
+        '@type': 'Offer',
+        itemOffered: {
+          '@type': 'Service',
+          name: service.name,
+          description: service.description,
+        },
+      })),
+    },
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}

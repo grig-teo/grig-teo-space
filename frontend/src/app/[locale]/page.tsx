@@ -3,6 +3,7 @@ import type { HeroStats } from '@/components/Hero';
 import { BlogPreview } from '@/components/Blog';
 import { HeroScene } from '@/components/HeroScene';
 import { ProjectsPreview } from '@/components/Projects';
+import { ServicesPreview } from '@/components/Services';
 import { Experience } from '@/components/Experience';
 import { JsonLd } from '@/components/JsonLd';
 import { Reveal } from '@/components/Reveal';
@@ -69,11 +70,17 @@ export default async function HomePage({ params }: Props) {
       <div className="flex justify-center py-4">
         <HeroScene />
       </div>
+      {/* Funnel order: promise, then what I can do for you, then proof, then
+          background. Projects used to sit after Experience, which buried the
+          evidence behind a CV-style timeline. */}
       <Reveal>
-        <Experience items={experience} />
+        <ServicesPreview />
       </Reveal>
       <Reveal>
         <ProjectsPreview projects={projects} />
+      </Reveal>
+      <Reveal>
+        <Experience items={experience} />
       </Reveal>
       {SHOW_BLOG && (
         <Reveal>
