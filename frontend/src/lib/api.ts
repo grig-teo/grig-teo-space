@@ -241,3 +241,40 @@ export async function getLearning(): Promise<LearningSummary | null> {
     return null;
   }
 }
+
+/** Payload accepted by `POST /api/contact`. `website` is the honeypot. */
+export type ContactSubmission = {
+  name: string;
+  email: string;
+  company?: string;
+  description: string;
+  budget?: string;
+  timeline?: string;
+  source?: string;
+  website?: string;
+  startedAt?: number;
+};
+
+export type ContactResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Sends a project inquiry. Returns a discriminated result rather than throwing,
+ * so the form can show the server's validation message verbatim.
+ */
+export async function submitContact(payload: ContactSubmission): Promise<ContactResult> {
+  const base = apiBaseUrl();
+  const prefix = base ? `${base}/api` : '/api';
+  try {
+    const res = await fetch(`${prefix}/contact`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) return { ok: true };
+    const data = (await res.json().catch(() => null)) as { message?: string | string[] } | null;
+    const message = Array.isArray(data?.message) ? data.message[0] : data?.message;
+    return { ok: false, error: message ?? 'request_failed' };
+  } catch {
+    return { ok: false, error: 'network_error' };
+  }
+}

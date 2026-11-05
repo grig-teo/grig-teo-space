@@ -11,7 +11,11 @@
   },
   "hero": {
     "prompt": "grig-teo:~$",
-    "whoami": "$ whoami",
+    "headline": "Transform idei în software gata de producție",
+    "lead": "Construiesc produse software scalabile, aplicații mobile, sisteme backend și soluții AI pentru companii.",
+    "role": "Inginer software · AI și dezvoltare full-stack",
+    "ctaPrimary": "Discută un proiect",
+    "ctaSecondary": "Vezi proiectele mele",
     "domains": "marketplace-uri · A/V în timp real · date civice · health-tech",
     "stats": {
       "years": "{value}+ ani",
@@ -19,8 +23,6 @@
       "products": "{value} produse",
       "articles": "{value} articole"
     },
-    "ctaProjects": "vezi proiectele",
-    "ctaContact": "contactează-mă →",
     "learning": {
       "goalLabel": "{language} → {level}",
       "streak": "{days} zile la rând",
@@ -101,5 +103,41 @@
     "range": "interval",
     "lastDays": "Ultimele {days} zile",
     "noData": "Nicio dată încă"
+  },
+  "contact": {
+    "eyebrow": "Solicitări de proiect",
+    "metaTitle": "Contact — inginer software pentru produse AI și full-stack",
+    "metaDescription": "Spune-mi ce vrei să construiești: sisteme backend, aplicații mobile, integrări AI sau un produs complet, de la idee la producție.",
+    "heading": "Spune-mi ce vrei să construiești",
+    "lead": "Trimite o descriere scurtă a proiectului și a ceea ce te blochează. Citesc personal fiecare mesaj și de obicei răspund în una sau două zile.",
+    "ctaDiscuss": "Discută un proiect",
+    "ctaHire": "Angajează-mă",
+    "hireSubject": "Solicitare de angajare",
+    "formHeading": "Cerere de proiect",
+    "formLead": "Câteva propoziții sunt suficiente pentru început. Dacă ai deja o specificație, lipește părțile esențiale.",
+    "directHeading": "Sau scrie-mi direct",
+    "directBody": "Preferi emailul? Scrie-mi și îți răspund de pe aceeași adresă.",
+    "emailLabel": "Email",
+    "responseNote": "Lucrez la un număr mic de proiecte odată, astfel încât fiecare să primească atenție reală. Dacă nu sunt potrivit, îți spun și te îndrum spre altcineva.",
+    "form": {
+      "name": "Nume",
+      "email": "Email",
+      "company": "Companie (opțional)",
+      "description": "Ce construiești?",
+      "descriptionPlaceholder": "Problema, pentru cine este și ce există deja.",
+      "budget": "Buget (opțional)",
+      "budgetPlaceholder": "de ex. 10–20k EUR, sau încă nu ești sigur",
+      "timeline": "Termen (opțional)",
+      "timelinePlaceholder": "de ex. în 3 luni",
+      "submit": "Trimite cererea",
+      "sending": "Se trimite…",
+      "privacy": "Mesajul ajunge direct în inboxul meu. Fără newsletter, fără să fie dat mai departe.",
+      "successTitle": "Mesaj primit",
+      "successBody": "Mulțumesc pentru detalii. Îți răspund pe email, de obicei în una sau două zile.",
+      "errorGeneric": "Mesajul nu a fost trimis.",
+      "errorName": "Introdu numele.",
+      "errorEmail": "Introdu o adresă de email validă.",
+      "errorDescription": "O propoziție sau două despre proiect ajută."
+    }
   }
 }

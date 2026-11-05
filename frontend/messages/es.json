@@ -11,7 +11,11 @@
   },
   "hero": {
     "prompt": "grig-teo:~$",
-    "whoami": "$ whoami",
+    "headline": "Convierto ideas en software listo para producción",
+    "lead": "Construyo productos software escalables, aplicaciones móviles, sistemas backend y soluciones con IA para empresas.",
+    "role": "Ingeniero de software · IA y desarrollo de producto full-stack",
+    "ctaPrimary": "Hablemos del proyecto",
+    "ctaSecondary": "Ver mi trabajo",
     "domains": "marketplaces · A/V en tiempo real · datos cívicos · health tech",
     "stats": {
       "years": "{value}+ años",
@@ -19,8 +23,6 @@
       "products": "{value} productos",
       "articles": "{value} artículos"
     },
-    "ctaProjects": "ver proyectos",
-    "ctaContact": "contáctame →",
     "learning": {
       "goalLabel": "{language} → {level}",
       "streak": "{days} d seguidos",
@@ -101,5 +103,41 @@
     "range": "rango",
     "lastDays": "Últimos {days} días",
     "noData": "Aún no hay datos"
+  },
+  "contact": {
+    "eyebrow": "Consultas de proyectos",
+    "metaTitle": "Contacto — Ingeniero de software para productos de IA y full-stack",
+    "metaDescription": "Cuéntame qué necesitas construir: sistemas backend, apps móviles, integraciones de IA o un producto completo desde la idea hasta producción.",
+    "heading": "Cuéntame qué necesitas construir",
+    "lead": "Envíame una descripción breve del proyecto y de qué lo está bloqueando. Leo todos los mensajes personalmente y suelo responder en uno o dos días.",
+    "ctaDiscuss": "Hablemos del proyecto",
+    "ctaHire": "Contrátame",
+    "hireSubject": "Consulta de contratación",
+    "formHeading": "Consulta de proyecto",
+    "formLead": "Con unas pocas frases basta para empezar. Si ya tienes una especificación, pega las partes clave.",
+    "directHeading": "O escríbeme directamente",
+    "directBody": "¿Prefieres el correo? Escríbeme y te responderé desde esa misma dirección.",
+    "emailLabel": "Correo electrónico",
+    "responseNote": "Acepto pocos proyectos a la vez para poder dedicarle a cada uno la atención que merece. Si no soy la persona adecuada, te lo diré y te orientaré hacia quien sí lo sea.",
+    "form": {
+      "name": "Nombre",
+      "email": "Correo electrónico",
+      "company": "Empresa (opcional)",
+      "description": "¿Qué estás construyendo?",
+      "descriptionPlaceholder": "El problema, para quién es y qué hay ya hecho.",
+      "budget": "Presupuesto (opcional)",
+      "budgetPlaceholder": "p. ej., 10–20 mil €, o todavía no lo tengo claro",
+      "timeline": "Plazo (opcional)",
+      "timelinePlaceholder": "p. ej., en 3 meses",
+      "submit": "Enviar consulta",
+      "sending": "Enviando…",
+      "privacy": "Tu mensaje llega directo a mi correo. Sin boletines y sin compartirlo con nadie.",
+      "successTitle": "Mensaje recibido",
+      "successBody": "Gracias por el detalle. Te responderé por correo, normalmente en uno o dos días.",
+      "errorGeneric": "No se ha podido enviar.",
+      "errorName": "Escribe tu nombre.",
+      "errorEmail": "Escribe una dirección de correo válida.",
+      "errorDescription": "Con un par de frases sobre el proyecto es suficiente."
+    }
   }
 }

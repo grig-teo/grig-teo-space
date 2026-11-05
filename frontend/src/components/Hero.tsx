@@ -28,24 +28,36 @@ export type HeroStats = {
  *  (its `about` bio must stay out of the landing page's serialized props). */
 export type HeroProfile = Pick<Profile, 'name' | 'title' | 'location'>;
 
-function TerminalCard({ profile }: { profile: HeroProfile }) {
+/**
+ * The hero's message block. It keeps the terminal window chrome as the site's
+ * signature, but leads with what a client needs to read first: the promise,
+ * then the offer, then who is making it. The name is present but small, because
+ * on a page selling a service the claim outranks the byline.
+ */
+function HeroPanel({ profile }: { profile: HeroProfile }) {
   const t = useTranslations('hero');
 
   return (
-    <div className="rounded-lg border border-border bg-surface font-mono">
-      <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+    <div className="rounded-lg border border-border bg-surface">
+      <div className="flex items-center gap-2 border-b border-border px-4 py-3 font-mono">
         <span className="size-3 rounded-full bg-red-400" aria-hidden />
         <span className="size-3 rounded-full bg-amber-400" aria-hidden />
         <span className="size-3 rounded-full bg-green-400" aria-hidden />
         <span className="ml-2 text-xs text-muted">{t('prompt')}</span>
       </div>
-      <div className="px-4 py-6 sm:px-6 sm:py-8">
-        <p className="text-sm text-muted">{t('whoami')}</p>
-        <h1 className="mt-3 font-mono text-4xl font-bold text-foreground md:text-6xl">
-          {profile.name}
+      <div className="px-4 py-8 sm:px-6 sm:py-10">
+        <p className="font-mono text-sm text-accent">{profile.name}</p>
+        <h1 className="mt-3 max-w-2xl font-mono text-3xl font-bold leading-[1.15] text-foreground sm:text-4xl md:text-[2.9rem]">
+          {t('headline')}
         </h1>
-        <p className="mt-3 text-accent">{profile.title}</p>
-        <p className="mt-1 text-sm text-muted">{profile.location}</p>
+        <p className="mt-5 max-w-xl font-sans text-base leading-relaxed text-muted">
+          {t('lead')}
+        </p>
+        <p className="mt-6 font-mono text-xs leading-relaxed text-muted">
+          {t('role')}
+          <span aria-hidden> · </span>
+          {profile.location}
+        </p>
       </div>
     </div>
   );
@@ -186,16 +198,16 @@ function HeroCtas() {
   return (
     <div className="flex flex-wrap gap-3">
       <Link
-        href="/#projects"
+        href="/contact"
         className="rounded bg-accent px-5 py-2.5 font-mono text-sm text-background hover:opacity-90"
       >
-        {t('ctaProjects')}
+        {t('ctaPrimary')}
       </Link>
       <Link
-        href="/#contact"
+        href="/projects"
         className="rounded border border-border px-5 py-2.5 font-mono text-sm text-muted hover:border-accent hover:text-accent"
       >
-        {t('ctaContact')}
+        {t('ctaSecondary')}
       </Link>
     </div>
   );
@@ -279,7 +291,7 @@ export function Hero({
     <section id="about" className="px-4 py-20 sm:px-6 md:px-12 md:py-28">
       <div className="max-w-6xl lg:grid lg:grid-cols-[1fr_auto] lg:items-start lg:gap-12">
         <div>
-          <TerminalCard profile={profile} />
+          <HeroPanel profile={profile} />
           <div className="mt-8">
             <StatsStrip stats={stats} />
           </div>

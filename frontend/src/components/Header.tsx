@@ -12,7 +12,7 @@ const baseLinks = [
   { key: 'projects', href: '/#projects' },
   { key: 'experience', href: '/#experience' },
   { key: 'health', href: '/#health' },
-  { key: 'contact', href: '/#contact' },
+  { key: 'contact', href: '/contact' },
 ] as const;
 
 function MenuIcon({ open }: { open: boolean }) {

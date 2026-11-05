@@ -7,9 +7,11 @@ import { AiService } from './ai.service';
 import { AiRateLimiter } from './ai-rate-limiter';
 import { AdminModule } from './admin/admin.module';
 import { SecurityModule } from './security/security.module';
+import { ContactModule } from './contact/contact.module';
 import { ContentModule } from './content/content.module';
 import { CvModule } from './cv/cv.module';
 import { AiChatMessage } from './entities/ai-chat-message.entity';
+import { ContactMessage } from './entities/contact-message.entity';
 import { HealthDocChatMessage } from './entities/health-doc-chat-message.entity';
 import { HealthDocument } from './entities/health-document.entity';
 import { HealthDocumentPage } from './entities/health-document-page.entity';
@@ -47,6 +49,7 @@ import { WhisperModule } from './whisper/whisper.module';
       entities: [
         SiteContent,
         AiChatMessage,
+        ContactMessage,
         HealthReading,
         HealthNote,
         HealthDocument,
@@ -72,6 +75,7 @@ import { WhisperModule } from './whisper/whisper.module';
     WebhooksModule,
     WhisperModule,
     LearningModule,
+    ContactModule,
   ],
   controllers: [PortfolioController, AiController, LinkedInController],
   providers: [

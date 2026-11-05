@@ -11,7 +11,11 @@
   },
   "hero": {
     "prompt": "grig-teo:~$",
-    "whoami": "$ whoami",
+    "headline": "Turning Ideas Into Production-Ready Software",
+    "lead": "I build scalable software products, mobile applications, backend systems, and AI-powered solutions for businesses.",
+    "role": "Software Engineer · AI & Full-Stack Product Development",
+    "ctaPrimary": "Discuss a Project",
+    "ctaSecondary": "Explore My Work",
     "domains": "marketplaces · real-time A/V · civic data · health tech",
     "stats": {
       "years": "{value}+ yrs",
@@ -19,8 +23,6 @@
       "products": "{value} products",
       "articles": "{value} articles"
     },
-    "ctaProjects": "view projects",
-    "ctaContact": "get in touch →",
     "learning": {
       "goalLabel": "{language} → {level}",
       "streak": "{days}d streak",
@@ -101,5 +103,41 @@
     "range": "range",
     "lastDays": "Last {days} days",
     "noData": "No data yet"
+  },
+  "contact": {
+    "eyebrow": "Project inquiries",
+    "metaTitle": "Contact — Software Engineer for AI & Full-Stack Products",
+    "metaDescription": "Tell me what you need built: backend systems, mobile apps, AI integrations, or a full product from idea to production.",
+    "heading": "Tell me what you need to build",
+    "lead": "Send a short description of the project and what is blocking it. I read every message myself and usually reply within a day or two.",
+    "ctaDiscuss": "Discuss a Project",
+    "ctaHire": "Hire Me",
+    "hireSubject": "Hiring inquiry",
+    "formHeading": "Project inquiry",
+    "formLead": "A few sentences are enough to start. If you already have a spec, paste the key parts.",
+    "directHeading": "Or reach me directly",
+    "directBody": "Prefer email? Write to me and I will answer from the same address.",
+    "emailLabel": "Email",
+    "responseNote": "I take on a small number of projects at a time so each one gets real attention. If I am not the right fit, I will say so and point you elsewhere.",
+    "form": {
+      "name": "Name",
+      "email": "Email",
+      "company": "Company (optional)",
+      "description": "What are you building?",
+      "descriptionPlaceholder": "The problem, who it is for, and what already exists.",
+      "budget": "Budget (optional)",
+      "budgetPlaceholder": "e.g. 10–20k EUR, or not sure yet",
+      "timeline": "Timeline (optional)",
+      "timelinePlaceholder": "e.g. within 3 months",
+      "submit": "Send inquiry",
+      "sending": "Sending…",
+      "privacy": "Your message goes straight to my inbox. No newsletter, no sharing.",
+      "successTitle": "Message received",
+      "successBody": "Thanks for the detail. I will reply by email, usually within a day or two.",
+      "errorGeneric": "That did not send.",
+      "errorName": "Please enter your name.",
+      "errorEmail": "Please enter a valid email address.",
+      "errorDescription": "A sentence or two about the project helps."
+    }
   }
 }
