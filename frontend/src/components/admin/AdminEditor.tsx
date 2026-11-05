@@ -17,6 +17,7 @@ import {
 } from '@/lib/admin-api';
 import { attachmentType } from '@/lib/attachments';
 import { localizedAll, localizedFrom, localizedList } from '@/lib/locale';
+import { messengerUrl, type MessengerKind } from '@/lib/messengers';
 import { useAdminLocale } from '@/components/admin/AdminLocale';
 import { BlogBodyEditor } from '@/components/admin/BlogBodyEditor';
 import { LocalGraphCard } from '@/components/admin/LocalGraphCard';
@@ -70,6 +71,17 @@ function slugify(value: string): string {
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+/** Shows the link that will actually be published, so a half-typed handle is
+ *  visible in the form rather than only on the live site. */
+function MessengerPreview({ kind, value }: { kind: MessengerKind; value?: string }) {
+  const url = messengerUrl(kind, value);
+  return (
+    <p className="-mt-2 font-mono text-xs text-muted">
+      {url ? `→ ${url}` : 'empty, so no icon is shown'}
+    </p>
+  );
 }
 
 function normalizeProject(project: Project & { url?: LocalizedString | string }): Project {
@@ -657,6 +669,7 @@ export function AdminEditor() {
               }))
             }
           />
+          <MessengerPreview kind="telegram" value={content.profile.contact.telegram} />
           <Field
             label="MAX — Russian messenger (handle or URL)"
             value={content.profile.contact.max ?? ''}
@@ -667,6 +680,7 @@ export function AdminEditor() {
               }))
             }
           />
+          <MessengerPreview kind="max" value={content.profile.contact.max} />
           <Field
             label="WhatsApp (number or URL)"
             value={content.profile.contact.whatsapp ?? ''}
@@ -677,6 +691,7 @@ export function AdminEditor() {
               }))
             }
           />
+          <MessengerPreview kind="whatsapp" value={content.profile.contact.whatsapp} />
         </section>
       ) : null}
 

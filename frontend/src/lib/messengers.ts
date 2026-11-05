@@ -2,24 +2,39 @@ import type { Locale, Profile } from './api';
 
 export type MessengerKind = 'telegram' | 'max' | 'whatsapp';
 
+/** Hosts people type without a scheme, e.g. "t.me/grig_teo". */
+const HOST_PREFIXES: Record<MessengerKind, RegExp> = {
+  telegram: /^(?:https?:\/\/)?(?:www\.)?(?:t|telegram)\.me\//i,
+  max: /^(?:https?:\/\/)?(?:www\.)?max\.ru\//i,
+  whatsapp: /^(?:https?:\/\/)?(?:www\.)?(?:wa\.me|api\.whatsapp\.com\/send\?phone=)\/?/i,
+};
+
 /**
  * Turns whatever was typed in the admin form into a usable link.
  *
- * The admin fields accept a bare handle ("grig_teo"), a phone number, or a full
- * URL, because asking a person to remember which of those a form wants is how
- * fields end up empty. Nothing here guesses a handle: an empty value returns
- * null and the icon is simply not rendered.
+ * Accepts a full URL, a host without a scheme ("t.me/grig_teo"), a phone number
+ * or a bare handle ("grig_teo"), because the field should not require the
+ * visitor to remember which of those it wants. An empty value returns null and
+ * the icon is simply not rendered: nothing here invents a handle.
  */
 export function messengerUrl(kind: MessengerKind, value?: string): string | null {
   const raw = (value ?? '').trim();
   if (!raw) return null;
+
+  // "t.me/name" and friends: keep the URL, just give it a scheme.
+  if (HOST_PREFIXES[kind].test(raw)) {
+    const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw.replace(/^\/+/, '')}`;
+    return withScheme;
+  }
   if (/^https?:\/\//i.test(raw)) return raw;
 
-  const handle = raw.replace(/^@/, '');
   if (kind === 'whatsapp') {
     const digits = raw.replace(/\D/g, '');
     return digits.length >= 6 ? `https://wa.me/${digits}` : null;
   }
+
+  const handle = raw.replace(/^@/, '');
+  if (!handle) return null;
   if (kind === 'telegram') return `https://t.me/${handle}`;
   return `https://max.ru/${handle}`;
 }
